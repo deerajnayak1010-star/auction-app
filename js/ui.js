@@ -120,6 +120,116 @@ export class UI {
       </div>
     `;
   }
+  // ═══════════════════════════════════════════
+  // RULES PAGE (post player-select, pre-auction)
+  // ═══════════════════════════════════════════
+
+  renderRules() {
+    this.mainEl.innerHTML = `
+      <div class="rules-page">
+        <div class="rules-header">
+          <div class="rules-icon">📜</div>
+          <h1 class="rules-title">Auction Rules</h1>
+          <p class="rules-subtitle">Please read the rules carefully before proceeding</p>
+        </div>
+
+        <div class="rules-grid">
+          <!-- Auction Rules -->
+          <div class="rules-card">
+            <div class="rules-card-header">
+              <span class="rules-card-icon">💰</span>
+              <h3>Auction Rules</h3>
+            </div>
+            <ul class="rules-list">
+              <li>Each team has a fixed budget of <strong>1,00,000 pts</strong></li>
+              <li>Base price starts from <strong>1,000 pts</strong></li>
+              <li>Bid increments:
+                <div class="rules-table">
+                  <div class="rules-row"><span>1,000 – 10,000</span><span>→ +500</span></div>
+                  <div class="rules-row"><span>10,000 – 20,000</span><span>→ +1,000</span></div>
+                  <div class="rules-row"><span>Above 20,000</span><span>→ +2,000</span></div>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Bidding Rules -->
+          <div class="rules-card">
+            <div class="rules-card-header">
+              <span class="rules-card-icon">🏏</span>
+              <h3>Bidding Rules</h3>
+            </div>
+            <ul class="rules-list">
+              <li>A team <strong>cannot bid consecutively</strong> on the same player</li>
+              <li>Minimum bid increment must be followed</li>
+              <li>Bid must be within team's <strong>remaining budget</strong></li>
+              <li>Once sold, a player cannot be re-auctioned (except in unsold round)</li>
+            </ul>
+          </div>
+
+          <!-- Team Building -->
+          <div class="rules-card">
+            <div class="rules-card-header">
+              <span class="rules-card-icon">👥</span>
+              <h3>Team Building</h3>
+            </div>
+            <ul class="rules-list">
+              <li>Each team must stay within their <strong>total budget</strong></li>
+              <li>Maximum squad size: <strong>14 players</strong></li>
+              <li>Build a balanced squad with batsmen, bowlers, and all-rounders</li>
+            </ul>
+          </div>
+
+          <!-- Re-Auction -->
+          <div class="rules-card">
+            <div class="rules-card-header">
+              <span class="rules-card-icon">♻️</span>
+              <h3>Re-Auction</h3>
+            </div>
+            <ul class="rules-list">
+              <li>Unsold players can be re-auctioned after the main auction round</li>
+              <li>Re-auction is based on organizer confirmation</li>
+              <li>Same rules apply in the re-auction round</li>
+            </ul>
+          </div>
+
+          <!-- Do's -->
+          <div class="rules-card rules-card-do">
+            <div class="rules-card-header">
+              <span class="rules-card-icon">✅</span>
+              <h3>Do's</h3>
+            </div>
+            <ul class="rules-list">
+              <li>Bid responsibly within your budget</li>
+              <li>Follow increment rules at all times</li>
+              <li>Confirm your team selection before bidding</li>
+              <li>Plan your strategy for key players</li>
+            </ul>
+          </div>
+
+          <!-- Don'ts -->
+          <div class="rules-card rules-card-dont">
+            <div class="rules-card-header">
+              <span class="rules-card-icon">❌</span>
+              <h3>Don'ts</h3>
+            </div>
+            <ul class="rules-list">
+              <li>No consecutive bids by the same team</li>
+              <li>No exceeding your team budget</li>
+              <li>No skipping bid increment rules</li>
+              <li>No disrupting the auction process</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="rules-footer">
+          <button class="btn btn-primary btn-lg" id="proceed-rules-btn">
+            ⚡ Proceed to Auction
+          </button>
+        </div>
+      </div>
+    `;
+  }
 
   // ═══════════════════════════════════════════
   // PLAYER SELECTION PAGE (post-setup, pre-auction)

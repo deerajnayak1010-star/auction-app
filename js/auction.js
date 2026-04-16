@@ -367,4 +367,50 @@ export class AuctionEngine {
   _log(type, data) {
     this.auctionLog.push({ type, ...data, timestamp: Date.now() });
   }
+
+  // ── Serialization (for localStorage persistence) ──
+
+  /** Serialize the entire engine to a JSON-safe object */
+  serialize() {
+    const teamsArr = [];
+    for (const [id, team] of this.teams) {
+      teamsArr.push({ ...team });
+    }
+    return {
+      teams: teamsArr,
+      playerPool: [...this.playerPool],
+      currentPlayer: this.currentPlayer,
+      currentBid: this.currentBid,
+      currentBidder: this.currentBidder,
+      bidHistory: [...this.bidHistory],
+      bidUndoStack: [...this.bidUndoStack],
+      bidRedoStack: [...this.bidRedoStack],
+      soldPlayers: [...this.soldPlayers],
+      unsoldPlayers: [...this.unsoldPlayers],
+      auctionLog: [...this.auctionLog],
+      playerIndex: this.playerIndex,
+      phase: this.phase,
+    };
+  }
+
+  /** Restore an AuctionEngine from serialized data */
+  static restore(data) {
+    // Create a dummy engine then overwrite its internals
+    const engine = Object.create(AuctionEngine.prototype);
+    engine.teams = new Map();
+    data.teams.forEach(t => engine.teams.set(t.id, { ...t }));
+    engine.playerPool = data.playerPool || [];
+    engine.currentPlayer = data.currentPlayer || null;
+    engine.currentBid = data.currentBid || 0;
+    engine.currentBidder = data.currentBidder || null;
+    engine.bidHistory = data.bidHistory || [];
+    engine.bidUndoStack = data.bidUndoStack || [];
+    engine.bidRedoStack = data.bidRedoStack || [];
+    engine.soldPlayers = data.soldPlayers || [];
+    engine.unsoldPlayers = data.unsoldPlayers || [];
+    engine.auctionLog = data.auctionLog || [];
+    engine.playerIndex = data.playerIndex || 0;
+    engine.phase = data.phase || 'waiting';
+    return engine;
+  }
 }

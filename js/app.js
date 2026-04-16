@@ -37,9 +37,12 @@ class App {
     // Initialize WebSocket connection
     this.initWebSocket();
 
+    // Try to restore saved state
+    this.loadState();
+
     // Navigate to initial view
     const hash = window.location.hash.slice(1);
-    if (['setup', 'player-select', 'players', 'auction', 'results'].includes(hash)) {
+    if (['setup', 'player-select', 'rules', 'players', 'auction', 'results'].includes(hash)) {
       this.currentView = hash;
     }
     this.render();
@@ -138,10 +141,65 @@ class App {
 
   onHashChange() {
     const hash = window.location.hash.slice(1);
-    if (['setup', 'player-select', 'players', 'auction', 'results'].includes(hash)) {
+    if (['setup', 'player-select', 'rules', 'players', 'auction', 'results'].includes(hash)) {
       this.currentView = hash;
       this.render();
     }
+  }
+
+  // ═══════════════════════════════════════════
+  // STATE PERSISTENCE (localStorage)
+  // ═══════════════════════════════════════════
+
+  /** Save current auction state to localStorage */
+  saveState() {
+    try {
+      const state = {
+        selectedTeamIds: [...this.selectedTeamIds],
+        selectedPlayerIds: [...this.selectedPlayerIds],
+        currentView: this.currentView,
+        engine: this.engine ? this.engine.serialize() : null,
+      };
+      localStorage.setItem('npl_auction_state', JSON.stringify(state));
+    } catch (e) {
+      console.warn('Failed to save state:', e);
+    }
+  }
+
+  /** Load saved auction state from localStorage */
+  loadState() {
+    try {
+      const raw = localStorage.getItem('npl_auction_state');
+      if (!raw) return;
+
+      const state = JSON.parse(raw);
+      if (state.selectedTeamIds) {
+        this.selectedTeamIds = new Set(state.selectedTeamIds);
+      }
+      if (state.selectedPlayerIds) {
+        this.selectedPlayerIds = new Set(state.selectedPlayerIds);
+      }
+      if (state.currentView) {
+        this.currentView = state.currentView;
+      }
+      if (state.engine) {
+        this.engine = AuctionEngine.restore(state.engine);
+        console.log('[App] Auction state restored from localStorage');
+      }
+    } catch (e) {
+      console.warn('Failed to load state:', e);
+      localStorage.removeItem('npl_auction_state');
+    }
+  }
+
+  /** Clear saved state and reset everything */
+  resetAuction() {
+    localStorage.removeItem('npl_auction_state');
+    this.engine = null;
+    this.selectedTeamIds = new Set();
+    this.selectedPlayerIds = new Set();
+    this.ui.showToast('🔄 Auction reset. Starting fresh!', 'info');
+    this.navigate('setup');
   }
 
   // ═══════════════════════════════════════════
@@ -165,6 +223,9 @@ class App {
       case 'player-select':
         this.ui.renderPlayerSelect(PLAYERS_DATA, this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
         this.bindPlayerSelectEvents();
+        break;
+      case 'rules':
+        this.ui.renderRules();
         break;
       case 'players':
         this.ui.renderPlayerPool(PLAYERS_DATA, this.poolFilter, this.poolSearch);
@@ -230,7 +291,7 @@ class App {
   }
 
   onClick(e) {
-    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn');
+    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn');
     if (!target) return;
 
     // ── Setup: team toggle ──
@@ -274,9 +335,21 @@ class App {
       return;
     }
 
-    // ── Player Selection: confirm ──
+    // ── Player Selection: confirm → go to Rules ──
     if (target.id === 'confirm-players-btn') {
       this.confirmPlayerSelection();
+      return;
+    }
+
+    // ── Rules: proceed to auction ──
+    if (target.id === 'proceed-rules-btn') {
+      this.navigate('auction');
+      return;
+    }
+
+    // ── Reset auction ──
+    if (target.id === 'reset-auction-btn') {
+      this.resetAuction();
       return;
     }
 
@@ -493,8 +566,9 @@ class App {
     const selectedTeams = TEAMS_DATA.filter(t => this.selectedTeamIds.has(t.id));
     const selectedPlayers = PLAYERS_DATA.filter(p => this.selectedPlayerIds.has(p.name));
     this.engine = new AuctionEngine(selectedTeams, selectedPlayers);
-    this.ui.showToast(`Auction started with ${selectedTeams.length} teams and ${selectedPlayers.length} players!`, 'success');
-    this.navigate('auction');
+    this.saveState();
+    this.ui.showToast(`${selectedTeams.length} teams, ${selectedPlayers.length} players ready!`, 'success');
+    this.navigate('rules');
   }
 
   handleQuickBid() {
@@ -524,6 +598,7 @@ class App {
       this.ui.updateBidDisplay(state);
       this.ui.showToast(`Quick bid: ${AuctionEngine.formatPoints(amount)}`, 'success');
       this.broadcastState();
+      this.saveState();
     } else {
       this.ui.showToast(result.error, 'error');
     }
@@ -537,6 +612,7 @@ class App {
       this.updateBidButtonStates();
       this.ui.showToast('Bid undone', 'info');
       this.broadcastState();
+      this.saveState();
     }
   }
 
@@ -548,6 +624,7 @@ class App {
       this.updateBidButtonStates();
       this.ui.showToast('Bid redone', 'info');
       this.broadcastState();
+      this.saveState();
     }
   }
 
@@ -575,6 +652,7 @@ class App {
     this.render();
     this.ui.showToast(`🏏 ${player.name} is up for auction!`, 'info');
     this.broadcastState();
+    this.saveState();
   }
 
   placeBid(teamId) {
@@ -602,6 +680,7 @@ class App {
       // Flash the bid amount
       this.ui.updateBidDisplay(state);
       this.broadcastState();
+      this.saveState();
     }
   }
 
@@ -624,6 +703,7 @@ class App {
     // Execute the sale
     this.engine.sellPlayer();
     this.broadcastState();
+    this.saveState();
 
     // Re-render after a short delay for the animation
     setTimeout(() => this.render(), 1200);
@@ -641,6 +721,7 @@ class App {
     // Execute
     this.engine.markUnsold();
     this.broadcastState();
+    this.saveState();
 
     // Re-render after animation
     setTimeout(() => this.render(), 1000);
