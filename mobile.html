@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NPL Auction — Mobile Bidding</title>
+  <meta name="description" content="Place your bids in the Nakre Premier League auction from your mobile device.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ── Design Tokens ── */
+    :root {
+      --bg-primary:    #070b1e;
+      --bg-secondary:  #0d1230;
+      --bg-card:       #131940;
+      --bg-surface:    #0f1535;
+      --accent-indigo: #6366f1;
+      --accent-gold:   #f59e0b;
+      --accent-green:  #10b981;
+      --accent-red:    #ef4444;
+      --accent-blue:   #3b82f6;
+      --text-1: #f1f5f9;
+      --text-2: #94a3b8;
+      --text-3: #64748b;
+      --text-4: #475569;
+      --border: rgba(255,255,255,0.06);
+      --border-light: rgba(255,255,255,0.1);
+      --glass: rgba(255,255,255,0.03);
+      --glass-heavy: rgba(255,255,255,0.06);
+      --radius-sm:  8px;
+      --radius-md:  12px;
+      --radius-lg:  16px;
+      --radius-xl:  24px;
+      --radius-full: 9999px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-1);
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(99,102,241,0.08), transparent),
+        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(236,72,153,0.06), transparent);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #mobile-app {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    .mobile-header {
+      background: rgba(7,11,30,0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .mobile-brand {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent-gold), var(--accent-indigo));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .mobile-team-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+      font-weight: 700;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .connection-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      animation: pulse-dot 2s ease infinite;
+    }
+    .connection-dot.disconnected {
+      background: var(--accent-red);
+      animation: none;
+    }
+
+    /* ── Login Screen ── */
+    .login-screen {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 380px;
+      padding: 40px 32px;
+      border-radius: var(--radius-xl);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      text-align: center;
+      animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .login-icon {
+      font-size: 3.5rem;
+      margin-bottom: 16px;
+    }
+
+    .login-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, #fff, var(--accent-gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .login-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-3);
+      margin-bottom: 28px;
+    }
+
+    .login-input {
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: var(--radius-md);
+      border: 2px solid var(--border-light);
+      background: var(--bg-surface);
+      color: var(--text-1);
+      font-size: 1.2rem;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      outline: none;
+      transition: var(--transition);
+      margin-bottom: 16px;
+    }
+    .login-input:focus {
+      border-color: var(--accent-indigo);
+      box-shadow: 0 0 0 4px rgba(99,102,241,0.15);
+    }
+    .login-input::placeholder {
+      letter-spacing: 1px;
+      text-transform: none;
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: var(--text-4);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 14px 24px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: linear-gradient(135deg, var(--accent-indigo), #8b5cf6);
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: 0 4px 16px rgba(99,102,241,0.3);
+    }
+    .login-btn:hover { box-shadow: 0 6px 24px rgba(99,102,241,0.45); transform: translateY(-1px); }
+    .login-btn:active { transform: scale(0.97); }
+    .login-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .login-error {
+      margin-top: 14px;
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.2);
+      color: var(--accent-red);
+      font-size: 0.82rem;
+      animation: shake 0.4s ease;
+    }
+
+    .login-hint {
+      margin-top: 20px;
+      font-size: 0.72rem;
+      color: var(--text-4);
+      line-height: 1.5;
+    }
+
+    /* ── Bidding Screen ── */
+    .bid-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    /* Team stats banner */
+    .team-stats-bar {
+      display: flex;
+      gap: 8px;
+    }
+    .team-stat-item {
+      flex: 1;
+      padding: 10px 8px;
+      border-radius: var(--radius-md);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    .team-stat-label {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-4);
+      font-weight: 600;
+    }
+    .team-stat-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      margin-top: 2px;
+    }
+    .team-stat-value.purse { color: var(--accent-green); }
+    .team-stat-value.squad { color: var(--accent-indigo); }
+
+    /* Player card */
+    .mobile-player-card {
+      padding: 24px;
+      border-radius: var(--radius-xl);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      text-align: center;
+      animation: slideInUp 0.4s ease;
+    }
+    .mobile-player-card.active {
+      border-color: var(--accent-indigo);
+      box-shadow: 0 0 30px rgba(99,102,241,0.15);
+    }
+
+    .mobile-player-avatar {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 14px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #fff;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .mobile-player-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+    }
+
+    .mobile-player-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .mobile-player-meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+      font-size: 0.78rem;
+      color: var(--text-2);
+    }
+
+    .mobile-badge {
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .mobile-player-base {
+      font-size: 0.8rem;
+      color: var(--text-3);
+      margin-top: 4px;
+    }
+    .mobile-player-base span {
+      color: var(--accent-gold);
+      font-weight: 700;
+    }
+
+    /* Bid display */
+    .bid-display {
+      padding: 20px;
+      border-radius: var(--radius-lg);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .bid-amount-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-3);
+      font-weight: 600;
+    }
+
+    .bid-amount-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: var(--accent-gold);
+      margin: 4px 0;
+      transition: var(--transition);
+    }
+
+    .bid-amount-team {
+      font-size: 0.85rem;
+      color: var(--text-2);
+      margin-bottom: 4px;
+    }
+
+    .bid-next-info {
+      font-size: 0.72rem;
+      color: var(--text-4);
+    }
+
+    /* Bid history mini */
+    .bid-history-mini {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 12px;
+    }
+    .bid-mini-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--glass-heavy);
+      font-size: 0.72rem;
+    }
+    .bid-mini-team {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .bid-mini-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .bid-mini-amount {
+      color: var(--accent-gold);
+      font-weight: 700;
+    }
+
+    /* Place bid button */
+    .bid-action-area {
+      margin-top: auto;
+      padding: 8px 0 env(safe-area-inset-bottom, 8px);
+    }
+
+    .place-bid-btn {
+      width: 100%;
+      padding: 18px 24px;
+      border-radius: var(--radius-lg);
+      border: none;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+      letter-spacing: 0.5px;
+    }
+    .place-bid-btn.can-bid {
+      background: linear-gradient(135deg, var(--accent-green), #059669);
+      color: #fff;
+      box-shadow: 0 6px 24px rgba(16,185,129,0.35);
+      animation: gentle-pulse 2s ease-in-out infinite;
+    }
+    .place-bid-btn.can-bid:hover {
+      box-shadow: 0 8px 32px rgba(16,185,129,0.5);
+      transform: translateY(-2px);
+    }
+    .place-bid-btn.can-bid:active { transform: scale(0.97); animation: none; }
+
+    .place-bid-btn.is-highest {
+      background: linear-gradient(135deg, var(--accent-gold), #d97706);
+      color: #fff;
+      cursor: default;
+      animation: none;
+    }
+
+    .place-bid-btn:disabled {
+      background: var(--glass-heavy);
+      color: var(--text-4);
+      cursor: not-allowed;
+      box-shadow: none;
+      animation: none;
+    }
+
+    .bid-btn-subtitle {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      opacity: 0.8;
+      margin-top: 2px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Waiting screen */
+    .waiting-screen {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .waiting-content h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.5rem;
+      color: var(--text-2);
+      margin-bottom: 8px;
+    }
+    .waiting-content p {
+      color: var(--text-3);
+      font-size: 0.9rem;
+    }
+    .waiting-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      animation: bounce 1.5s ease infinite;
+    }
+
+    /* Status messages */
+    .status-bar {
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      text-align: center;
+      font-size: 0.82rem;
+      font-weight: 600;
+      animation: fadeIn 0.3s ease;
+    }
+    .status-bar.sold {
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.2);
+      color: var(--accent-green);
+    }
+    .status-bar.unsold {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.2);
+      color: var(--accent-red);
+    }
+    .status-bar.info {
+      background: rgba(99,102,241,0.1);
+      border: 1px solid rgba(99,102,241,0.2);
+      color: var(--accent-indigo);
+    }
+    .status-bar.warning {
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.2);
+      color: var(--accent-gold);
+    }
+
+    /* Confirm overlay */
+    .confirm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      animation: fadeIn 0.2s ease;
+      padding: 24px;
+    }
+    .confirm-card {
+      width: 100%;
+      max-width: 340px;
+      padding: 32px 24px;
+      border-radius: var(--radius-xl);
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      text-align: center;
+      animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .confirm-card h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.2rem;
+      margin-bottom: 6px;
+    }
+    .confirm-card p {
+      font-size: 0.85rem;
+      color: var(--text-3);
+      margin-bottom: 20px;
+    }
+    .confirm-amount {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--accent-gold);
+      margin: 8px 0 16px;
+    }
+    .confirm-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .confirm-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      border: none;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .confirm-btn.yes {
+      background: linear-gradient(135deg, var(--accent-green), #059669);
+      color: #fff;
+    }
+    .confirm-btn.no {
+      background: var(--glass-heavy);
+      color: var(--text-2);
+      border: 1px solid var(--border);
+    }
+
+    /* ── Animations ── */
+    @keyframes slideInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25%  { transform: translateX(-6px); }
+      75%  { transform: translateX(6px); }
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-10px); }
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.4; }
+    }
+    @keyframes gentle-pulse {
+      0%, 100% { box-shadow: 0 6px 24px rgba(16,185,129,0.35); }
+      50%      { box-shadow: 0 6px 32px rgba(16,185,129,0.5); }
+    }
+    @keyframes bid-flash {
+      0%   { background: rgba(245,158,11,0.2); }
+      100% { background: transparent; }
+    }
+
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+    /* Expired / Error screen */
+    .expired-screen {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .expired-card {
+      max-width: 380px;
+      padding: 40px 32px;
+      border-radius: var(--radius-xl);
+      background: var(--bg-card);
+      border: 1px solid rgba(239,68,68,0.15);
+      text-align: center;
+      animation: slideInUp 0.6s ease;
+    }
+    .expired-card .expired-icon { font-size: 3rem; margin-bottom: 16px; }
+    .expired-card h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
+      color: var(--accent-red);
+      margin-bottom: 8px;
+    }
+    .expired-card p {
+      font-size: 0.9rem;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div id="mobile-app"></div>
+
+  <script>
+    // ─────────────────────────────────────────────
+    // Mobile Bidding Client
+    // ─────────────────────────────────────────────
+
+    const app = document.getElementById('mobile-app');
+
+    // Parse session token from URL
+    const params = new URLSearchParams(window.location.search);
+    const sessionToken = params.get('session');
+
+    // State
+    let ws = null;
+    let connected = false;
+    let authenticated = false;
+    let myTeam = null;
+    let auctionState = null;
+    let showConfirm = false;
+    let statusMessage = null;
+    let statusTimeout = null;
+
+    // ── Format pts ──
+    function fmt(pts) {
+      return pts.toLocaleString('en-IN') + ' pts';
+    }
+
+    function getInitials(name) {
+      const parts = name.split(' ');
+      if (parts.length === 1) return parts[0][0].toUpperCase();
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+
+    // ── Render ──
+    function render() {
+      if (!sessionToken) {
+        renderExpired('Invalid Link', 'This link is not valid. Please scan the QR code again or contact the organizer.');
+        return;
+      }
+
+      if (!authenticated) {
+        renderLogin();
+        return;
+      }
+
+      renderBidding();
+    }
+
+    function renderExpired(title, message) {
+      app.innerHTML = `
+        <header class="mobile-header">
+          <div class="mobile-brand">NPL AUCTION</div>
+        </header>
+        <div class="expired-screen">
+          <div class="expired-card">
+            <div class="expired-icon">⚠️</div>
+            <h2>${title}</h2>
+            <p>${message}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderLogin() {
+      // If login form already exists, just update the button state
+      const existingInput = document.getElementById('team-code-input');
+      if (existingInput) {
+        const btn = document.getElementById('login-btn');
+        if (btn && !btn.textContent.includes('Connecting')) {
+          btn.disabled = !connected;
+        }
+        // Update connection dot
+        const dot = document.querySelector('.connection-dot');
+        if (dot) {
+          dot.className = 'connection-dot' + (connected ? '' : ' disconnected');
+        }
+        const statusText = document.querySelector('.mobile-header span[style]');
+        if (statusText) {
+          statusText.textContent = connected ? 'Connected' : 'Connecting...';
+        }
+        return;
+      }
+
+      app.innerHTML = `
+        <header class="mobile-header">
+          <div class="mobile-brand">NPL AUCTION</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div class="connection-dot ${connected ? '' : 'disconnected'}"></div>
+            <span style="font-size:0.7rem;color:var(--text-4)">${connected ? 'Connected' : 'Connecting...'}</span>
+          </div>
+        </header>
+        <div class="login-screen">
+          <div class="login-card">
+            <div class="login-icon">🏏</div>
+            <div class="login-title">Team Login</div>
+            <div class="login-subtitle">Enter your team code to start bidding</div>
+            <input type="text" id="team-code-input" class="login-input"
+                   placeholder="e.g. BFC" maxlength="10" autocomplete="off" autofocus>
+            <button id="login-btn" class="login-btn" ${!connected ? 'disabled' : ''}>
+              🔑 Join Auction
+            </button>
+            <div id="login-error-area"></div>
+            <div class="login-hint">
+              Your team code is the short name assigned during setup.<br>
+              Ask the organizer if you don't know your code.
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Bind events
+      const input = document.getElementById('team-code-input');
+      const btn = document.getElementById('login-btn');
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') doLogin();
+      });
+      btn.addEventListener('click', doLogin);
+    }
+
+    function doLogin() {
+      const input = document.getElementById('team-code-input');
+      const code = input.value.trim();
+      if (!code) return;
+
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true;
+      btn.textContent = 'Connecting...';
+
+      ws.send(JSON.stringify({
+        type: 'mobile-auth',
+        teamCode: code,
+        sessionToken: sessionToken,
+      }));
+    }
+
+    function showLoginError(msg) {
+      const area = document.getElementById('login-error-area');
+      if (area) {
+        area.innerHTML = `<div class="login-error">${msg}</div>`;
+      }
+      const btn = document.getElementById('login-btn');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '🔑 Join Auction';
+      }
+    }
+
+    function renderBidding() {
+      if (!auctionState) {
+        app.innerHTML = `
+          <header class="mobile-header">
+            <div class="mobile-brand">NPL AUCTION</div>
+            <div class="mobile-team-badge" style="background:${myTeam.teamColor};color:${myTeam.teamTextColor}">
+              <div class="connection-dot" style="background:${connected ? 'lime':'red'}"></div>
+              ${myTeam.teamShortName}
+            </div>
+          </header>
+          <div class="waiting-screen">
+            <div class="waiting-content">
+              <div class="waiting-icon">⏳</div>
+              <h2>Waiting for Auction</h2>
+              <p>The auction hasn't started yet. Please wait for the organizer.</p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const state = auctionState;
+      const myTeamData = state.myTeam;
+      const isMyBid = state.currentBidder === myTeam.teamId;
+      const isBidding = state.phase === 'bidding';
+      const isWaiting = state.phase === 'waiting';
+      const isComplete = state.phase === 'complete';
+
+      // Check if team can afford bid
+      let canAffordBid = false;
+      if (myTeamData && isBidding) {
+        const nextBid = isMyBid ? state.currentBid : state.nextBidAmount;
+        const slotsAfter = Math.max(0, 12 - (myTeamData.squad?.length || 0) - 1);
+        const reserve = slotsAfter * 1000;
+        const squadFull = (myTeamData.squad?.length || 0) >= 14;
+        canAffordBid = !isMyBid && !squadFull && myTeamData.purse >= nextBid + reserve;
+      }
+
+      app.innerHTML = `
+        <header class="mobile-header">
+          <div class="mobile-brand">NPL AUCTION</div>
+          <div class="mobile-team-badge" style="background:${myTeam.teamColor};color:${myTeam.teamTextColor}">
+            <div class="connection-dot" style="background:${connected ? 'lime':'red'}"></div>
+            ${myTeam.teamShortName}
+          </div>
+        </header>
+
+        <div class="bid-screen">
+          ${statusMessage ? `<div class="status-bar ${statusMessage.type}">${statusMessage.text}</div>` : ''}
+
+          <!-- Team Stats -->
+          <div class="team-stats-bar">
+            <div class="team-stat-item">
+              <div class="team-stat-label">Purse</div>
+              <div class="team-stat-value purse">${myTeamData ? fmt(myTeamData.purse) : '—'}</div>
+            </div>
+            <div class="team-stat-item">
+              <div class="team-stat-label">Squad</div>
+              <div class="team-stat-value squad">${myTeamData ? myTeamData.squad?.length || 0 : 0}/14</div>
+            </div>
+            <div class="team-stat-item">
+              <div class="team-stat-label">Progress</div>
+              <div class="team-stat-value">${state.soldCount + state.unsoldCount}/${state.totalPlayers}</div>
+            </div>
+          </div>
+
+          ${isComplete ? `
+            <div class="waiting-screen" style="flex:1;">
+              <div class="waiting-content">
+                <div class="waiting-icon">🏆</div>
+                <h2>Auction Complete!</h2>
+                <p>${state.soldCount} sold • ${state.unsoldCount} unsold</p>
+              </div>
+            </div>
+          ` : isWaiting ? `
+            <div class="waiting-screen" style="flex:1;">
+              <div class="waiting-content">
+                <div class="waiting-icon">⏳</div>
+                <h2>Next Player Coming Up</h2>
+                <p>Player ${state.playerIndex + 1} of ${state.totalPlayers} • ${state.remainingPlayers} remaining</p>
+              </div>
+            </div>
+          ` : `
+            <!-- Player Card -->
+            <div class="mobile-player-card active">
+              <div class="mobile-player-avatar" style="background: linear-gradient(135deg, var(--accent-indigo), #8b5cf6);">
+                ${state.currentPlayer?.image
+                  ? `<img src="${state.currentPlayer.image}" alt="${state.currentPlayer.name}">`
+                  : getInitials(state.currentPlayer?.name || '?')}
+              </div>
+              <div class="mobile-player-name">${state.currentPlayer?.name || 'Unknown'}</div>
+              <div class="mobile-player-meta">
+                <span class="mobile-badge" style="background:rgba(99,102,241,0.15);color:var(--accent-indigo);">
+                  ${state.currentPlayer?.role || ''}
+                </span>
+                ${state.currentPlayer?.isWK ? '<span class="mobile-badge" style="background:rgba(16,185,129,0.15);color:var(--accent-green);">🧤 WK</span>' : ''}
+                <span>📍 ${state.currentPlayer?.location || ''}</span>
+              </div>
+              <div class="mobile-player-base">Base: <span>${fmt(state.currentPlayer?.basePrice || 0)}</span></div>
+            </div>
+
+            <!-- Bid Display -->
+            <div class="bid-display">
+              <div class="bid-amount-label">Current Bid</div>
+              <div class="bid-amount-value">${fmt(state.currentBid)}</div>
+              ${state.currentBidderTeam ? `
+                <div class="bid-amount-team" style="color:${state.currentBidderTeam.color}">
+                  🏆 ${state.currentBidderTeam.shortName || state.currentBidderTeam.name}
+                  ${isMyBid ? '<span style="color:var(--accent-gold);"> (You)</span>' : ''}
+                </div>
+              ` : '<div class="bid-amount-team">No bids yet</div>'}
+              <div class="bid-next-info">
+                ${!isMyBid && state.nextBidAmount ? `Next bid: ${fmt(state.nextBidAmount)} (+${fmt(state.increment)})` : ''}
+              </div>
+
+              ${state.bidHistory && state.bidHistory.length > 0 ? `
+                <div class="bid-history-mini">
+                  ${[...state.bidHistory].reverse().map(b => `
+                    <div class="bid-mini-entry">
+                      <span class="bid-mini-team">
+                        <span class="bid-mini-dot" style="background:${b.teamColor}"></span>
+                        ${b.teamName}
+                      </span>
+                      <span class="bid-mini-amount">${fmt(b.amount)}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+            </div>
+          `}
+
+          ${isBidding ? `
+            <!-- Bid Button -->
+            <div class="bid-action-area">
+              <button id="place-bid-btn"
+                class="place-bid-btn ${isMyBid ? 'is-highest' : canAffordBid ? 'can-bid' : ''}"
+                ${!canAffordBid || isMyBid ? 'disabled' : ''}>
+                ${isMyBid
+                  ? '🏆 You are the highest bidder'
+                  : canAffordBid
+                    ? `💰 Place Bid — ${fmt(state.nextBidAmount)}<span class="bid-btn-subtitle">Tap to bid</span>`
+                    : '❌ Cannot bid'}
+              </button>
+            </div>
+          ` : ''}
+        </div>
+
+        ${showConfirm ? `
+          <div class="confirm-overlay" id="confirm-overlay">
+            <div class="confirm-card">
+              <h3>Confirm Bid</h3>
+              <p>You are about to place a bid of</p>
+              <div class="confirm-amount">${fmt(state.nextBidAmount)}</div>
+              <p style="font-size:0.75rem;">for <strong>${state.currentPlayer?.name}</strong></p>
+              <div class="confirm-actions">
+                <button class="confirm-btn no" id="confirm-no">Cancel</button>
+                <button class="confirm-btn yes" id="confirm-yes">✅ Confirm Bid</button>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+      `;
+
+      // Bind bid button
+      const bidBtn = document.getElementById('place-bid-btn');
+      if (bidBtn && canAffordBid && !isMyBid) {
+        bidBtn.addEventListener('click', () => {
+          showConfirm = true;
+          render();
+        });
+      }
+
+      // Bind confirm overlay
+      if (showConfirm) {
+        document.getElementById('confirm-no')?.addEventListener('click', () => {
+          showConfirm = false;
+          render();
+        });
+        document.getElementById('confirm-yes')?.addEventListener('click', () => {
+          showConfirm = false;
+          placeBid();
+          render();
+        });
+        document.getElementById('confirm-overlay')?.addEventListener('click', (e) => {
+          if (e.target.id === 'confirm-overlay') {
+            showConfirm = false;
+            render();
+          }
+        });
+      }
+    }
+
+    function placeBid() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type: 'mobile-bid' }));
+      setStatus('Bid submitted...', 'info', 2000);
+    }
+
+    function setStatus(text, type, duration = 3000) {
+      statusMessage = { text, type };
+      clearTimeout(statusTimeout);
+      statusTimeout = setTimeout(() => {
+        statusMessage = null;
+        render();
+      }, duration);
+    }
+
+    // ── WebSocket Connection ──
+    let wsRetries = 0;
+    let connectTimeout = null;
+
+    function connectWS() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const url = `${protocol}//${window.location.host}`;
+
+      console.log('[Mobile] Connecting to:', url);
+
+      try {
+        ws = new WebSocket(url);
+      } catch (e) {
+        console.warn('WS connect failed:', e);
+        wsRetries++;
+        if (wsRetries > 5) {
+          renderExpired('Connection Failed',
+            'Unable to connect to the auction server. Please make sure:<br><br>' +
+            '• Your device is on the <strong>same Wi-Fi</strong> as the host<br>' +
+            '• The URL includes port <strong>:3000</strong><br>' +
+            '• The auction server is running');
+        } else {
+          setTimeout(connectWS, 3000);
+        }
+        return;
+      }
+
+      // Timeout: if WS doesn't open within 8 seconds, show error
+      clearTimeout(connectTimeout);
+      connectTimeout = setTimeout(() => {
+        if (!connected) {
+          wsRetries++;
+          if (wsRetries > 3) {
+            renderExpired('Connection Timeout',
+              'Cannot reach the auction server. Please verify:<br><br>' +
+              '• You are on the <strong>same Wi-Fi network</strong><br>' +
+              '• Use the exact URL from the QR code<br>' +
+              '• URL should be like: <strong>http://192.168.x.x:3000/mobile.html?session=...</strong>');
+          }
+        }
+      }, 8000);
+
+      ws.onopen = () => {
+        connected = true;
+        wsRetries = 0;
+        clearTimeout(connectTimeout);
+        console.log('[Mobile] WS connected');
+        render();
+      };
+
+      ws.onmessage = (event) => {
+        let msg;
+        try { msg = JSON.parse(event.data); }
+        catch (e) { return; }
+
+        switch (msg.type) {
+          case 'auth-result':
+            if (msg.success) {
+              authenticated = true;
+              myTeam = {
+                teamId: msg.teamId,
+                teamName: msg.teamName,
+                teamShortName: msg.teamShortName,
+                teamColor: msg.teamColor,
+                teamTextColor: msg.teamTextColor,
+              };
+              console.log('[Mobile] Authenticated as', msg.teamShortName);
+              setStatus(`Welcome, ${msg.teamName}! 🏏`, 'info', 3000);
+              render();
+            } else {
+              showLoginError(msg.error);
+            }
+            break;
+
+          case 'state-update':
+            const prevBidder = auctionState?.currentBidder;
+            auctionState = msg.state;
+
+            // Show feedback when another team bids
+            if (myTeam && prevBidder === myTeam.teamId && msg.state.currentBidder !== myTeam.teamId) {
+              setStatus('⚡ Another team has outbid you!', 'warning', 3000);
+            }
+
+            showConfirm = false; // close confirm on state change
+            render();
+            break;
+
+          case 'bid-result':
+            if (msg.success) {
+              setStatus('✅ Bid placed successfully!', 'sold', 2000);
+            } else {
+              setStatus(`❌ ${msg.error}`, 'unsold', 3000);
+            }
+            render();
+            break;
+
+          case 'kicked':
+            authenticated = false;
+            myTeam = null;
+            auctionState = null;
+            renderExpired('Session Ended', msg.error || 'You have been disconnected.');
+            break;
+
+          case 'host-disconnected':
+            setStatus('⚠️ Auction host disconnected', 'warning', 5000);
+            render();
+            break;
+        }
+      };
+
+      ws.onclose = () => {
+        connected = false;
+        console.log('[Mobile] WS disconnected');
+        render(); // Always update UI to show disconnected state
+        if (authenticated) {
+          setStatus('🔄 Reconnecting...', 'warning', 10000);
+        }
+        setTimeout(connectWS, 3000);
+      };
+
+      ws.onerror = () => {
+        console.warn('[Mobile] WS error');
+      };
+    }
+
+    // ── Init ──
+    render();
+    connectWS();
+  </script>
+</body>
+</html>

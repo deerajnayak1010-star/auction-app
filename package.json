@@ -1,0 +1,14 @@
+{
+  "name": "nakre-premier-league-auction",
+  "version": "1.0.0",
+  "description": "Cricket auction application with mobile bidding support",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "ws": "^8.16.0"
+  }
+}

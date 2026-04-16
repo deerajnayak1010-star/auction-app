@@ -23,6 +23,8 @@ export class AuctionEngine {
     this.currentBid = 0;
     this.currentBidder = null;
     this.bidHistory = [];       // bids for current player
+    this.bidUndoStack = [];     // undo snapshots
+    this.bidRedoStack = [];     // redo snapshots
     this.soldPlayers = [];      // all sold results
     this.unsoldPlayers = [];    // unsold player objects
     this.auctionLog = [];       // full activity log
@@ -42,10 +44,11 @@ export class AuctionEngine {
 
   /**
    * Get the bid increment based on the current bid amount.
-   * Up to 10,000 → +1,000 | 10,000+ → +2,000
+   * Up to 10,000 → +500 | 10,000–20,000 → +1,000 | 20,000+ → +2,000
    */
   getIncrement(bid) {
-    if (bid < 10000) return 1000;
+    if (bid < 10000) return 500;
+    if (bid < 20000) return 1000;
     return 2000;
   }
 
@@ -67,6 +70,8 @@ export class AuctionEngine {
     this.currentBid = this.currentPlayer.basePrice;
     this.currentBidder = null;
     this.bidHistory = [];
+    this.bidUndoStack = [];
+    this.bidRedoStack = [];
     this.phase = 'bidding';
     this.playerIndex++;
 
@@ -116,10 +121,23 @@ export class AuctionEngine {
   /**
    * Place a bid for a team. Returns { success, bid, bidder } or { success: false, error }.
    */
+  /** Save a snapshot of the current bid state for undo. */
+  _saveBidSnapshot() {
+    this.bidUndoStack.push({
+      bid: this.currentBid,
+      bidder: this.currentBidder,
+      bidHistory: [...this.bidHistory],
+    });
+    this.bidRedoStack = [];
+  }
+
   placeBid(teamId) {
     if (!this.canTeamBid(teamId)) {
       return { success: false, error: 'Team cannot bid' };
     }
+
+    // Save state for undo before mutating
+    this._saveBidSnapshot();
 
     // Increase bid if not the first bidder
     if (this.currentBidder !== null) {
@@ -145,6 +163,101 @@ export class AuctionEngine {
     });
 
     return { success: true, bid: this.currentBid, bidder: teamId };
+  }
+
+  /**
+   * Place a direct bid with a specific amount.
+   * @param {string} teamId
+   * @param {number} amount - Must be greater than currentBid (or equal to base if first bid)
+   */
+  placeDirectBid(teamId, amount) {
+    if (this.phase !== 'bidding') return { success: false, error: 'Not in bidding phase' };
+
+    const team = this.teams.get(teamId);
+    if (!team) return { success: false, error: 'Team not found' };
+    if (team.squad.length >= 14) return { success: false, error: 'Squad full' };
+
+    // Amount must be >= base price
+    if (amount < this.currentPlayer.basePrice) {
+      return { success: false, error: 'Bid below base price' };
+    }
+
+    // If there's already a bid, amount must exceed current
+    if (this.currentBidder !== null && amount <= this.currentBid) {
+      return { success: false, error: 'Bid must exceed current bid' };
+    }
+
+    // Same bidder can't outbid themselves
+    if (this.currentBidder === teamId) {
+      return { success: false, error: 'Already highest bidder' };
+    }
+
+    // Reserve check
+    const slotsAfterThis = Math.max(0, 12 - team.squad.length - 1);
+    const reserve = slotsAfterThis * 1000;
+    if (team.purse < amount + reserve) {
+      return { success: false, error: 'Insufficient budget' };
+    }
+
+    // Save state for undo
+    this._saveBidSnapshot();
+
+    this.currentBid = amount;
+    this.currentBidder = teamId;
+
+    const entry = {
+      teamId,
+      teamName: team.shortName,
+      teamColor: team.color,
+      amount: this.currentBid,
+      timestamp: Date.now(),
+    };
+
+    this.bidHistory.push(entry);
+
+    this._log('bid', {
+      ...entry,
+      playerName: this.currentPlayer.name,
+    });
+
+    return { success: true, bid: this.currentBid, bidder: teamId };
+  }
+
+  // ── Undo / Redo ───────────────────────────────
+
+  canUndo() { return this.bidUndoStack.length > 0 && this.phase === 'bidding'; }
+  canRedo() { return this.bidRedoStack.length > 0 && this.phase === 'bidding'; }
+
+  undoBid() {
+    if (!this.canUndo()) return false;
+    // Push current state to redo
+    this.bidRedoStack.push({
+      bid: this.currentBid,
+      bidder: this.currentBidder,
+      bidHistory: [...this.bidHistory],
+    });
+    // Restore previous
+    const prev = this.bidUndoStack.pop();
+    this.currentBid = prev.bid;
+    this.currentBidder = prev.bidder;
+    this.bidHistory = prev.bidHistory;
+    return true;
+  }
+
+  redoBid() {
+    if (!this.canRedo()) return false;
+    // Push current state to undo
+    this.bidUndoStack.push({
+      bid: this.currentBid,
+      bidder: this.currentBidder,
+      bidHistory: [...this.bidHistory],
+    });
+    // Restore redo
+    const next = this.bidRedoStack.pop();
+    this.currentBid = next.bid;
+    this.currentBidder = next.bidder;
+    this.bidHistory = next.bidHistory;
+    return true;
   }
 
   // ── Resolution ────────────────────────────────
@@ -197,6 +310,20 @@ export class AuctionEngine {
     this.currentBid = 0;
     this.currentBidder = null;
     this.bidHistory = [];
+    this.bidUndoStack = [];
+    this.bidRedoStack = [];
+  }
+
+  /** Move all unsold players back into the active pool to be auctioned again */
+  reauctionUnsold() {
+    if (this.unsoldPlayers.length === 0) return false;
+    
+    this.playerPool = this._shuffle([...this.unsoldPlayers]);
+    this.unsoldPlayers = [];
+    this.phase = 'waiting';
+    
+    this._log('reauction', { count: this.playerPool.length });
+    return true;
   }
 
   // ── State Snapshot ────────────────────────────
@@ -215,6 +342,8 @@ export class AuctionEngine {
       currentBidder: this.currentBidder,
       currentBidderTeam: this.currentBidder ? this.teams.get(this.currentBidder) : null,
       bidHistory: [...this.bidHistory],
+      canUndo: this.canUndo(),
+      canRedo: this.canRedo(),
       nextBidAmount: this.phase === 'bidding' ? this.getNextBidAmount() : 0,
       increment: this.phase === 'bidding' ? this.getIncrement(this.currentBid) : 0,
       playerIndex: this.playerIndex,

@@ -42,6 +42,8 @@ export class UI {
       { id: 'results', label: 'Results' },
     ];
 
+    const isFs = !!document.fullscreenElement;
+
     this.headerEl.innerHTML = `
       <div class="nav-brand">NAKRE PREMIER LEAGUE</div>
       <nav class="nav-links">
@@ -49,12 +51,17 @@ export class UI {
           <button class="nav-link ${currentView === v.id ? 'active' : ''}" data-view="${v.id}">${v.label}</button>
         `).join('')}
       </nav>
-      <div class="nav-stats">
-        ${stats.remaining !== undefined ? `
-          <span>Remaining:<span class="nav-stat-value">${stats.remaining}</span></span>
-          <span>Sold:<span class="nav-stat-value">${stats.sold || 0}</span></span>
-          <span>Unsold:<span class="nav-stat-value">${stats.unsold || 0}</span></span>
-        ` : ''}
+      <div class="nav-right">
+        <div class="nav-stats">
+          ${stats.remaining !== undefined ? `
+            <span>Remaining:<span class="nav-stat-value">${stats.remaining}</span></span>
+            <span>Sold:<span class="nav-stat-value">${stats.sold || 0}</span></span>
+            <span>Unsold:<span class="nav-stat-value">${stats.unsold || 0}</span></span>
+          ` : ''}
+        </div>
+        <button class="btn-fullscreen" id="fullscreen-btn" title="${isFs ? 'Exit Fullscreen' : 'Enter Fullscreen'}">
+          ${isFs ? '⊗' : '⛶'}
+        </button>
       </div>
     `;
   }
@@ -76,16 +83,30 @@ export class UI {
                  data-team-id="${team.id}"
                  style="--team-color: ${team.color}">
               <div class="team-check-icon">✓</div>
-              <div class="team-logo-circle" style="background: ${team.color}; color: ${team.textColor}">
-                ${team.shortName}
+              <div class="team-logo-circle" style="background: ${team.color}; color: ${team.textColor}; overflow:hidden;">
+                ${team.logo ? `<img src="${team.logo}" alt="${team.shortName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : team.shortName}
               </div>
               <div class="team-name">${team.name}</div>
               <div class="team-purse">${fmt(team.purse)}</div>
-              <div style="margin-top:6px; font-size:0.7rem; color:var(--text-3)">
-                👤 Owner: <span style="color:var(--text-2)">${team.owner}</span>
-              </div>
-              <div style="font-size:0.7rem; color:var(--text-3)">
-                ⭐ Icon: <span style="color:var(--accent-gold)">${team.iconPlayer}</span>
+              <div class="team-people-row">
+                <div class="team-person">
+                  <div class="team-person-img">
+                    ${team.ownerImage ? `<img src="${team.ownerImage}" alt="${team.owner}">` : '👤'}
+                  </div>
+                  <div class="team-person-info">
+                    <span class="team-person-label">Owner</span>
+                    <span class="team-person-name">${team.owner}</span>
+                  </div>
+                </div>
+                <div class="team-person">
+                  <div class="team-person-img icon-player">
+                    ${team.iconPlayerImage ? `<img src="${team.iconPlayerImage}" alt="${team.iconPlayer}">` : '⭐'}
+                  </div>
+                  <div class="team-person-info">
+                    <span class="team-person-label">Icon Player</span>
+                    <span class="team-person-name" style="color:var(--accent-gold)">${team.iconPlayer}</span>
+                  </div>
+                </div>
               </div>
             </div>
           `).join('')}
@@ -94,6 +115,88 @@ export class UI {
           <p>${selectedTeamIds.size} team${selectedTeamIds.size !== 1 ? 's' : ''} selected (minimum 2 required)</p>
           <button class="btn btn-primary btn-lg" id="start-auction-btn" ${selectedTeamIds.size < 2 ? 'disabled' : ''}>
             🏏 Start Auction
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  // ═══════════════════════════════════════════
+  // PLAYER SELECTION PAGE (post-setup, pre-auction)
+  // ═══════════════════════════════════════════
+
+  renderPlayerSelect(players, selectedPlayerIds, currentFilter = 'All', searchQuery = '') {
+    const roles = ['All', 'Batsman', 'Bowler', 'All-Rounder', 'Wicket-Keeper'];
+
+    let filtered = players;
+    if (currentFilter === 'Wicket-Keeper') {
+      filtered = filtered.filter(p => p.isWK);
+    } else if (currentFilter !== 'All') {
+      filtered = filtered.filter(p => p.role === currentFilter);
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.location.toLowerCase().includes(q)
+      );
+    }
+
+    const allFilteredSelected = filtered.length > 0 && filtered.every(p => selectedPlayerIds.has(p.name));
+
+    this.mainEl.innerHTML = `
+      <div class="player-select-page">
+        <div class="player-select-header">
+          <div>
+            <h1 class="hero-title" style="font-size:clamp(1.8rem,3.5vw,2.8rem)">Select Players for Auction</h1>
+            <p class="hero-subtitle">Choose which players to include in this auction</p>
+          </div>
+          <div class="player-select-actions">
+            <label class="select-all-label" id="select-all-players-btn">
+              <span class="custom-checkbox ${allFilteredSelected ? 'checked' : ''}"></span>
+              Select All ${currentFilter !== 'All' ? currentFilter + 's' : 'Players'}
+            </label>
+            <span class="player-select-count">${selectedPlayerIds.size} / ${players.length} selected</span>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:20px;">
+          <div class="pool-filters">
+            ${roles.map(r => `
+              <button class="filter-btn ${currentFilter === r ? 'active' : ''}" data-role="${r}">
+                ${r === 'All' ? 'All' : r === 'Wicket-Keeper' ? '🧤 WK' : (ROLE_CONFIG[r]?.icon || '') + ' ' + r}
+              </button>
+            `).join('')}
+          </div>
+          <input type="text" class="search-input" placeholder="Search players..." id="player-select-search" value="${searchQuery}">
+        </div>
+
+        <div class="players-grid player-select-grid">
+          ${filtered.map(player => {
+            const role = ROLE_CONFIG[player.role] || {};
+            const isSelected = selectedPlayerIds.has(player.name);
+            return `
+              <div class="player-pool-card player-select-item ${isSelected ? 'ps-selected' : ''}" data-player-name="${player.name}">
+                <div class="ps-check-icon">${isSelected ? '✓' : ''}</div>
+                <div class="player-initials" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}88); overflow: hidden; width:56px; height:56px;">
+                  ${player.image ? `<img src="${player.image}" alt="${player.name}" style="width:100%;height:100%;object-fit:cover;object-position:top;">` : getInitials(player.name)}
+                </div>
+                <div class="player-name">${player.name}</div>
+                <div class="player-meta">
+                  <span class="badge badge-role" style="background: ${role.color}22; color: ${role.color}">${role.icon || ''} ${player.role}</span>
+                  ${player.isWK ? '<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;">🧤 WK</span>' : ''}
+                </div>
+                <div class="player-base">Base: ${fmt(player.basePrice)}</div>
+              </div>
+            `;
+          }).join('')}
+          ${filtered.length === 0 ? '<p style="grid-column:1/-1; text-align:center; color:var(--text-4); padding:40px;">No players found</p>' : ''}
+        </div>
+
+        <div class="setup-footer" style="margin-top:24px;">
+          <p>${selectedPlayerIds.size} player${selectedPlayerIds.size !== 1 ? 's' : ''} selected for auction</p>
+          <button class="btn btn-primary btn-lg" id="confirm-players-btn" ${selectedPlayerIds.size === 0 ? 'disabled' : ''}>
+            🏏 Proceed to Auction with ${selectedPlayerIds.size} Players
           </button>
         </div>
       </div>
@@ -141,10 +244,10 @@ export class UI {
             const role = ROLE_CONFIG[player.role] || {};
             return `
               <div class="player-pool-card">
-                <div class="player-initials" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}88); overflow: hidden;">
-                  ${player.image ? \`<img src="\${player.image}" alt="\${player.name}" style="width:100%;height:100%;object-fit:cover;">\` : getInitials(player.name)}
+                <div class="player-initials" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}88); overflow: hidden; width:64px; height:64px;">
+                  ${player.image ? `<img src="${player.image}" alt="${player.name}" style="width:100%;height:100%;object-fit:cover;object-position:top;">` : getInitials(player.name)}
                 </div>
-                <div class="player-name">\${player.name}</div>
+                <div class="player-name">${player.name}</div>
                 <div class="player-meta">
                   <span class="badge badge-role" style="background: ${role.color}22; color: ${role.color}">${role.icon || ''} ${player.role}</span>
                   ${player.isWK ? '<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;">🧤 WK</span>' : ''}
@@ -170,7 +273,7 @@ export class UI {
   // AUCTION PAGE
   // ═══════════════════════════════════════════
 
-  renderAuction(state) {
+  renderAuction(state, connectedMobiles = []) {
     if (state.phase === 'complete') {
       this.renderAuctionComplete(state);
       return;
@@ -178,15 +281,16 @@ export class UI {
 
     this.mainEl.innerHTML = `
       <div class="auction-layout">
-        ${this._renderTeamsSidebar(state)}
+        ${this._renderTeamsSidebar(state, connectedMobiles)}
         ${this._renderAuctionCenter(state)}
-        ${this._renderInfoPanel(state)}
+        ${this._renderInfoPanel(state, connectedMobiles)}
         ${this._renderActivityLog(state)}
       </div>
     `;
   }
 
-  _renderTeamsSidebar(state) {
+  _renderTeamsSidebar(state, connectedMobiles = []) {
+    const connectedIds = new Set(connectedMobiles.map(m => m.teamId));
     return `
       <div class="auction-sidebar">
         ${state.teams.map(team => {
@@ -194,14 +298,18 @@ export class UI {
           const isFull = team.squad.length >= 14;
           const pursePct = (team.purse / 100000) * 100;
           const barClass = pursePct < 15 ? 'critical' : pursePct < 40 ? 'low' : '';
+          const isMobileConnected = connectedIds.has(team.id);
           return `
             <div class="sidebar-team ${isHighest ? 'highest-bidder' : ''} ${isFull ? 'squad-full' : ''}"
                  style="--team-color: ${team.color}">
-              <div class="sidebar-team-logo" style="background: ${team.color}; color: ${team.textColor}">
-                ${team.shortName}
+              <div class="sidebar-team-logo" style="background: ${team.color}; color: ${team.textColor}; overflow:hidden;">
+                ${team.logo ? `<img src="${team.logo}" alt="${team.shortName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : team.shortName}
               </div>
               <div class="sidebar-team-info">
-                <div class="sidebar-team-name">${team.shortName}</div>
+                <div class="sidebar-team-name">
+                  ${team.shortName}
+                  ${isMobileConnected ? '<span class="mobile-indicator" title="Connected via mobile">📱</span>' : ''}
+                </div>
                 <div class="sidebar-team-purse">${fmt(team.purse)}</div>
                 <div class="sidebar-team-squad">${team.squad.length}/14 players</div>
                 <div class="purse-bar">
@@ -234,10 +342,10 @@ export class UI {
     return `
       <div class="auction-center">
         <div class="player-auction-card bidding" id="player-card">
-          <div class="player-auction-initials" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}99); overflow: hidden;">
-            ${player.image ? \`<img src="\${player.image}" alt="\${player.name}" style="width:100%;height:100%;object-fit:cover;">\` : getInitials(player.name)}
+          <div class="player-auction-initials" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}99); overflow: hidden; width:140px; height:140px;">
+            ${player.image ? `<img src="${player.image}" alt="${player.name}" style="width:100%;height:100%;object-fit:cover;object-position:top;">` : getInitials(player.name)}
           </div>
-          <div class="player-auction-name">\${player.name}</div>
+          <div class="player-auction-name">${player.name}</div>
           <div class="player-auction-meta">
             <span class="badge badge-role" style="background: ${role.color}22; color: ${role.color}">${role.icon || ''} ${player.role}</span>
             ${player.isWK ? '<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;">🧤 WK</span>' : ''}
@@ -274,9 +382,10 @@ export class UI {
     `;
   }
 
-  _renderInfoPanel(state) {
+  _renderInfoPanel(state, connectedMobiles = []) {
     const hasBids = state.bidHistory.length > 0;
     const bidderTeam = state.currentBidderTeam;
+    const mobileCount = connectedMobiles.length;
 
     return `
       <div class="auction-info-panel">
@@ -297,8 +406,54 @@ export class UI {
           ` : ''}
         </div>
 
+        <!-- Mobile Bidding Card -->
+        <div class="bid-info-card mobile-bid-card">
+          <div class="bid-current-label">📱 Mobile Bidding</div>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">
+            <span style="font-size:0.78rem; color:${mobileCount > 0 ? 'var(--accent-green)' : 'var(--text-4)'}">
+              ${mobileCount > 0 ? `${mobileCount} device${mobileCount !== 1 ? 's' : ''} connected` : 'No devices connected'}
+            </span>
+            <button class="btn btn-primary btn-sm" id="generate-qr-btn" style="font-size:0.72rem; padding:5px 12px;">
+              📲 QR / Link
+            </button>
+          </div>
+          ${mobileCount > 0 ? `
+            <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:8px;">
+              ${connectedMobiles.map(m => `
+                <span style="font-size:0.65rem; padding:2px 8px; border-radius:var(--radius-full); background:rgba(16,185,129,0.1); color:var(--accent-green); border:1px solid rgba(16,185,129,0.2);">
+                  📱 ${m.teamShortName}
+                </span>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+
+        ${state.phase === 'bidding' ? `
+        <div class="bid-info-card quick-bid-card">
+          <div class="bid-current-label">⚡ Quick Bid</div>
+          <div class="quick-bid-form">
+            <input type="number" id="quick-bid-amount" class="quick-bid-input"
+                   value="${state.nextBidAmount}" min="${state.currentPlayer?.basePrice || 0}" step="500"
+                   placeholder="Bid amount">
+            <select id="quick-bid-team" class="quick-bid-select">
+              <option value="">Select Team</option>
+              ${state.teams.map(t => `
+                <option value="${t.id}" ${state.currentBidder === t.id ? 'disabled' : ''}>${t.shortName} (${fmt(t.purse)})</option>
+              `).join('')}
+            </select>
+            <button class="btn btn-primary btn-sm" id="quick-bid-btn" style="width:100%">💰 Place Bid</button>
+          </div>
+        </div>
+        ` : ''}
+
         <div class="bid-info-card" style="flex:1; overflow-y:auto;">
-          <div class="bid-history-title">Bid History</div>
+          <div class="bid-history-header">
+            <div class="bid-history-title">Bid History</div>
+            <div class="bid-history-controls">
+              <button class="btn-undo-redo" id="undo-bid-btn" title="Undo last bid" ${!state.canUndo ? 'disabled' : ''}>↩ Undo</button>
+              <button class="btn-undo-redo" id="redo-bid-btn" title="Redo bid" ${!state.canRedo ? 'disabled' : ''}>↪ Redo</button>
+            </div>
+          </div>
           <div class="bid-history-list">
             ${hasBids ? [...state.bidHistory].reverse().map(entry => `
               <div class="bid-history-entry">
@@ -361,11 +516,42 @@ export class UI {
   }
 
   renderAuctionComplete(state) {
+    const hasUnsold = state.unsoldCount > 0;
+
     this.mainEl.innerHTML = `
       <div class="auction-complete">
-        <h2>🏆 Auction Complete!</h2>
+        <div class="auction-complete-icon">🏆</div>
+        <h2>Auction Complete!</h2>
         <p>${state.soldCount} players sold • ${state.unsoldCount} players unsold</p>
-        <button class="btn btn-primary btn-lg" id="view-results-btn">📊 View Results</button>
+
+        ${hasUnsold ? `
+          <div class="reauction-prompt">
+            <div class="reauction-prompt-icon">♻️</div>
+            <h3>Re-Auction Unsold Players?</h3>
+            <p class="reauction-prompt-desc">
+              ${state.unsoldCount} player${state.unsoldCount !== 1 ? 's' : ''} went unsold. 
+              Would you like to conduct a re-auction round for them?
+            </p>
+            <div class="reauction-prompt-players">
+              ${state.unsoldPlayers.slice(0, 8).map(p => `
+                <span class="reauction-player-chip">${p.name}</span>
+              `).join('')}
+              ${state.unsoldPlayers.length > 8 ? `<span class="reauction-player-chip more">+${state.unsoldPlayers.length - 8} more</span>` : ''}
+            </div>
+            <div class="reauction-prompt-actions">
+              <button class="btn btn-reauction-yes btn-lg" id="reauction-yes-btn">
+                ✅ Yes, Re-Auction
+              </button>
+              <button class="btn btn-reauction-no btn-lg" id="reauction-no-btn">
+                ❌ No, View Results
+              </button>
+            </div>
+          </div>
+        ` : `
+          <div class="auction-complete-actions">
+            <button class="btn btn-primary btn-lg" id="view-results-btn">📊 View Results</button>
+          </div>
+        `}
       </div>
     `;
   }
@@ -397,6 +583,9 @@ export class UI {
         <div class="results-header">
           <h2>Auction Results</h2>
           <p>${state.soldCount} players sold across ${state.teams.length} teams</p>
+          <div style="margin-top:16px; display:flex; gap:12px; justify-content:center;">
+            <button class="btn btn-primary" id="download-all-posters-btn">📥 Download All Team Posters</button>
+          </div>
         </div>
 
         <div class="results-stats">
@@ -425,8 +614,8 @@ export class UI {
           ${state.teams.map(team => `
             <div class="result-team-card">
               <div class="result-team-header" style="--team-color: ${team.color}">
-                <div class="result-team-logo" style="background: ${team.color}; color: ${team.textColor}">
-                  ${team.shortName}
+                <div class="result-team-logo" style="background: ${team.color}; color: ${team.textColor}; overflow:hidden;">
+                  ${team.logo ? `<img src="${team.logo}" alt="${team.shortName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : team.shortName}
                 </div>
                 <div class="result-team-info">
                   <div class="result-team-name">${team.name}</div>
@@ -435,6 +624,10 @@ export class UI {
                     <span>Purse: ${fmt(team.purse)}</span>
                     <span>Squad: ${team.squad.length}/14</span>
                   </div>
+                </div>
+                <div class="result-team-people">
+                  ${team.ownerImage ? `<img class="result-team-avatar" src="${team.ownerImage}" alt="${team.owner}" title="Owner: ${team.owner}">` : ''}
+                  ${team.iconPlayerImage ? `<img class="result-team-avatar icon" src="${team.iconPlayerImage}" alt="${team.iconPlayer}" title="Icon: ${team.iconPlayer}">` : ''}
                 </div>
               </div>
               <div class="result-squad-list">
@@ -454,13 +647,22 @@ export class UI {
                   <div class="result-squad-empty">No players acquired</div>
                 `}
               </div>
+              <div style="padding:8px 20px 14px; display:flex; gap:8px;">
+                <button class="btn btn-ghost btn-sm poster-preview-btn" data-team-id="${team.id}">🖼️ Preview</button>
+                <button class="btn btn-primary btn-sm poster-download-btn" data-team-id="${team.id}">📥 Download Poster</button>
+              </div>
             </div>
           `).join('')}
         </div>
 
         ${state.unsoldPlayers.length > 0 ? `
           <div class="unsold-section">
-            <h3>❌ Unsold Players (${state.unsoldPlayers.length})</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="margin: 0;">❌ Unsold Players (${state.unsoldPlayers.length})</h3>
+              <button id="reauction-btn" class="btn btn-primary" style="background: var(--accent-gold); color: #fff;">
+                ♻️ Re-auction Unsold Players
+              </button>
+            </div>
             <div class="unsold-grid">
               ${state.unsoldPlayers.map(p => `
                 <span class="unsold-chip">${p.name} • ${p.role}</span>
@@ -526,4 +728,101 @@ export class UI {
       card.insertAdjacentHTML('beforeend', '<div class="auction-overlay unsold">UNSOLD</div>');
     }
   }
+
+  // ═══════════════════════════════════════════
+  // QR CODE MODAL
+  // ═══════════════════════════════════════════
+
+  /** Show QR code modal with mobile bidding link */
+  showQRModal(url, ip, token) {
+    // Remove existing modal if any
+    this.closeQRModal();
+
+    const qrImgSrc = `/api/qr?data=${encodeURIComponent(url)}`;
+
+    const modal = document.createElement('div');
+    modal.id = 'qr-modal';
+    modal.className = 'qr-modal-overlay';
+    modal.innerHTML = `
+      <div class="qr-modal-card">
+        <button class="qr-modal-close" id="close-qr-modal">&times;</button>
+        <div class="qr-modal-icon">📱</div>
+        <h3 class="qr-modal-title">Mobile Bidding Access</h3>
+        <p class="qr-modal-desc">Scan this QR code or share the link to enable mobile bidding</p>
+
+        <div class="qr-canvas-wrap">
+          <img id="qr-image" src="${qrImgSrc}" alt="QR Code" width="220" height="220"
+               style="display:block; border-radius:8px;"
+               onerror="this.alt='QR code failed to load'; this.style.padding='60px 20px'; this.style.color='#94a3b8'; this.style.fontSize='14px'; this.style.textAlign='center';">
+        </div>
+
+        <div class="qr-link-box">
+          <span class="qr-link-text" id="mobile-link-text">${url}</span>
+          <button class="qr-copy-btn" id="copy-link-btn" title="Copy link">📋</button>
+        </div>
+
+        <div class="qr-info">
+          <div class="qr-info-item">
+            <span class="qr-info-label">Network IP</span>
+            <span class="qr-info-value">${ip}:3000</span>
+          </div>
+          <div class="qr-info-item">
+            <span class="qr-info-label">Expires</span>
+            <span class="qr-info-value">24 hours</span>
+          </div>
+        </div>
+
+        <p class="qr-hint">
+          📌 Teams enter their <strong>short name</strong> (e.g. BFC, MI) as the team code to join.
+          <br>All devices must be on the <strong>same Wi-Fi network</strong>.
+        </p>
+      </div>
+    `;
+
+    // Append inside #app so click delegation works
+    document.getElementById('app').appendChild(modal);
+
+    // Direct event listeners for reliability
+    const closeBtn = modal.querySelector('#close-qr-modal');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.closeQRModal();
+      });
+    }
+
+    // Close on overlay click (not on card click)
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        this.closeQRModal();
+      }
+    });
+
+    // Copy link button
+    const copyBtn = modal.querySelector('#copy-link-btn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(url).then(() => {
+          this.showToast('📋 Link copied to clipboard!', 'success');
+        }).catch(() => {
+          const linkEl = modal.querySelector('#mobile-link-text');
+          if (linkEl) {
+            const range = document.createRange();
+            range.selectNodeContents(linkEl);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            this.showToast('Link selected — press Ctrl+C to copy', 'info');
+          }
+        });
+      });
+    }
+  }
+
+  /** Close QR modal */
+  closeQRModal() {
+    const existing = document.getElementById('qr-modal');
+    if (existing) existing.remove();
+  }
 }
+
