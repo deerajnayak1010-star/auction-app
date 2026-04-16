@@ -238,7 +238,10 @@ export class UI {
   renderPlayerSelect(players, selectedPlayerIds, currentFilter = 'All', searchQuery = '') {
     const roles = ['All', 'Batsman', 'Bowler', 'All-Rounder', 'Wicket-Keeper'];
 
-    let filtered = players;
+    // Sort alphabetically
+    let sorted = [...players].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+
+    let filtered = sorted;
     if (currentFilter === 'Wicket-Keeper') {
       filtered = filtered.filter(p => p.isWK);
     } else if (currentFilter !== 'All') {
@@ -282,11 +285,13 @@ export class UI {
         </div>
 
         <div class="players-grid player-select-grid">
-          ${filtered.map(player => {
+          ${filtered.map((player, index) => {
             const role = ROLE_CONFIG[player.role] || {};
             const isSelected = selectedPlayerIds.has(player.name);
+            const serialNo = sorted.findIndex(p => p.name === player.name) + 1;
             return `
               <div class="player-pool-card player-select-item ${isSelected ? 'ps-selected' : ''}" data-player-name="${player.name}">
+                <div class="player-serial-no">${serialNo}</div>
                 <div class="ps-check-icon">${isSelected ? '✓' : ''}</div>
                 <div class="player-initials" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}88); overflow: hidden; width:56px; height:56px;">
                   ${player.image ? `<img src="${player.image}" alt="${player.name}" style="width:100%;height:100%;object-fit:cover;object-position:top;">` : getInitials(player.name)}
@@ -320,7 +325,10 @@ export class UI {
   renderPlayerPool(players, currentFilter = 'All', searchQuery = '') {
     const roles = ['All', 'Batsman', 'Bowler', 'All-Rounder', 'Wicket-Keeper'];
 
-    let filtered = players;
+    // Sort alphabetically A→Z (case-insensitive)
+    let sorted = [...players].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+
+    let filtered = sorted;
     if (currentFilter === 'Wicket-Keeper') {
       filtered = filtered.filter(p => p.isWK);
     } else if (currentFilter !== 'All') {
@@ -350,12 +358,16 @@ export class UI {
           </div>
         </div>
         <div class="players-grid">
-          ${filtered.map(player => {
+          ${filtered.map((player, index) => {
             const role = ROLE_CONFIG[player.role] || {};
+            // Get original serial number from sorted full list
+            const serialNo = sorted.findIndex(p => p.name === player.name) + 1;
             return `
               <div class="player-pool-card">
-                <div class="player-initials" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}88); overflow: hidden; width:64px; height:64px;">
+                <div class="player-serial-no">${serialNo}</div>
+                <div class="player-initials player-img-trigger" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}88); overflow: hidden; width:64px; height:64px; cursor:pointer;" data-player-img="${player.image || ''}" data-player-name="${player.name}" title="View Image">
                   ${player.image ? `<img src="${player.image}" alt="${player.name}" style="width:100%;height:100%;object-fit:cover;object-position:top;">` : getInitials(player.name)}
+                  ${player.image ? '<div class="player-img-overlay">🔍</div>' : ''}
                 </div>
                 <div class="player-name">${player.name}</div>
                 <div class="player-meta">
@@ -376,7 +388,51 @@ export class UI {
           <button class="btn btn-primary btn-lg" id="goto-auction-btn">🏏 Proceed to Auction</button>
         </div>
       </div>
+
+      <!-- Player Image Popup -->
+      <div class="player-img-modal" id="player-img-modal" style="display:none;">
+        <div class="player-img-modal-backdrop" id="player-img-modal-close"></div>
+        <div class="player-img-modal-content">
+          <button class="player-img-modal-x" id="player-img-modal-x">&times;</button>
+          <img id="player-img-modal-img" src="" alt="">
+          <div class="player-img-modal-name" id="player-img-modal-name"></div>
+        </div>
+      </div>
     `;
+
+    // Bind image popup events
+    this._bindImagePopup();
+  }
+
+  /** Bind click events for player image popup */
+  _bindImagePopup() {
+    document.querySelectorAll('.player-img-trigger').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const img = el.dataset.playerImg;
+        const name = el.dataset.playerName;
+        if (!img) return;
+        const modal = document.getElementById('player-img-modal');
+        const modalImg = document.getElementById('player-img-modal-img');
+        const modalName = document.getElementById('player-img-modal-name');
+        if (modal && modalImg && modalName) {
+          modalImg.src = img;
+          modalImg.alt = name;
+          modalName.textContent = name;
+          modal.style.display = 'flex';
+        }
+      });
+    });
+
+    // Close on X button
+    document.getElementById('player-img-modal-x')?.addEventListener('click', () => {
+      document.getElementById('player-img-modal').style.display = 'none';
+    });
+
+    // Close on backdrop click
+    document.getElementById('player-img-modal-close')?.addEventListener('click', () => {
+      document.getElementById('player-img-modal').style.display = 'none';
+    });
   }
 
   // ═══════════════════════════════════════════
