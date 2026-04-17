@@ -6,8 +6,13 @@
 import { ROLE_CONFIG } from './data.js';
 import { AuctionEngine } from './auction.js';
 
-const POSTER_W = 1080;
-const POSTER_H = 1080;
+// Output dimensions (social media optimized)
+const POSTER_OUTPUT_W = 1080;
+const POSTER_OUTPUT_H = 1080;
+// Internal render at 2x for HD sharpness
+const SCALE = 2;
+const POSTER_W = POSTER_OUTPUT_W * SCALE;
+const POSTER_H = POSTER_OUTPUT_H * SCALE;
 
 const ROLE_COLORS = {
   'Batsman':     '#3b82f6',
@@ -81,30 +86,36 @@ export async function generateTeamPoster(team) {
   const canvas = document.createElement('canvas');
   canvas.width = POSTER_W;
   canvas.height = POSTER_H;
+  // Set CSS display size for correct preview
+  canvas.style.width = POSTER_OUTPUT_W + 'px';
+  canvas.style.height = POSTER_OUTPUT_H + 'px';
   const ctx = canvas.getContext('2d');
+
+  // Scale all drawing operations by 2x for HD
+  ctx.scale(SCALE, SCALE);
 
   // Enable high-quality rendering
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
   // ── Background ────────────────────────────
-  const bgGrad = ctx.createLinearGradient(0, 0, 0, POSTER_H);
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, POSTER_OUTPUT_H);
   bgGrad.addColorStop(0, '#070b1e');
   bgGrad.addColorStop(0.4, '#0d1230');
   bgGrad.addColorStop(1, '#070b1e');
   ctx.fillStyle = bgGrad;
-  ctx.fillRect(0, 0, POSTER_W, POSTER_H);
+  ctx.fillRect(0, 0, POSTER_OUTPUT_W, POSTER_OUTPUT_H);
 
   // Subtle team color glow at top
-  const glowGrad = ctx.createRadialGradient(POSTER_W / 2, 0, 30, POSTER_W / 2, 0, 500);
+  const glowGrad = ctx.createRadialGradient(POSTER_OUTPUT_W / 2, 0, 30, POSTER_OUTPUT_W / 2, 0, 500);
   glowGrad.addColorStop(0, hexToRgba(team.color, 0.25));
   glowGrad.addColorStop(1, 'transparent');
   ctx.fillStyle = glowGrad;
-  ctx.fillRect(0, 0, POSTER_W, 400);
+  ctx.fillRect(0, 0, POSTER_OUTPUT_W, 400);
 
   // ── Top accent bar ────────────────────────
   ctx.fillStyle = team.color;
-  ctx.fillRect(0, 0, POSTER_W, 6);
+  ctx.fillRect(0, 0, POSTER_OUTPUT_W, 6);
 
   const PAD = 40; // side padding
 
@@ -164,58 +175,10 @@ export async function generateTeamPoster(team) {
   ctx.textBaseline = 'top';
   ctx.fillText(`Owner: ${team.owner || '—'}   •   Icon: ${team.iconPlayer || '—'}`, nameX, headerCenterY + 12);
 
-  // ── Owner & Icon Player photos at top-right corner ──
-  const avatarR = 22;
-  const avatarY = headerCenterY;
-  const avatarSpacing = 52;
-  const avatarStartX = POSTER_W - PAD - avatarR;
-
-  if (iconPlayerImg) {
-    const ipX = avatarStartX;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(ipX, avatarY, avatarR, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
-    ctx.drawImage(iconPlayerImg, ipX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2);
-    ctx.restore();
-    ctx.beginPath();
-    ctx.arc(ipX, avatarY, avatarR + 2, 0, Math.PI * 2);
-    ctx.strokeStyle = '#f59e0b';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = '#64748b';
-    ctx.font = '10px "Segoe UI", Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText('ICON', ipX, avatarY + avatarR + 4);
-  }
-
-  if (ownerImg) {
-    const ownerX = avatarStartX - avatarSpacing;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(ownerX, avatarY, avatarR, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
-    ctx.drawImage(ownerImg, ownerX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2);
-    ctx.restore();
-    ctx.beginPath();
-    ctx.arc(ownerX, avatarY, avatarR + 2, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = '#64748b';
-    ctx.font = '10px "Segoe UI", Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText('OWNER', ownerX, avatarY + avatarR + 4);
-  }
-
   // ── Stats Bar ─────────────────────────────
-  const statsY = 115;
-  const statsH = 60;
-  roundRect(ctx, PAD, statsY, POSTER_W - PAD * 2, statsH, 12);
+  const statsY = 105;
+  const statsH = 56;
+  roundRect(ctx, PAD, statsY, POSTER_OUTPUT_W - PAD * 2, statsH, 12);
   ctx.fillStyle = hexToRgba(team.color, 0.1);
   ctx.fill();
   ctx.strokeStyle = hexToRgba(team.color, 0.25);
@@ -227,7 +190,7 @@ export async function generateTeamPoster(team) {
     { label: 'TOTAL SPENT', value: fmt(team.totalSpent) },
     { label: 'PURSE LEFT', value: fmt(team.purse) },
   ];
-  const statAreaW = POSTER_W - PAD * 2;
+  const statAreaW = POSTER_OUTPUT_W - PAD * 2;
   const statSlotW = statAreaW / stats.length;
 
   stats.forEach((s, i) => {
@@ -242,7 +205,7 @@ export async function generateTeamPoster(team) {
 
     ctx.textBaseline = 'top';
     ctx.fillStyle = '#f59e0b';
-    ctx.font = 'bold 20px "Segoe UI", Arial, sans-serif';
+    ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
     ctx.fillText(s.value, sx, scy + 2);
 
     if (i < stats.length - 1) {
@@ -252,8 +215,90 @@ export async function generateTeamPoster(team) {
     }
   });
 
+  // ── Owner & Icon Player — large square images below stats ──
+  const ownerIconY = statsY + statsH + 14;
+  const avatarSize = 64;
+  const avatarGap = 24;
+  const totalAvatarW = avatarSize * 2 + avatarGap;
+  const avatarStartX = (POSTER_OUTPUT_W - totalAvatarW) / 2;
+
+  // Owner image
+  if (ownerImg) {
+    const ox = avatarStartX;
+    const oy = ownerIconY;
+    drawSquareImage(ctx, ownerImg, ox, oy, avatarSize, 8);
+    // Border
+    roundRect(ctx, ox - 1, oy - 1, avatarSize + 2, avatarSize + 2, 9);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Label
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '600 9px "Segoe UI", Arial, sans-serif';
+    ctx.fillText('OWNER', ox + avatarSize / 2, oy + avatarSize + 5);
+    // Name
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '11px "Segoe UI", Arial, sans-serif';
+    ctx.fillText(team.owner || '—', ox + avatarSize / 2, oy + avatarSize + 18);
+  } else {
+    // Placeholder
+    const ox = avatarStartX;
+    const oy = ownerIconY;
+    roundRect(ctx, ox, oy, avatarSize, avatarSize, 8);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fill();
+    ctx.fillStyle = '#475569';
+    ctx.font = 'bold 24px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('👤', ox + avatarSize / 2, oy + avatarSize / 2);
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '600 9px "Segoe UI", Arial, sans-serif';
+    ctx.fillText('OWNER', ox + avatarSize / 2, oy + avatarSize + 5);
+  }
+
+  // Icon Player image
+  if (iconPlayerImg) {
+    const ix = avatarStartX + avatarSize + avatarGap;
+    const iy = ownerIconY;
+    drawSquareImage(ctx, iconPlayerImg, ix, iy, avatarSize, 8);
+    // Gold border
+    roundRect(ctx, ix - 1, iy - 1, avatarSize + 2, avatarSize + 2, 9);
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Label
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#f59e0b';
+    ctx.font = '600 9px "Segoe UI", Arial, sans-serif';
+    ctx.fillText('ICON PLAYER', ix + avatarSize / 2, iy + avatarSize + 5);
+    // Name
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = '11px "Segoe UI", Arial, sans-serif';
+    ctx.fillText(team.iconPlayer || '—', ix + avatarSize / 2, iy + avatarSize + 18);
+  } else {
+    const ix = avatarStartX + avatarSize + avatarGap;
+    const iy = ownerIconY;
+    roundRect(ctx, ix, iy, avatarSize, avatarSize, 8);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fill();
+    ctx.fillStyle = '#475569';
+    ctx.font = 'bold 24px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⭐', ix + avatarSize / 2, iy + avatarSize / 2);
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#f59e0b';
+    ctx.font = '600 9px "Segoe UI", Arial, sans-serif';
+    ctx.fillText('ICON PLAYER', ix + avatarSize / 2, iy + avatarSize + 5);
+  }
+
   // ── Section Title ─────────────────────────
-  const sectionY = 195;
+  const sectionY = ownerIconY + avatarSize + 36;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillStyle = '#f1f5f9';
@@ -268,7 +313,7 @@ export async function generateTeamPoster(team) {
   const gridStartY = sectionY + 44;
   const cols = 2;
   const colGap = 12;
-  const cellW = (POSTER_W - PAD * 2 - colGap) / cols;
+  const cellW = (POSTER_OUTPUT_W - PAD * 2 - colGap) / cols;
   const photoSize = 72; // square photo size
   const cellH = photoSize + 16; // padding around photo
   const rowGap = 8;
@@ -361,33 +406,33 @@ export async function generateTeamPoster(team) {
     ctx.textBaseline = 'top';
     ctx.fillStyle = '#475569';
     ctx.font = '13px "Segoe UI", Arial, sans-serif';
-    ctx.fillText(`${emptyCount} slot${emptyCount > 1 ? 's' : ''} remaining`, POSTER_W / 2, emptyY);
+    ctx.fillText(`${emptyCount} slot${emptyCount > 1 ? 's' : ''} remaining`, POSTER_OUTPUT_W / 2, emptyY);
   }
 
   // ── Footer ────────────────────────────────
-  const footerY = POSTER_H - 55;
+  const footerY = POSTER_OUTPUT_H - 55;
 
   // Divider
   ctx.fillStyle = 'rgba(255,255,255,0.06)';
-  ctx.fillRect(PAD, footerY, POSTER_W - PAD * 2, 1);
+  ctx.fillRect(PAD, footerY, POSTER_OUTPUT_W - PAD * 2, 1);
 
   // Branding
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.fillStyle = '#64748b';
   ctx.font = '600 12px "Segoe UI", Arial, sans-serif';
-  ctx.fillText('NAKRE PREMIER LEAGUE 3.0  •  2026 AUCTION', POSTER_W / 2, footerY + 16);
+  ctx.fillText('NAKRE PREMIER LEAGUE 3.0  •  2026 AUCTION', POSTER_OUTPUT_W / 2, footerY + 16);
 
   // Bottom accent
   ctx.fillStyle = team.color;
-  ctx.fillRect(0, POSTER_H - 5, POSTER_W, 5);
+  ctx.fillRect(0, POSTER_OUTPUT_H - 5, POSTER_OUTPUT_W, 5);
 
   // Bottom glow
-  const bottomGlow = ctx.createRadialGradient(POSTER_W / 2, POSTER_H, 30, POSTER_W / 2, POSTER_H, 300);
+  const bottomGlow = ctx.createRadialGradient(POSTER_OUTPUT_W / 2, POSTER_OUTPUT_H, 30, POSTER_OUTPUT_W / 2, POSTER_OUTPUT_H, 300);
   bottomGlow.addColorStop(0, hexToRgba(team.color, 0.1));
   bottomGlow.addColorStop(1, 'transparent');
   ctx.fillStyle = bottomGlow;
-  ctx.fillRect(0, POSTER_H - 300, POSTER_W, 300);
+  ctx.fillRect(0, POSTER_OUTPUT_H - 300, POSTER_OUTPUT_W, 300);
 
   return canvas;
 }

@@ -441,14 +441,16 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
 
 /* ── Flip Card for Owner & Icon Player ── */
 .flip-card {
-  perspective: 600px;
+  perspective: 800px;
   cursor: pointer;
   flex: 1;
   min-width: 0;
 }
 .flip-card-inner {
   position: relative;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  height: 120px;
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
 }
 .flip-card.flipped .flip-card-inner {
@@ -456,6 +458,8 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
 }
 .flip-card-front,
 .flip-card-back {
+  position: absolute;
+  inset: 0;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   border-radius: var(--radius-sm);
@@ -470,40 +474,78 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
   padding: 6px 8px;
 }
 .flip-card-back {
-  position: absolute;
-  inset: 0;
   transform: rotateY(180deg);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 6px;
+  padding: 8px 6px;
   text-align: center;
+  gap: 4px;
+}
+.flip-card-back .flip-back-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-4);
+  font-weight: 700;
+  line-height: 1;
 }
 .flip-card-back img {
-  width: 100%;
-  max-height: 120px;
-  object-fit: cover;
-  object-position: top;
+  width: 80px;
+  height: 72px;
+  object-fit: contain;
   border-radius: 6px;
-  margin-bottom: 4px;
+  background: rgba(255,255,255,0.04);
 }
 .flip-card-back .flip-back-name {
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: var(--text-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  line-height: 1;
 }
-.flip-card-back .flip-back-label {
-  font-size: 0.52rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-4);
-  font-weight: 600;
-  margin-bottom: 2px;
+
+/* ── Auto-flip animation ── */
+.flip-card.auto-flipping {
+  animation: flipCardGlow 4s ease-in-out infinite;
+}
+.flip-card.auto-flipping .flip-card-inner {
+  animation: autoFlipRotate 4s ease-in-out infinite;
+}
+@keyframes autoFlipRotate {
+  0%, 30%   { transform: rotateY(0deg) scale(1); }
+  35%       { transform: rotateY(90deg) scale(1.04); }
+  40%, 70%  { transform: rotateY(180deg) scale(1.02); }
+  75%       { transform: rotateY(270deg) scale(1.04); }
+  80%, 100% { transform: rotateY(360deg) scale(1); }
+}
+@keyframes flipCardGlow {
+  0%, 30%   { box-shadow: none; }
+  35%, 40%  { box-shadow: 0 0 16px rgba(99,102,241,0.35); }
+  45%, 70%  { box-shadow: 0 0 8px rgba(245,158,11,0.2); }
+  75%, 80%  { box-shadow: 0 0 16px rgba(99,102,241,0.35); }
+  85%, 100% { box-shadow: none; }
+}
+/* Pulse idle effect */
+.flip-card.auto-flipping::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  animation: flipPulse 4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes flipPulse {
+  0%, 28%   { border-color: transparent; }
+  35%       { border-color: rgba(99,102,241,0.4); }
+  45%, 68%  { border-color: rgba(245,158,11,0.3); }
+  75%       { border-color: rgba(99,102,241,0.4); }
+  85%, 100% { border-color: transparent; }
 }
 
 .setup-footer {
@@ -1081,7 +1123,8 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
 .result-team-header {
   padding: 16px 20px;
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 12px;
   border-bottom: 1px solid var(--border);
   position: relative;
@@ -1113,45 +1156,59 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
   font-weight: 700;
 }
 .result-team-meta {
-  font-size: 0.72rem;
-  color: var(--text-3);
+  font-size: 0.78rem;
+  color: var(--text-2);
   display: flex;
-  gap: 12px;
-  margin-top: 2px;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+.result-team-meta span {
+  white-space: nowrap;
 }
 
 .result-team-people {
   display: flex;
-  gap: -8px;
+  gap: 12px;
   z-index: 1;
   flex-shrink: 0;
+  align-items: flex-start;
+}
+.result-team-avatar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 .result-team-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
   object-fit: cover;
-  border: 2px solid var(--bg-card);
-  margin-left: -6px;
+  object-position: top;
+  border: 2px solid rgba(255,255,255,0.15);
   transition: var(--transition);
   cursor: pointer;
 }
-.result-team-avatar:first-child { margin-left: 0; }
 .result-team-avatar:hover {
-  transform: scale(1.2);
+  transform: scale(1.1);
   z-index: 2;
-  border-color: rgba(255,255,255,0.3);
+  border-color: rgba(255,255,255,0.4);
 }
 .result-team-avatar.icon {
   border-color: var(--accent-gold);
 }
-.result-team-meta {
-  font-size: 0.72rem;
-  color: var(--text-3);
-  display: flex;
-  gap: 12px;
-  margin-top: 2px;
+.result-team-avatar-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-4);
+  font-weight: 700;
+  text-align: center;
 }
+
+
 
 .result-squad-list {
   padding: 12px 20px;
@@ -1810,13 +1867,16 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
 
 .rules-title {
   font-family: 'Outfit', sans-serif;
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   font-weight: 900;
   background: linear-gradient(135deg, var(--accent-gold), var(--accent-indigo));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rules-subtitle {
@@ -1836,8 +1896,8 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
   border-radius: var(--radius-xl);
   background: var(--bg-card);
   border: 1px solid var(--border);
-  transition: var(--transition);
-  animation: slideInUp 0.5s ease backwards;
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  animation: slideInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 .rules-card:nth-child(1) { animation-delay: 0.05s; }
 .rules-card:nth-child(2) { animation-delay: 0.1s; }
@@ -1850,8 +1910,8 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
 
 .rules-card:hover {
   border-color: var(--border-light);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
 }
 
 .rules-card-do {

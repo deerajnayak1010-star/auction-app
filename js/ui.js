@@ -148,7 +148,7 @@ export class UI {
       </div>
     `;
 
-    // Bind flip card click
+    // Bind flip card click and auto-flip
     this._bindFlipCards();
   }
   // ═══════════════════════════════════════════
@@ -166,57 +166,7 @@ export class UI {
         </div>
 
         <div class="rules-grid">
-          <!-- General Guidelines -->
-          <div class="rules-card">
-            <div class="rules-card-header">
-              <span class="rules-card-icon">📋</span>
-              <h3>General Guidelines</h3>
-            </div>
-            <ul class="rules-list">
-              <li>Only <strong>3–4 members per team</strong> are allowed to be present during the auction</li>
-              <li>All participants are expected to maintain <strong>discipline and professionalism</strong> throughout the event</li>
-            </ul>
-          </div>
-
-          <!-- Code of Conduct -->
-          <div class="rules-card rules-card-dont">
-            <div class="rules-card-header">
-              <span class="rules-card-icon">⚖️</span>
-              <h3>Code of Conduct</h3>
-            </div>
-            <ul class="rules-list">
-              <li>No <strong>arguments, fighting, or disruptive behavior</strong> will be tolerated</li>
-              <li>No <strong>alcohol or inappropriate activities</strong> are allowed during the auction</li>
-              <li>Participants must <strong>respect all teams, organizers,</strong> and decisions made during the event</li>
-            </ul>
-          </div>
-
-          <!-- Authority & Decisions -->
-          <div class="rules-card">
-            <div class="rules-card-header">
-              <span class="rules-card-icon">🏛️</span>
-              <h3>Authority & Decisions</h3>
-            </div>
-            <ul class="rules-list">
-              <li>The <strong>NPL Management Team's decision is final</strong> in all matters</li>
-              <li>In case of any disputes, changes, or unexpected situations: the organizers reserve the right to <strong>modify rules or take necessary actions</strong></li>
-              <li>All participants are expected to <strong>comply without objection</strong></li>
-            </ul>
-          </div>
-
-          <!-- Fair Play -->
-          <div class="rules-card rules-card-do">
-            <div class="rules-card-header">
-              <span class="rules-card-icon">🤝</span>
-              <h3>Fair Play</h3>
-            </div>
-            <ul class="rules-list">
-              <li>All teams must follow the auction rules and bidding guidelines <strong>strictly</strong></li>
-              <li>Any <strong>misuse or violation</strong> may result in disqualification or penalties</li>
-            </ul>
-          </div>
-
-          <!-- Auction Rules -->
+          <!-- 1. Auction Rules -->
           <div class="rules-card">
             <div class="rules-card-header">
               <span class="rules-card-icon">💰</span>
@@ -235,7 +185,7 @@ export class UI {
             </ul>
           </div>
 
-          <!-- Bidding Rules -->
+          <!-- 2. Bidding Rules -->
           <div class="rules-card">
             <div class="rules-card-header">
               <span class="rules-card-icon">🏏</span>
@@ -249,7 +199,7 @@ export class UI {
             </ul>
           </div>
 
-          <!-- Team Building -->
+          <!-- 3. Team Building -->
           <div class="rules-card">
             <div class="rules-card-header">
               <span class="rules-card-icon">👥</span>
@@ -262,7 +212,7 @@ export class UI {
             </ul>
           </div>
 
-          <!-- Re-Auction -->
+          <!-- 4. Re-Auction -->
           <div class="rules-card">
             <div class="rules-card-header">
               <span class="rules-card-icon">♻️</span>
@@ -272,6 +222,56 @@ export class UI {
               <li>Unsold players can be re-auctioned after the main auction round</li>
               <li>Re-auction is based on organizer confirmation</li>
               <li>Same rules apply in the re-auction round</li>
+            </ul>
+          </div>
+
+          <!-- 5. General Guidelines -->
+          <div class="rules-card">
+            <div class="rules-card-header">
+              <span class="rules-card-icon">📋</span>
+              <h3>General Guidelines</h3>
+            </div>
+            <ul class="rules-list">
+              <li>Only <strong>3–4 members per team</strong> are allowed to be present during the auction</li>
+              <li>All participants are expected to maintain <strong>discipline and professionalism</strong> throughout the event</li>
+            </ul>
+          </div>
+
+          <!-- 6. Code of Conduct -->
+          <div class="rules-card rules-card-dont">
+            <div class="rules-card-header">
+              <span class="rules-card-icon">⚖️</span>
+              <h3>Code of Conduct</h3>
+            </div>
+            <ul class="rules-list">
+              <li>No <strong>arguments, fighting, or disruptive behavior</strong> will be tolerated</li>
+              <li>No <strong>alcohol or inappropriate activities</strong> are allowed during the auction</li>
+              <li>Participants must <strong>respect all teams, organizers,</strong> and decisions made during the event</li>
+            </ul>
+          </div>
+
+          <!-- 7. Fair Play -->
+          <div class="rules-card rules-card-do">
+            <div class="rules-card-header">
+              <span class="rules-card-icon">🤝</span>
+              <h3>Fair Play</h3>
+            </div>
+            <ul class="rules-list">
+              <li>All teams must follow the auction rules and bidding guidelines <strong>strictly</strong></li>
+              <li>Any <strong>misuse or violation</strong> may result in disqualification or penalties</li>
+            </ul>
+          </div>
+
+          <!-- 8. Authority & Decisions -->
+          <div class="rules-card">
+            <div class="rules-card-header">
+              <span class="rules-card-icon">🏛️</span>
+              <h3>Authority & Decisions</h3>
+            </div>
+            <ul class="rules-list">
+              <li>The <strong>NPL Management Team's decision is final</strong> in all matters</li>
+              <li>In case of any disputes, changes, or unexpected situations: the organizers reserve the right to <strong>modify rules or take necessary actions</strong></li>
+              <li>All participants are expected to <strong>comply without objection</strong></li>
             </ul>
           </div>
         </div>
@@ -506,14 +506,27 @@ export class UI {
     });
   }
 
-  /** Bind flip card click events */
+  /** Bind flip card click events + start auto-flip */
   _bindFlipCards() {
-    document.querySelectorAll('[data-flip-card]').forEach(card => {
+    const allCards = document.querySelectorAll('[data-flip-card]');
+
+    // Manual click toggle (stops auto for that card)
+    allCards.forEach(card => {
       card.addEventListener('click', (e) => {
         e.stopPropagation();
+        // If auto-flipping, stop it on click
+        card.classList.remove('auto-flipping');
         card.classList.toggle('flipped');
       });
     });
+
+    // Start synchronized auto-flip for all cards
+    // Small delay to let cards render
+    setTimeout(() => {
+      allCards.forEach(card => {
+        card.classList.add('auto-flipping');
+      });
+    }, 1500);
   }
 
   /** Show reset confirmation modal */
@@ -859,7 +872,7 @@ export class UI {
     this.mainEl.innerHTML = `
       <div class="results-page">
         <div class="results-header">
-          <h2>Auction Results</h2>
+          <h2>NAKRE PREMIER LEAGUE 3.0 - 2026</h2>
           <p>${state.soldCount} players sold across ${state.teams.length} teams</p>
           <div style="margin-top:16px; display:flex; gap:12px; justify-content:center;">
             <button class="btn btn-primary" id="download-all-posters-btn">📥 Download All Team Posters</button>
@@ -904,8 +917,18 @@ export class UI {
                   </div>
                 </div>
                 <div class="result-team-people">
-                  ${team.ownerImage ? `<img class="result-team-avatar" src="${team.ownerImage}" alt="${team.owner}" title="Owner: ${team.owner}">` : ''}
-                  ${team.iconPlayerImage ? `<img class="result-team-avatar icon" src="${team.iconPlayerImage}" alt="${team.iconPlayer}" title="Icon: ${team.iconPlayer}">` : ''}
+                  ${team.ownerImage ? `
+                    <div class="result-team-avatar-wrap">
+                      <img class="result-team-avatar" src="${team.ownerImage}" alt="${team.owner}" title="Owner: ${team.owner}">
+                      <span class="result-team-avatar-label">Owner</span>
+                    </div>
+                  ` : ''}
+                  ${team.iconPlayerImage ? `
+                    <div class="result-team-avatar-wrap">
+                      <img class="result-team-avatar icon" src="${team.iconPlayerImage}" alt="${team.iconPlayer}" title="Icon: ${team.iconPlayer}">
+                      <span class="result-team-avatar-label">Icon</span>
+                    </div>
+                  ` : ''}
                 </div>
               </div>
               <div class="result-squad-list">
