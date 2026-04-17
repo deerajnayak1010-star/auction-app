@@ -115,10 +115,56 @@ class App {
     });
   }
 
-  /** Broadcast current auction state to all mobile clients */
+  /** Broadcast current auction state to all mobile clients + projector tabs */
   broadcastState() {
-    if (!this.engine || !this.wsClient.connected) return;
-    this.wsClient.broadcastState(this.engine.getState());
+    if (!this.engine) return;
+    const state = this.engine.getState();
+
+    // WebSocket broadcast (when server is running)
+    if (this.wsClient.connected) {
+      this.wsClient.broadcastState(state);
+    }
+
+    // BroadcastChannel for cross-tab projector (works on GitHub Pages / static hosting)
+    try {
+      if (!this._projectorChannel) {
+        this._projectorChannel = new BroadcastChannel('npl-projector');
+      }
+      // Send filtered state (same shape the server would send)
+      this._projectorChannel.postMessage({
+        type: 'state-update',
+        state: this._filterStateForProjector(state)
+      });
+    } catch (e) {
+      // BroadcastChannel not supported — ignore
+    }
+  }
+
+  /** Filter auction state to projector-safe subset (mirrors server.js filterStateForProjector) */
+  _filterStateForProjector(state) {
+    return {
+      phase: state.phase,
+      currentPlayer: state.currentPlayer,
+      currentBid: state.currentBid,
+      currentBidder: state.currentBidder,
+      currentBidderTeam: state.currentBidderTeam ? {
+        shortName: state.currentBidderTeam.shortName,
+        name: state.currentBidderTeam.name,
+        color: state.currentBidderTeam.color,
+        logo: state.currentBidderTeam.logo
+      } : null,
+      nextBidAmount: state.nextBidAmount,
+      playerIndex: state.playerIndex,
+      totalPlayers: state.totalPlayers,
+      remainingPlayers: state.remainingPlayers,
+      soldCount: state.soldCount,
+      unsoldCount: state.unsoldCount,
+      bidHistory: (state.bidHistory || []).slice(-5),
+      timerRemaining: state.timerRemaining,
+      timerStartTime: state.timerStartTime || null,
+      timerDuration: state.timerDuration || 30,
+      timerEnabled: state.timerEnabled || false
+    };
   }
 
   /** Handle an incoming bid from a mobile client */

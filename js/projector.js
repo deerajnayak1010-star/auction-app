@@ -11,6 +11,7 @@ class ProjectorApp {
     this.connected = false;
     this.animFrameId = null;
     this.currentPlayerName = null; // track to detect player changes
+    this.localMode = false; // true when using BroadcastChannel (no server)
 
     // DOM refs (cached after render)
     this.mainEl = document.getElementById('proj-main');
@@ -20,6 +21,7 @@ class ProjectorApp {
 
   init() {
     this.connectWebSocket();
+    this.initBroadcastChannel(); // fallback for static hosting
     this.startRenderLoop();
     this.bindFullscreen();
   }
@@ -50,6 +52,31 @@ class ProjectorApp {
   }
 
   // ═══════════════════════════════════════════
+  // BROADCASTCHANNEL (cross-tab, no server needed)
+  // ═══════════════════════════════════════════
+
+  initBroadcastChannel() {
+    try {
+      this._channel = new BroadcastChannel('npl-projector');
+      this._channel.onmessage = (event) => {
+        const msg = event.data;
+        if (msg && msg.type === 'state-update') {
+          // Switch to local mode if we weren't already connected via WS
+          if (!this.connected) {
+            this.localMode = true;
+            this.setConnectionStatus(true);
+          }
+          this.prevState = this.state;
+          this.state = msg.state;
+          this.onStateUpdate();
+        }
+      };
+    } catch (e) {
+      // BroadcastChannel not supported — WebSocket only
+    }
+  }
+
+  // ═══════════════════════════════════════════
   // WEBSOCKET
   // ═══════════════════════════════════════════
 
@@ -60,13 +87,13 @@ class ProjectorApp {
     try {
       this.ws = new WebSocket(wsUrl);
     } catch (e) {
-      this.setConnectionStatus(false);
-      setTimeout(() => this.connectWebSocket(), 3000);
+      this.handleWsFailed();
       return;
     }
 
     this.ws.onopen = () => {
-      console.log('[Projector] Connected');
+      console.log('[Projector] Connected via WebSocket');
+      this.localMode = false;
       this.ws.send(JSON.stringify({ type: 'projector-register' }));
       this.setConnectionStatus(true);
     };
@@ -85,14 +112,22 @@ class ProjectorApp {
     };
 
     this.ws.onclose = () => {
-      console.log('[Projector] Disconnected');
-      this.setConnectionStatus(false);
-      setTimeout(() => this.connectWebSocket(), 3000);
+      console.log('[Projector] WebSocket disconnected');
+      this.handleWsFailed();
     };
 
     this.ws.onerror = () => {
-      this.setConnectionStatus(false);
+      this.handleWsFailed();
     };
+  }
+
+  handleWsFailed() {
+    // If we already have BroadcastChannel working, stay in local mode
+    if (this.localMode) return;
+    
+    this.setConnectionStatus(false);
+    // Retry WebSocket less aggressively (it may never work on GitHub Pages)
+    this._wsRetryTimer = setTimeout(() => this.connectWebSocket(), 5000);
   }
 
   setConnectionStatus(connected) {
@@ -101,13 +136,20 @@ class ProjectorApp {
       this.statusDot.className = 'proj-status-dot' + (connected ? ' connected' : '');
     }
     if (this.statusText) {
-      this.statusText.textContent = connected ? 'Live' : 'Reconnecting...';
+      if (connected) {
+        this.statusText.textContent = this.localMode ? 'Local' : 'Live';
+      } else {
+        this.statusText.textContent = 'Reconnecting...';
+      }
     }
     if (!connected && this.state === null) {
       this.mainEl.innerHTML = `
         <div class="proj-disconnected">
           <div class="proj-disconnected-icon">⟳</div>
-          <div class="proj-disconnected-text">Connecting to Server...</div>
+          <div class="proj-disconnected-text">Waiting for Auction Host...</div>
+          <div style="font-size: 0.85rem; color: rgba(255,255,255,0.4); margin-top: 12px;">
+            Open the auction panel in another tab and start the auction
+          </div>
         </div>
       `;
     }
