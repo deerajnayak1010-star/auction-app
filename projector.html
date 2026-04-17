@@ -308,6 +308,73 @@
       min-height: 0;
     }
 
+    /* ── Team Budget Warning Banner ── */
+    .proj-team-warning {
+      min-height: 0;
+      transition: all 0.3s ease;
+    }
+    .proj-warning-inner {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: var(--radius-lg);
+      padding: clamp(12px, 1.5vw, 24px) clamp(16px, 2vw, 32px);
+      text-align: center;
+      margin-bottom: clamp(10px, 1.2vw, 18px);
+      backdrop-filter: blur(12px);
+      animation: warningFadeIn 0.4s ease;
+    }
+    .proj-warning-inner.caution {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+    .proj-warning-inner.critical {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+      animation: warningFadeIn 0.4s ease, warningPulse 2s ease-in-out infinite;
+    }
+    @keyframes warningFadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes warningPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+      50%      { box-shadow: 0 0 20px 4px rgba(239, 68, 68, 0.2); }
+    }
+    .proj-warning-team {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.1rem, 1.8vw, 1.8rem);
+      font-weight: 800;
+      margin-bottom: 4px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .proj-warning-stats {
+      font-size: clamp(0.95rem, 1.4vw, 1.5rem);
+      font-weight: 600;
+      color: var(--accent-gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .proj-warning-purse {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+    }
+    .proj-warning-sep {
+      color: var(--text-4);
+      font-size: 0.8em;
+    }
+    .proj-warning-slots {
+      color: var(--text-2);
+    }
+    .proj-warning-inner.critical .proj-warning-stats {
+      color: var(--accent-red);
+    }
+    .proj-warning-inner.critical .proj-warning-slots {
+      color: rgba(239, 68, 68, 0.8);
+    }
+
     /* ── Bid Status Box ── */
     .proj-bid-box {
       background: var(--bg-card);

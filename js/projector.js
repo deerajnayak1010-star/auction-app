@@ -335,11 +335,15 @@ class ProjectorApp {
     // Bid history
     const historyHtml = this.renderBidHistoryHtml(s.bidHistory);
 
+    // Team budget warning
+    const warningHtml = this.renderTeamWarning(s);
+
     this.mainEl.innerHTML = `
       <div class="proj-player-area">
         ${playerCardHtml}
       </div>
       <div class="proj-info-area">
+        <div class="proj-team-warning" id="proj-team-warning">${warningHtml}</div>
         <div class="proj-bid-box" id="proj-bid-box">
           <div class="proj-bid-label ${labelClass}" id="proj-bid-label">${statusLabel}</div>
           <div class="proj-bid-amount" id="proj-bid-amount">${bidStr}</div>
@@ -374,6 +378,12 @@ class ProjectorApp {
     if (bidderEl) {
       bidderEl.innerHTML = this.renderBidder(s.currentBidderTeam);
     }
+
+    // Update team warning
+    const warningEl = document.getElementById('proj-team-warning');
+    if (warningEl) {
+      warningEl.innerHTML = this.renderTeamWarning(s);
+    }
   }
 
   updateBidHistory() {
@@ -401,6 +411,44 @@ class ProjectorApp {
   // ═══════════════════════════════════════════
   // RENDER HELPERS
   // ═══════════════════════════════════════════
+
+  /** Render the team budget warning banner above CURRENT BID */
+  renderTeamWarning(s) {
+    if (!s || s.phase !== 'bidding') return '';
+    if (!s.currentBidderTeam || !s.currentBidder) return '';
+
+    const teamName = s.currentBidderTeam.name || s.currentBidderTeam.shortName;
+    const teamColor = s.currentBidderTeam.color || '#ffffff';
+    const purse = s.currentBidderPurse;
+    const squadCount = s.currentBidderSquadCount ?? 0;
+
+    if (purse === null || purse === undefined) return '';
+
+    const purseAfterBid = purse - s.currentBid;
+    const slotsNeeded = Math.max(0, 12 - squadCount - 1); // -1 for current player
+    const purseStr = this.formatPoints(Math.max(0, purseAfterBid));
+
+    // Determine warning level
+    let urgencyClass = '';
+    if (slotsNeeded > 0 && purseAfterBid < slotsNeeded * 2000) {
+      urgencyClass = 'critical'; // very tight budget
+    } else if (slotsNeeded > 0 && purseAfterBid < slotsNeeded * 5000) {
+      urgencyClass = 'caution'; // moderate concern
+    }
+
+    return `
+      <div class="proj-warning-inner ${urgencyClass}">
+        <div class="proj-warning-team" style="color: ${teamColor}">
+          ⚠️ ${teamName}
+        </div>
+        <div class="proj-warning-stats">
+          <span class="proj-warning-purse">${purseStr} remaining</span>
+          <span class="proj-warning-sep">•</span>
+          <span class="proj-warning-slots">Need ${slotsNeeded} more player${slotsNeeded !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+    `;
+  }
 
   renderPlayerCard(p, isSold, isUnsold) {
     if (!p) return '';

@@ -163,7 +163,10 @@ class App {
       timerRemaining: state.timerRemaining,
       timerStartTime: state.timerStartTime || null,
       timerDuration: state.timerDuration || 30,
-      timerEnabled: state.timerEnabled || false
+      timerEnabled: state.timerEnabled || false,
+      // Bidder team financial info (for projector warning)
+      currentBidderPurse: state.currentBidderTeam ? state.currentBidderTeam.purse : null,
+      currentBidderSquadCount: state.currentBidderTeam ? state.currentBidderTeam.squad?.length ?? 0 : 0
     };
   }
 
@@ -178,7 +181,7 @@ class App {
     if (!canBid) {
       const team = this.engine.getTeamState(msg.teamId);
       let error = 'Cannot bid';
-      if (team && team.squad.length >= 14) error = 'Squad is full';
+      if (team && team.squad.length >= 12) error = 'Squad is full';
       else if (this.engine.currentBidder === msg.teamId) error = 'Already highest bidder';
       else error = 'Insufficient budget';
       this.wsClient.sendBidResult(msg.teamId, false, error);
@@ -975,8 +978,8 @@ class App {
     const canBid = this.engine.canTeamBid(teamId);
     if (!canBid) {
       const team = this.engine.getTeamState(teamId);
-      if (team && team.squad.length >= 14) {
-        this.ui.showToast(`${team.shortName}: Squad is full (14/14)`, 'error');
+      if (team && team.squad.length >= 12) {
+        this.ui.showToast(`${team.shortName}: Squad is full (12/12)`, 'error');
       } else if (this.engine.currentBidder === teamId) {
         this.ui.showToast(`${team.shortName}: Already the highest bidder`, 'warning');
       } else {

@@ -18,7 +18,8 @@ export class AuctionEngine {
       });
     });
 
-    this.playerPool = this._shuffle([...players]);
+    // Shuffle players but pin reserved players at specific positions
+    this.playerPool = this._buildPlayerPool([...players]);
     this.currentPlayer = null;
     this.currentBid = 0;
     this.currentBidder = null;
@@ -48,6 +49,53 @@ export class AuctionEngine {
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
     return arr;
+  }
+
+  /**
+   * Build player pool with reserved players pinned at specific positions.
+   * Reserved players: Ajay(pos 83), Nikil Shetty(85), Samith(86), Vijay(88), Rajesh Pollu(92)
+   */
+  _buildPlayerPool(players) {
+    const reservedMap = [
+      { name: 'Ajay',          position: 83 },
+      { name: 'Nikil Shetty',  position: 85 },
+      { name: 'Samith',        position: 86 },
+      { name: 'Vijay',         position: 88 },
+      { name: 'Rajesh Pollu',  position: 92 },
+    ];
+
+    const reservedNames = new Set(reservedMap.map(r => r.name));
+
+    // Separate reserved from regular
+    const reserved = [];
+    const regular = [];
+    for (const p of players) {
+      if (reservedNames.has(p.name)) {
+        reserved.push(p);
+      } else {
+        regular.push(p);
+      }
+    }
+
+    // Shuffle regular players
+    this._shuffle(regular);
+
+    // Build final pool — start with regular players
+    const pool = [...regular];
+
+    // Insert reserved players at their specific positions (1-indexed → 0-indexed)
+    // Sort by position descending so earlier inserts don't shift later positions
+    const sortedReserved = reservedMap
+      .map(r => ({ ...r, player: reserved.find(p => p.name === r.name) }))
+      .filter(r => r.player) // only if player exists in pool
+      .sort((a, b) => a.position - b.position);
+
+    for (const r of sortedReserved) {
+      const idx = Math.min(r.position - 1, pool.length); // 0-indexed, clamp to pool size
+      pool.splice(idx, 0, r.player);
+    }
+
+    return pool;
   }
 
   /**
@@ -135,7 +183,7 @@ export class AuctionEngine {
 
     const team = this.teams.get(teamId);
     if (!team) return false;
-    if (team.squad.length >= 14) return false;             // max squad
+    if (team.squad.length >= 12) return false;             // max squad
     if (this.currentBidder === teamId) return false;       // already highest bidder
 
     const nextBid = this.getNextBidAmount();
@@ -216,7 +264,7 @@ export class AuctionEngine {
 
     const team = this.teams.get(teamId);
     if (!team) return { success: false, error: 'Team not found' };
-    if (team.squad.length >= 14) return { success: false, error: 'Squad full' };
+    if (team.squad.length >= 12) return { success: false, error: 'Squad full' };
 
     // Amount must be >= base price
     if (amount < this.currentPlayer.basePrice) {

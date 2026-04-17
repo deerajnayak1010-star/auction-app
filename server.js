@@ -283,7 +283,10 @@ function filterStateForProjector(state) {
     timerRemaining: state.timerRemaining,
     timerStartTime: state.timerStartTime || null,
     timerDuration: state.timerDuration || 30,
-    timerEnabled: state.timerEnabled || false
+    timerEnabled: state.timerEnabled || false,
+    // Bidder team financial info (for projector warning)
+    currentBidderPurse: state.currentBidderTeam ? state.currentBidderTeam.purse : null,
+    currentBidderSquadCount: state.currentBidderTeam ? (state.currentBidderTeam.squad?.length ?? 0) : 0
   };
 }
 

@@ -450,10 +450,10 @@ export class CommentaryEngine {
     if (teamState) {
       const squadSize = teamState.squad.length;
       const remaining = teamState.purse;
-      const slotsLeft = 14 - squadSize;
+      const slotsLeft = 12 - squadSize;
 
       const squadTemplates = [
-        `👥 ${teamShortName} squad update: ${squadSize}/14 players, ${fmt(remaining)} in the kitty. ${slotsLeft} slots to fill.`,
+        `👥 ${teamShortName} squad update: ${squadSize}/12 players, ${fmt(remaining)} in the kitty. ${slotsLeft} slots to fill.`,
         `👥 ${teamShortName} now has ${squadSize} players with ${fmt(remaining)} remaining. Building nicely!`,
       ];
       this._addLine('squad', pick(squadTemplates));

@@ -654,7 +654,7 @@ export class UI {
       <div class="auction-sidebar">
         ${state.teams.map(team => {
           const isHighest = state.currentBidder === team.id;
-          const isFull = team.squad.length >= 14;
+          const isFull = team.squad.length >= 12;
           const pursePct = (team.purse / 100000) * 100;
           const barClass = pursePct < 15 ? 'critical' : pursePct < 40 ? 'low' : '';
           const isMobileConnected = connectedIds.has(team.id);
@@ -670,7 +670,7 @@ export class UI {
                   ${isMobileConnected ? '<span class="mobile-indicator" title="Connected via mobile">📱</span>' : ''}
                 </div>
                 <div class="sidebar-team-purse">${fmt(team.purse)}</div>
-                <div class="sidebar-team-squad">${team.squad.length}/14 players</div>
+                <div class="sidebar-team-squad">${team.squad.length}/12 players</div>
                 <div class="purse-bar">
                   <div class="purse-bar-fill ${barClass}" style="width: ${pursePct}%"></div>
                 </div>
@@ -1030,7 +1030,7 @@ export class UI {
                 <div class="result-team-meta">
                   <span>Spent: ${fmt(team.totalSpent)}</span>
                   <span>Purse: ${fmt(team.purse)}</span>
-                  <span>Squad: ${team.squad.length}/14</span>
+                  <span>Squad: ${team.squad.length}/12</span>
                 </div>
               </div>
               <div class="result-team-people">
