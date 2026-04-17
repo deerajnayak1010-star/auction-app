@@ -407,6 +407,7 @@ export class AuctionEngine {
       timerEnabled: this.timerEnabled,
       timerDuration: this.timerDuration,
       timerRemaining: this.getTimerRemaining(),
+      timerStartTime: this.timerStartTime,
       // Analytics
       maxBidsPlayer: this.maxBidsPlayer,
     };

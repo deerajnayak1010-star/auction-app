@@ -34,7 +34,7 @@ export class UI {
   // HEADER
   // ═══════════════════════════════════════════
 
-  renderHeader(currentView, stats = {}, soundMuted = false) {
+  renderHeader(currentView, stats = {}, soundMuted = false, commentaryVisible = false) {
     const views = [
       { id: 'setup',   label: 'Setup' },
       { id: 'players', label: 'Players' },
@@ -67,11 +67,16 @@ export class UI {
             <span>Unsold:<span class="nav-stat-value">${stats.unsold || 0}</span></span>
           ` : ''}
         </div>
-        <button class="btn-commentary-toggle ${currentView === 'auction' ? 'active' : ''}" id="commentary-toggle-btn" title="Toggle Live Commentary">
-          🎙️
+        <button class="header-icon-btn ${commentaryVisible ? 'icon-on' : 'icon-off'}" id="commentary-toggle-btn" title="${commentaryVisible ? 'Disable Commentary' : 'Enable Commentary'}">
+          <span class="header-icon-emoji">🎙️</span>
+          <span class="header-icon-indicator ${commentaryVisible ? 'on' : 'off'}"></span>
         </button>
-        <button class="btn-sound-toggle" id="sound-toggle-btn" title="${soundMuted ? 'Unmute Sound' : 'Mute Sound'}">
-          ${soundMuted ? '🔇' : '🔊'}
+        <button class="header-icon-btn ${!soundMuted ? 'icon-on' : 'icon-off'}" id="sound-toggle-btn" title="${soundMuted ? 'Enable Sound' : 'Disable Sound'}">
+          <span class="header-icon-emoji">${soundMuted ? '🔇' : '🔊'}</span>
+          <span class="header-icon-indicator ${!soundMuted ? 'on' : 'off'}"></span>
+        </button>
+        <button class="header-icon-btn" id="open-projector-btn" title="Open Projector Screen">
+          <span class="header-icon-emoji">📺</span>
         </button>
         <button class="btn-reset-auction" id="reset-auction-btn" title="Start New Auction / Reset">🔄 New Auction</button>
         <button class="btn-fullscreen" id="fullscreen-btn" title="${isFs ? 'Exit Fullscreen' : 'Enter Fullscreen'}">
@@ -775,12 +780,7 @@ export class UI {
         </div>
         ` : ''}
 
-        <div class="bid-info-card quick-bid-card">
-          <div class="bid-current-label">📺 Live Projector</div>
-          <button class="btn btn-secondary btn-sm" id="open-projector-btn" style="width:100%; margin-top:8px;">
-            ↗ Open Projector Screen
-          </button>
-        </div>
+
 
         <div class="bid-info-card mobile-bid-card">
           <div class="bid-current-label">📱 Mobile Bidding</div>

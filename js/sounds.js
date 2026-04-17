@@ -6,7 +6,7 @@
 export class AuctionSounds {
   constructor() {
     this.ctx = null;       // AudioContext (lazy init on first user gesture)
-    this.muted = false;
+    this.muted = true;     // muted by default — user enables manually
     this.volume = 0.5;     // 0–1
 
     // Restore mute preference

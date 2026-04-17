@@ -34,7 +34,7 @@ export class CommentaryEngine {
     this.listeners = [];     // onChange callbacks
 
     // ── Text-to-Speech ────────────────────────
-    this.speechEnabled = true;
+    this.speechEnabled = false;
     this.speechRate = 1.15;      // slightly fast for commentator energy
     this.speechPitch = 1.05;     // slightly high for excitement
     this.speechVolume = 1.0;

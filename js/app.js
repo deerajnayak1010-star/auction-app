@@ -39,7 +39,8 @@ class App {
 
     // Live Commentary
     this.commentary = new CommentaryEngine();
-    this.commentaryVisible = true;  // panel visibility
+    this.commentaryVisible = false;  // disabled by default
+    this.commentary.setSpeechEnabled(false); // speech off by default
     this.idleCommentaryInterval = null;
   }
 
@@ -286,7 +287,7 @@ class App {
       unsold: this.engine.getState().unsoldCount,
     } : {};
 
-    this.ui.renderHeader(this.currentView, stats);
+    this.ui.renderHeader(this.currentView, stats, this.sounds.muted, this.commentaryVisible);
     this.bindNavEvents();
 
     switch (this.currentView) {
@@ -411,6 +412,12 @@ class App {
     if (target.id === 'logout-btn') {
       this.isLoggedIn = false;
       localStorage.removeItem('npl_token');
+      // Stop commentary and speech
+      this.commentaryVisible = false;
+      this.commentary.setSpeechEnabled(false);
+      this.commentary.stopSpeaking();
+      this.ui.removeCommentaryPanel();
+      this.stopIdleCommentary();
       this.saveState();
       this.ui.showToast('Logged out successfully', 'info');
       this.navigate('login');
@@ -647,10 +654,8 @@ class App {
     // ── Sound toggle ──
     if (target.id === 'sound-toggle-btn' || target.closest('#sound-toggle-btn')) {
       const muted = this.sounds.toggleMute();
-      // Sync commentary speech with sound mute
-      this.commentary.setSpeechEnabled(!muted);
-      this.ui.updateSoundButton(muted);
       this.ui.showToast(muted ? '🔇 Sound muted' : '🔊 Sound enabled', 'info', 1500);
+      this.render();
       return;
     }
 
@@ -1093,6 +1098,7 @@ class App {
       this.stopIdleCommentary();
       this.ui.showToast('🎙️ Commentary disabled', 'info', 1500);
     }
+    this.render();
   }
 
   /** Start idle/analytics commentary interval */

@@ -3,138 +3,644 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAKRE PREMIER LEAGUE 3.0 - Live Projector</title>
-  
+  <title>NAKRE PREMIER LEAGUE 3.0 — Live Projector</title>
+  <meta name="description" content="Live auction projector view for NAKRE PREMIER LEAGUE 3.0">
+
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@700;800;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-  
-  <!-- CSS -->
-  <link rel="stylesheet" href="css/styles.css">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+
   <style>
-    /* Projector specific overrides for a massive, clean display */
+    /* ════════════════════════════════════════════
+       PROJECTOR — Ultra Premium Design System
+       ════════════════════════════════════════════ */
+
+    :root {
+      --bg-primary:    #050816;
+      --bg-card:       rgba(15, 20, 55, 0.85);
+      --bg-card-solid: #0d1235;
+
+      --accent-indigo: #6366f1;
+      --accent-gold:   #f59e0b;
+      --accent-green:  #10b981;
+      --accent-red:    #ef4444;
+      --accent-blue:   #3b82f6;
+      --accent-pink:   #ec4899;
+
+      --text-1: #f1f5f9;
+      --text-2: #94a3b8;
+      --text-3: #64748b;
+      --text-4: #475569;
+
+      --border:       rgba(255,255,255,0.06);
+      --border-light: rgba(255,255,255,0.12);
+      --glass:        rgba(255,255,255,0.04);
+      --glass-heavy:  rgba(255,255,255,0.07);
+
+      --radius-md:  12px;
+      --radius-lg:  16px;
+      --radius-xl:  24px;
+      --radius-full: 9999px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: 16px; }
+
     body {
-      overflow: hidden; /* Hide scrollbars on projector */
-    }
-    .projector-container {
-      display: flex;
-      flex-direction: column;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-1);
+      overflow: hidden;
       height: 100vh;
-      padding: 40px;
-      box-sizing: border-box;
+      width: 100vw;
     }
-    .projector-header {
-      text-align: center;
-      margin-bottom: 40px;
+
+    /* ── Animated background ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 0%, rgba(99,102,241,0.12), transparent 60%),
+        radial-gradient(ellipse 60% 40% at 85% 100%, rgba(236,72,153,0.08), transparent 50%),
+        radial-gradient(ellipse 70% 50% at 50% 50%, rgba(245,158,11,0.05), transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+      animation: bgShift 20s ease-in-out infinite alternate;
     }
-    .projector-title {
+    @keyframes bgShift {
+      0%   { opacity: 0.8; filter: hue-rotate(0deg); }
+      100% { opacity: 1;   filter: hue-rotate(15deg); }
+    }
+
+    /* ── Layout ── */
+    .projector-root {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      height: 100vh;
+      padding: 20px 30px;
+      gap: 16px;
+    }
+
+    /* ── Top Bar ── */
+    .proj-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px;
+    }
+    .proj-brand {
       font-family: 'Outfit', sans-serif;
-      font-size: 3.5rem;
+      font-size: clamp(1.4rem, 3vw, 2.4rem);
       font-weight: 900;
-      background: linear-gradient(135deg, var(--accent-gold), var(--accent-indigo));
+      background: linear-gradient(135deg, var(--accent-gold) 0%, #fff 40%, var(--accent-indigo) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      letter-spacing: 2px;
-      margin: 0;
+      letter-spacing: 1px;
     }
-    .projector-main {
-      flex: 1;
+    .proj-status {
       display: flex;
-      gap: 60px;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--text-3);
+    }
+    .proj-status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-red);
+      box-shadow: 0 0 8px rgba(239,68,68,0.5);
+      transition: all 0.5s ease;
+    }
+    .proj-status-dot.connected {
+      background: var(--accent-green);
+      box-shadow: 0 0 8px rgba(16,185,129,0.5);
+      animation: statusPulse 2s ease-in-out infinite;
+    }
+    @keyframes statusPulse {
+      0%, 100% { box-shadow: 0 0 8px rgba(16,185,129,0.5); }
+      50%      { box-shadow: 0 0 16px rgba(16,185,129,0.8); }
+    }
+
+    /* ── Main Content Area ── */
+    .proj-main {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(30px, 4vw, 80px);
+      min-height: 0;
+    }
+
+    /* ── Waiting State ── */
+    .proj-waiting {
+      text-align: center;
+      animation: fadeInUp 0.6s ease;
+    }
+    .proj-waiting-icon {
+      font-size: 5rem;
+      margin-bottom: 20px;
+      animation: float 3s ease-in-out infinite;
+    }
+    .proj-waiting-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.6rem, 3vw, 2.8rem);
+      font-weight: 700;
+      color: var(--text-2);
+      margin-bottom: 12px;
+    }
+    .proj-waiting-sub {
+      font-size: 1rem;
+      color: var(--text-4);
+    }
+    .proj-waiting-dots::after {
+      content: '';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+    @keyframes dots {
+      0%   { content: ''; }
+      25%  { content: '.'; }
+      50%  { content: '..'; }
+      75%  { content: '...'; }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-12px); }
+    }
+
+    /* ── Player Card ── */
+    .proj-player-area {
+      flex: 0 0 auto;
+      width: clamp(280px, 25vw, 420px);
+      animation: fadeInLeft 0.5s ease;
+    }
+    .proj-player-card {
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      box-shadow:
+        0 20px 60px rgba(0,0,0,0.5),
+        0 0 40px rgba(99,102,241,0.08);
+      position: relative;
+      transition: all 0.4s ease;
+    }
+    .proj-player-card:hover {
+      box-shadow:
+        0 24px 70px rgba(0,0,0,0.6),
+        0 0 60px rgba(99,102,241,0.12);
+      transform: translateY(-4px);
+    }
+    .proj-player-img {
+      width: 100%;
+      aspect-ratio: 3/4;
+      background: linear-gradient(135deg, #0d1235, #1a1a3e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .proj-player-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+    }
+    .proj-player-img .proj-initial {
+      font-family: 'Outfit', sans-serif;
+      font-size: 6rem;
+      font-weight: 900;
+      color: rgba(255,255,255,0.12);
+    }
+    .proj-player-body {
+      padding: clamp(16px, 2vw, 30px);
+      text-align: center;
+      background: linear-gradient(180deg, rgba(13,18,53,0.95), rgba(7,8,22,0.98));
+    }
+    .proj-player-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.4rem, 2.2vw, 2.2rem);
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .proj-player-role {
+      display: inline-block;
+      padding: 6px 18px;
+      border-radius: var(--radius-full);
+      font-size: clamp(0.7rem, 1vw, 0.95rem);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+    .proj-player-role.batsman   { background: rgba(59,130,246,0.15); color: #3b82f6; }
+    .proj-player-role.bowler    { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .proj-player-role.allrounder { background: rgba(245,158,11,0.15); color: #f59e0b; }
+    .proj-player-base {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.04);
+      border-radius: var(--radius-md);
+    }
+    .proj-player-base-label {
+      font-size: 0.75rem;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .proj-player-base-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+
+    /* ── Player card overlay (SOLD / UNSOLD) ── */
+    .proj-card-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      animation: overlayIn 0.4s ease;
+    }
+    .proj-card-overlay.sold {
+      background: rgba(16,185,129,0.25);
+      backdrop-filter: blur(4px);
+    }
+    .proj-card-overlay.unsold {
+      background: rgba(239,68,68,0.2);
+      backdrop-filter: blur(4px);
+    }
+    .proj-card-overlay-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 4rem;
+      font-weight: 900;
+      letter-spacing: 6px;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .proj-card-overlay.sold .proj-card-overlay-text   { color: var(--accent-green); }
+    .proj-card-overlay.unsold .proj-card-overlay-text { color: var(--accent-red); }
+    @keyframes overlayIn {
+      0%   { opacity: 0; transform: scale(0.8); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* ── Info Area (Right Side) ── */
+    .proj-info-area {
+      flex: 1;
+      max-width: 700px;
+      display: flex;
+      flex-direction: column;
+      gap: clamp(12px, 1.5vw, 24px);
+      animation: fadeInRight 0.5s ease;
+      min-height: 0;
+    }
+
+    /* ── Bid Status Box ── */
+    .proj-bid-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-xl);
+      padding: clamp(20px, 2.5vw, 40px);
+      text-align: center;
+      box-shadow:
+        0 16px 40px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+      backdrop-filter: blur(20px);
+      position: relative;
+      overflow: hidden;
+    }
+    .proj-bid-box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-gold), var(--accent-indigo), transparent);
+    }
+    .proj-bid-label {
+      font-size: clamp(0.85rem, 1.2vw, 1.2rem);
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .proj-bid-label.sold-label   { color: var(--accent-green); }
+    .proj-bid-label.unsold-label { color: var(--accent-red); }
+
+    .proj-bid-amount {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(2.5rem, 5.5vw, 5rem);
+      font-weight: 800;
+      color: var(--accent-gold);
+      line-height: 1;
+      margin-bottom: 12px;
+      text-shadow: 0 0 40px rgba(245,158,11,0.25);
+      transition: all 0.3s ease;
+    }
+    .proj-bid-amount.flash {
+      animation: bidFlash 0.4s ease;
+    }
+    @keyframes bidFlash {
+      0%   { transform: scale(1); }
+      30%  { transform: scale(1.08); text-shadow: 0 0 60px rgba(245,158,11,0.5); }
+      100% { transform: scale(1); }
+    }
+
+    .proj-bidder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      font-size: clamp(1.2rem, 2vw, 2rem);
+      font-weight: 700;
+      min-height: 50px;
+    }
+    .proj-bidder img {
+      width: clamp(36px, 3.5vw, 56px);
+      height: clamp(36px, 3.5vw, 56px);
+      object-fit: contain;
+      border-radius: 50%;
+    }
+    .proj-bidder-none {
+      color: var(--text-4);
+      font-weight: 500;
+      font-size: 1.1rem;
+    }
+
+    /* ── Timer Ring ── */
+    .proj-timer-wrap {
+      display: flex;
       align-items: center;
       justify-content: center;
     }
-    .projector-player-area {
-      flex: 1;
-      max-width: 600px;
+    .proj-timer-ring-container {
+      position: relative;
+      width: clamp(140px, 14vw, 200px);
+      height: clamp(140px, 14vw, 200px);
+    }
+    .proj-timer-svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+    .proj-timer-bg {
+      fill: none;
+      stroke: rgba(255,255,255,0.06);
+      stroke-width: 6;
+    }
+    .proj-timer-progress {
+      fill: none;
+      stroke: var(--accent-green);
+      stroke-width: 6;
+      stroke-linecap: round;
+      transition: stroke 0.5s ease;
+      filter: drop-shadow(0 0 8px currentColor);
+    }
+    .proj-timer-text {
+      position: absolute;
+      inset: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
     }
-    .projector-card {
-      transform: scale(1.5);
-      transform-origin: top center;
-      margin-bottom: 200px; /* Make space since we scaled it */
+    .proj-timer-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      font-weight: 800;
+      color: var(--text-1);
+      line-height: 1;
+      transition: color 0.5s ease;
     }
-    .projector-info-area {
-      flex: 1;
-      max-width: 800px;
-      display: flex;
-      flex-direction: column;
-      gap: 40px;
-    }
-    
-    .projector-status-box {
-      background: var(--glass-heavy);
-      border: 2px solid var(--border-light);
-      border-radius: var(--radius-xl);
-      padding: 40px;
-      text-align: center;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-    }
-    .projector-bid-label {
-      font-size: 1.5rem;
-      color: var(--text-2);
+    .proj-timer-label {
+      font-size: 0.65rem;
+      color: var(--text-4);
       text-transform: uppercase;
       letter-spacing: 2px;
-      margin-bottom: 10px;
+      margin-top: 4px;
     }
-    .projector-bid-amount {
-      font-size: 6rem;
-      font-weight: 900;
-      color: var(--accent-gold);
-      font-family: 'JetBrains Mono', monospace;
-      line-height: 1;
-      margin-bottom: 20px;
-      text-shadow: 0 0 40px rgba(250,204,21,0.3);
+    .proj-timer-ring-container.warning .proj-timer-progress { stroke: var(--accent-gold); }
+    .proj-timer-ring-container.warning .proj-timer-value    { color: var(--accent-gold); }
+    .proj-timer-ring-container.danger .proj-timer-progress  { stroke: var(--accent-red); }
+    .proj-timer-ring-container.danger .proj-timer-value     { color: var(--accent-red); }
+    .proj-timer-ring-container.danger {
+      animation: timerPulse 1s ease-in-out infinite;
     }
-    .projector-bidder {
-      font-size: 2.5rem;
-      font-weight: 700;
-      color: #fff;
-    }
-    
-    .projector-timer {
-      font-size: 8rem;
-      font-weight: 900;
-      color: var(--text-1);
-      font-family: 'JetBrains Mono', monospace;
-      text-align: center;
-      margin: 20px 0;
-      text-shadow: 0 0 30px rgba(255,255,255,0.2);
-    }
-    .projector-timer.warning { color: var(--accent-gold); }
-    .projector-timer.danger { color: var(--accent-red); animation: pulse 1s infinite; }
-    
-    .projector-waiting {
-      font-size: 3rem;
-      color: var(--text-2);
-      text-align: center;
-      margin-top: 20vh;
-      font-weight: 700;
+    @keyframes timerPulse {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.04); }
     }
 
-    @keyframes pulse {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.05); opacity: 0.8; }
-      100% { transform: scale(1); opacity: 1; }
+    /* ── Sold/Unsold result in timer area ── */
+    .proj-result-badge {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(2.5rem, 5vw, 5rem);
+      font-weight: 900;
+      letter-spacing: 4px;
+      text-align: center;
+      animation: resultBounce 0.5s ease;
+    }
+    .proj-result-badge.sold {
+      color: var(--accent-green);
+      text-shadow: 0 0 40px rgba(16,185,129,0.4);
+    }
+    .proj-result-badge.unsold {
+      color: var(--accent-red);
+      text-shadow: 0 0 40px rgba(239,68,68,0.4);
+    }
+    @keyframes resultBounce {
+      0%   { opacity: 0; transform: scale(0.5); }
+      60%  { transform: scale(1.15); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* ── Bid History ── */
+    .proj-bid-history {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px 16px;
+      backdrop-filter: blur(12px);
+      max-height: 140px;
+      overflow: hidden;
+    }
+    .proj-bid-history-title {
+      font-size: 0.65rem;
+      color: var(--text-4);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+    .proj-bid-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      font-size: 0.8rem;
+      animation: slideIn 0.3s ease;
+    }
+    .proj-bid-entry + .proj-bid-entry {
+      border-top: 1px solid var(--border);
+    }
+    .proj-bid-team {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+    .proj-bid-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .proj-bid-amt {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: var(--accent-gold);
+      font-size: 0.78rem;
+    }
+    @keyframes slideIn {
+      0%   { opacity: 0; transform: translateX(-10px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ── Bottom Bar ── */
+    .proj-bottombar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(12px);
+    }
+    .proj-progress {
+      display: flex;
+      gap: 24px;
+      font-size: 0.8rem;
+      color: var(--text-3);
+      font-weight: 500;
+    }
+    .proj-progress-value {
+      font-weight: 700;
+      margin-left: 4px;
+    }
+    .proj-progress-value.sold   { color: var(--accent-green); }
+    .proj-progress-value.unsold { color: var(--accent-red); }
+    .proj-progress-value.remaining { color: var(--accent-blue); }
+
+    .proj-controls {
+      display: flex;
+      gap: 8px;
+    }
+    .proj-btn {
+      padding: 8px 16px;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      background: var(--glass-heavy);
+      color: var(--text-2);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .proj-btn:hover {
+      background: rgba(255,255,255,0.1);
+      color: var(--text-1);
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    /* ── Disconnected state ── */
+    .proj-disconnected {
+      text-align: center;
+      animation: fadeInUp 0.6s ease;
+    }
+    .proj-disconnected-icon {
+      font-size: 4rem;
+      margin-bottom: 16px;
+      animation: spin 2s linear infinite;
+    }
+    @keyframes spin {
+      0%   { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .proj-disconnected-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-3);
+    }
+
+    /* ── Generic animations ── */
+    @keyframes fadeInUp {
+      0%   { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeInLeft {
+      0%   { opacity: 0; transform: translateX(-30px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes fadeInRight {
+      0%   { opacity: 0; transform: translateX(30px); }
+      100% { opacity: 1; transform: translateX(0); }
     }
   </style>
 </head>
 <body>
-  
-  <div id="projector-root" class="projector-container">
-    <div class="projector-header">
-      <h1 class="projector-title">NAKRE PREMIER LEAGUE 3.0</h1>
+
+  <div class="projector-root" id="projector-root">
+    <!-- Top Bar -->
+    <div class="proj-topbar">
+      <div class="proj-brand">NAKRE PREMIER LEAGUE 3.0</div>
+      <div class="proj-status">
+        <div class="proj-status-dot" id="proj-status-dot"></div>
+        <span id="proj-status-text">Connecting...</span>
+      </div>
     </div>
-    
-    <div id="projector-content" class="projector-main">
-      <div class="projector-waiting">Waiting for Auctioneer...</div>
+
+    <!-- Main Content -->
+    <div class="proj-main" id="proj-main">
+      <div class="proj-waiting">
+        <div class="proj-waiting-icon">🏏</div>
+        <div class="proj-waiting-text">Waiting for Auctioneer<span class="proj-waiting-dots"></span></div>
+        <div class="proj-waiting-sub">The auction will appear here when started</div>
+      </div>
+    </div>
+
+    <!-- Bottom Bar -->
+    <div class="proj-bottombar" id="proj-bottombar">
+      <div class="proj-progress" id="proj-progress">
+        <span>Player <span class="proj-progress-value remaining" id="proj-player-count">—</span></span>
+        <span>Sold <span class="proj-progress-value sold" id="proj-sold-count">0</span></span>
+        <span>Unsold <span class="proj-progress-value unsold" id="proj-unsold-count">0</span></span>
+        <span>Remaining <span class="proj-progress-value remaining" id="proj-remaining-count">—</span></span>
+      </div>
+      <div class="proj-controls">
+        <button class="proj-btn" id="proj-fullscreen-btn">⛶ Fullscreen</button>
+      </div>
     </div>
   </div>
 
-  <script src="js/projector.js" type="module"></script>
+  <script src="js/projector.js"></script>
 </body>
 </html>

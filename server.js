@@ -280,7 +280,10 @@ function filterStateForProjector(state) {
     soldCount: state.soldCount,
     unsoldCount: state.unsoldCount,
     bidHistory: (state.bidHistory || []).slice(-5),
-    timerRemaining: state.timerRemaining
+    timerRemaining: state.timerRemaining,
+    timerStartTime: state.timerStartTime || null,
+    timerDuration: state.timerDuration || 30,
+    timerEnabled: state.timerEnabled || false
   };
 }
 
