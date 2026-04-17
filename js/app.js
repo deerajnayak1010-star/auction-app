@@ -16,7 +16,8 @@ class App {
     this.engine = null;
     this.selectedTeamIds = new Set();
     this.selectedPlayerIds = new Set();
-    this.currentView = 'setup';
+    this.currentView = 'login';
+    this.isLoggedIn = false;
     this.poolFilter = 'All';
     this.poolSearch = '';
     this.playerSelectFilter = 'All';
@@ -42,7 +43,7 @@ class App {
     this.idleCommentaryInterval = null;
   }
 
-  init() {
+  async init() {
     // Listen to hash changes for routing
     window.addEventListener('hashchange', () => this.onHashChange());
 
@@ -61,12 +62,21 @@ class App {
     });
 
     // Try to restore saved state
-    this.loadState();
+    await this.loadState();
 
-    // Navigate to initial view
-    const hash = window.location.hash.slice(1);
-    if (['setup', 'player-select', 'rules', 'players', 'auction', 'results'].includes(hash)) {
-      this.currentView = hash;
+    // Enforce login
+    if (!this.isLoggedIn) {
+      this.currentView = 'login';
+      window.location.hash = 'login';
+    } else {
+      // Navigate to initial view
+      const hash = window.location.hash.slice(1);
+      if (['setup', 'player-select', 'rules', 'players', 'auction', 'results'].includes(hash)) {
+        this.currentView = hash;
+      } else if (hash === 'login') {
+        this.currentView = 'setup'; // already logged in
+        window.location.hash = 'setup';
+      }
     }
     this.render();
   }
@@ -164,7 +174,18 @@ class App {
 
   onHashChange() {
     const hash = window.location.hash.slice(1);
-    if (['setup', 'player-select', 'rules', 'players', 'auction', 'results'].includes(hash)) {
+    
+    if (!this.isLoggedIn && hash !== 'login') {
+      window.location.hash = 'login';
+      return;
+    }
+    
+    if (this.isLoggedIn && hash === 'login') {
+      window.location.hash = 'setup';
+      return;
+    }
+
+    if (['login', 'setup', 'player-select', 'rules', 'players', 'auction', 'results'].includes(hash)) {
       this.currentView = hash;
       this.render();
     }
@@ -178,24 +199,51 @@ class App {
   saveState() {
     try {
       const state = {
+        isLoggedIn: this.isLoggedIn,
         selectedTeamIds: [...this.selectedTeamIds],
         selectedPlayerIds: [...this.selectedPlayerIds],
         currentView: this.currentView,
         engine: this.engine ? this.engine.serialize() : null,
       };
-      localStorage.setItem('npl_auction_state', JSON.stringify(state));
+      const stateStr = JSON.stringify(state);
+      localStorage.setItem('npl_auction_state', stateStr);
+      
+      if (this.isLoggedIn) {
+        fetch('/api/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + (localStorage.getItem('npl_token') || '')
+          },
+          body: stateStr
+        }).catch(e => console.warn('Server sync failed', e));
+      }
     } catch (e) {
       console.warn('Failed to save state:', e);
     }
   }
 
-  /** Load saved auction state from localStorage */
-  loadState() {
+  /** Load saved auction state from server/localStorage */
+  async loadState() {
     try {
-      const raw = localStorage.getItem('npl_auction_state');
+      let raw = null;
+      try {
+        const res = await fetch('/api/state');
+        if (res.ok) raw = await res.text();
+      } catch (e) {
+        console.warn('Failed to fetch state from server');
+      }
+
+      if (!raw) {
+        raw = localStorage.getItem('npl_auction_state');
+      }
+
       if (!raw) return;
 
       const state = JSON.parse(raw);
+      if (state.isLoggedIn !== undefined) {
+        this.isLoggedIn = state.isLoggedIn;
+      }
       if (state.selectedTeamIds) {
         this.selectedTeamIds = new Set(state.selectedTeamIds);
       }
@@ -221,6 +269,8 @@ class App {
     this.engine = null;
     this.selectedTeamIds = new Set();
     this.selectedPlayerIds = new Set();
+    // Keep login state when resetting auction data
+    this.saveState(); 
     this.ui.showToast('🔄 Auction reset. Starting fresh!', 'info');
     this.navigate('setup');
   }
@@ -240,6 +290,9 @@ class App {
     this.bindNavEvents();
 
     switch (this.currentView) {
+      case 'login':
+        this.ui.renderLogin();
+        break;
       case 'setup':
         this.ui.renderSetup(TEAMS_DATA, this.selectedTeamIds, this.timerDuration);
         this.bindTimerSetting();
@@ -327,8 +380,42 @@ class App {
   }
 
   onClick(e) {
-    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #results-tab-squads, #results-tab-analytics, #commentary-toggle-btn, #commentary-header, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn');
+    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], #login-btn, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #results-tab-squads, #results-tab-analytics, #commentary-toggle-btn, #commentary-header, #open-projector-btn, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn');
     if (!target) return;
+
+    // ── Login: submit ──
+    if (target.id === 'login-btn') {
+      const userEl = document.getElementById('login-username');
+      const passEl = document.getElementById('login-password');
+      if (userEl && passEl) {
+        fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: userEl.value, password: passEl.value })
+        }).then(r => r.json()).then(data => {
+          if (data.success) {
+            this.isLoggedIn = true;
+            localStorage.setItem('npl_token', data.token);
+            this.saveState();
+            this.ui.showToast('Login successful!', 'success');
+            this.navigate('setup');
+          } else {
+            this.ui.showToast('Invalid username or password', 'error');
+          }
+        }).catch(() => this.ui.showToast('Server error', 'error'));
+      }
+      return;
+    }
+
+    // ── Logout ──
+    if (target.id === 'logout-btn') {
+      this.isLoggedIn = false;
+      localStorage.removeItem('npl_token');
+      this.saveState();
+      this.ui.showToast('Logged out successfully', 'info');
+      this.navigate('login');
+      return;
+    }
 
     // ── Setup: team toggle ──
     if (target.closest('.team-select-card')) {
@@ -590,6 +677,12 @@ class App {
     // ── Commentary panel header click (collapse/expand) ──
     if (target.id === 'commentary-header' || target.closest('#commentary-header')) {
       this.ui.toggleCommentaryPanel();
+      return;
+    }
+
+    // ── Open Projector Screen ──
+    if (target.id === 'open-projector-btn' || target.closest('#open-projector-btn')) {
+      window.open('projector.html', '_blank');
       return;
     }
   }

@@ -8,8 +8,20 @@ const path = require('path');
 const { WebSocketServer } = require('ws');
 const os = require('os');
 const QRCode = require('qrcode');
+const sqlite3 = require('sqlite3').verbose();
 
 const PORT = process.env.PORT || 3000;
+
+// ── Database Setup ─────────────────────────────
+const dbPath = path.join(__dirname, 'auction.db');
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) console.error('[DB] Error opening database:', err);
+  else console.log('[DB] SQLite database connected');
+});
+
+db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS app_state (id INTEGER PRIMARY KEY, state_json TEXT)`);
+});
 
 // ── Helpers ────────────────────────────────────
 
@@ -70,11 +82,68 @@ function validateTeamCode(teamCode) {
   return activeSession.teams.find(t => t.shortName.toUpperCase() === code);
 }
 
-// ── HTTP Server (static files) ─────────────────
+// ── HTTP Server (static files & API) ───────────
+
+// Basic body parser helper
+function parseBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => body += chunk.toString());
+    req.on('end', () => {
+      try { resolve(JSON.parse(body || '{}')); }
+      catch (e) { resolve({}); }
+    });
+    req.on('error', reject);
+  });
+}
 
 const server = http.createServer(async (req, res) => {
+  // API: Login
+  if (req.method === 'POST' && req.url === '/api/login') {
+    const body = await parseBody(req);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    if ((body.username || '').toUpperCase() === 'RCB' && body.password === 'RCB2.0') {
+      res.end(JSON.stringify({ success: true, token: 'npl-auth-token' }));
+    } else {
+      res.end(JSON.stringify({ success: false }));
+    }
+    return;
+  }
+
+  // API: State Get/Set
+  if (req.url === '/api/state') {
+    if (req.method === 'GET') {
+      db.get("SELECT state_json FROM app_state WHERE id = 1", (err, row) => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        if (err || !row) {
+          res.end(JSON.stringify(null));
+        } else {
+          res.end(row.state_json);
+        }
+      });
+      return;
+    }
+    
+    if (req.method === 'POST') {
+      const authHeader = req.headers.authorization;
+      if (authHeader !== 'Bearer npl-auth-token') {
+        res.writeHead(401);
+        res.end(JSON.stringify({ success: false, error: 'Unauthorized' }));
+        return;
+      }
+      const body = await parseBody(req);
+      const jsonStr = JSON.stringify(body);
+      db.run("INSERT OR REPLACE INTO app_state (id, state_json) VALUES (1, ?)", [jsonStr], (err) => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        if (err) res.end(JSON.stringify({ success: false }));
+        else res.end(JSON.stringify({ success: true }));
+      });
+      return;
+    }
+  }
+
   // API: server info
-  if (req.url === '/api/server-info') {
+  if (req.method === 'GET' && req.url === '/api/server-info') {
     res.writeHead(200, {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
@@ -142,9 +211,22 @@ const wss = new WebSocketServer({ server });
 
 let hostSocket = null;
 const mobileClients = new Map(); // ws -> { teamId, teamName, ... }
+const projectorClients = new Set(); // set of ws clients
 let latestState = null;
 
+function broadcastToProjectors(state) {
+  for (const client of projectorClients) {
+    if (client.readyState === 1) {
+      client.send(JSON.stringify({
+        type: 'state-update',
+        state: filterStateForProjector(state),
+      }));
+    }
+  }
+}
+
 function broadcastToMobiles(state) {
+  broadcastToProjectors(state); // Ensure projectors also get every state update
   for (const [client, info] of mobileClients) {
     if (client.readyState === 1) {
       client.send(JSON.stringify({
@@ -179,6 +261,29 @@ function filterStateForMobile(state, teamId) {
   };
 }
 
+function filterStateForProjector(state) {
+  return {
+    phase: state.phase,
+    currentPlayer: state.currentPlayer,
+    currentBid: state.currentBid,
+    currentBidder: state.currentBidder,
+    currentBidderTeam: state.currentBidderTeam ? {
+      shortName: state.currentBidderTeam.shortName,
+      name: state.currentBidderTeam.name,
+      color: state.currentBidderTeam.color,
+      logo: state.currentBidderTeam.logo
+    } : null,
+    nextBidAmount: state.nextBidAmount,
+    playerIndex: state.playerIndex,
+    totalPlayers: state.totalPlayers,
+    remainingPlayers: state.remainingPlayers,
+    soldCount: state.soldCount,
+    unsoldCount: state.unsoldCount,
+    bidHistory: (state.bidHistory || []).slice(-5),
+    timerRemaining: state.timerRemaining
+  };
+}
+
 wss.on('connection', (ws) => {
   console.log('[WS] New connection');
 
@@ -188,6 +293,18 @@ wss.on('connection', (ws) => {
     catch (e) { return; }
 
     switch (msg.type) {
+      
+      // ── Projector Registration ──
+      case 'projector-register':
+        projectorClients.add(ws);
+        console.log('[WS] Projector connected');
+        if (latestState) {
+          ws.send(JSON.stringify({
+            type: 'state-update',
+            state: filterStateForProjector(latestState)
+          }));
+        }
+        break;
 
       // ── Host registers ──
       case 'host-register':
@@ -360,6 +477,11 @@ wss.on('connection', (ws) => {
           teamShortName: info.teamShortName,
         }));
       }
+    }
+
+    if (projectorClients.has(ws)) {
+      console.log('[WS] Projector disconnected');
+      projectorClients.delete(ws);
     }
   });
 });

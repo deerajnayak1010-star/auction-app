@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NAKRE PREMIER LEAGUE 3.0 - Live Projector</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@700;800;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+  
+  <style>
+    /* Projector specific overrides for a massive, clean display */
+    body {
+      overflow: hidden; /* Hide scrollbars on projector */
+    }
+    .projector-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: 40px;
+      box-sizing: border-box;
+    }
+    .projector-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .projector-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 3.5rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--accent-gold), var(--accent-indigo));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 2px;
+      margin: 0;
+    }
+    .projector-main {
+      flex: 1;
+      display: flex;
+      gap: 60px;
+      align-items: center;
+      justify-content: center;
+    }
+    .projector-player-area {
+      flex: 1;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .projector-card {
+      transform: scale(1.5);
+      transform-origin: top center;
+      margin-bottom: 200px; /* Make space since we scaled it */
+    }
+    .projector-info-area {
+      flex: 1;
+      max-width: 800px;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+    
+    .projector-status-box {
+      background: var(--glass-heavy);
+      border: 2px solid var(--border-light);
+      border-radius: var(--radius-xl);
+      padding: 40px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+    .projector-bid-label {
+      font-size: 1.5rem;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+    }
+    .projector-bid-amount {
+      font-size: 6rem;
+      font-weight: 900;
+      color: var(--accent-gold);
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1;
+      margin-bottom: 20px;
+      text-shadow: 0 0 40px rgba(250,204,21,0.3);
+    }
+    .projector-bidder {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    
+    .projector-timer {
+      font-size: 8rem;
+      font-weight: 900;
+      color: var(--text-1);
+      font-family: 'JetBrains Mono', monospace;
+      text-align: center;
+      margin: 20px 0;
+      text-shadow: 0 0 30px rgba(255,255,255,0.2);
+    }
+    .projector-timer.warning { color: var(--accent-gold); }
+    .projector-timer.danger { color: var(--accent-red); animation: pulse 1s infinite; }
+    
+    .projector-waiting {
+      font-size: 3rem;
+      color: var(--text-2);
+      text-align: center;
+      margin-top: 20vh;
+      font-weight: 700;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  
+  <div id="projector-root" class="projector-container">
+    <div class="projector-header">
+      <h1 class="projector-title">NAKRE PREMIER LEAGUE 3.0</h1>
+    </div>
+    
+    <div id="projector-content" class="projector-main">
+      <div class="projector-waiting">Waiting for Auctioneer...</div>
+    </div>
+  </div>
+
+  <script src="js/projector.js" type="module"></script>
+</body>
+</html>

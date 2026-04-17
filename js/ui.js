@@ -45,6 +45,13 @@ export class UI {
 
     const isFs = !!document.fullscreenElement;
 
+    if (currentView === 'login') {
+      this.headerEl.innerHTML = `
+        <div class="nav-brand" style="margin: 0 auto;">NAKRE PREMIER LEAGUE 3.0</div>
+      `;
+      return;
+    }
+
     this.headerEl.innerHTML = `
       <div class="nav-brand">NAKRE PREMIER LEAGUE 3.0</div>
       <nav class="nav-links">
@@ -70,6 +77,36 @@ export class UI {
         <button class="btn-fullscreen" id="fullscreen-btn" title="${isFs ? 'Exit Fullscreen' : 'Enter Fullscreen'}">
           ${isFs ? '⊗' : '⛶'}
         </button>
+        <button class="btn btn-ghost btn-sm" id="logout-btn" title="Logout" style="margin-left: 12px;">
+          Logout
+        </button>
+      </div>
+    `;
+  }
+
+  // ═══════════════════════════════════════════
+  // LOGIN PAGE
+  // ═══════════════════════════════════════════
+  
+  renderLogin() {
+    this.mainEl.innerHTML = `
+      <div class="login-page">
+        <div class="login-card glass-card">
+          <div class="login-icon">🔒</div>
+          <h2 class="login-title">Admin Login</h2>
+          <p class="login-subtitle">Please sign in to access the auction</p>
+          <div class="login-form">
+            <div class="input-group" style="text-align: left; margin-bottom: 16px;">
+              <label for="login-username" style="display: block; margin-bottom: 6px; font-size: 0.85rem; color: var(--text-2);">Username</label>
+              <input type="text" id="login-username" class="search-input" style="width: 100%; box-sizing: border-box;" placeholder="Enter username">
+            </div>
+            <div class="input-group" style="text-align: left; margin-bottom: 24px;">
+              <label for="login-password" style="display: block; margin-bottom: 6px; font-size: 0.85rem; color: var(--text-2);">Password</label>
+              <input type="password" id="login-password" class="search-input" style="width: 100%; box-sizing: border-box;" placeholder="Enter password">
+            </div>
+            <button class="btn btn-primary btn-lg" id="login-btn" style="width: 100%;">Sign In</button>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -737,6 +774,14 @@ export class UI {
           <div class="timer-label">Bid Timer</div>
         </div>
         ` : ''}
+
+        <div class="bid-info-card quick-bid-card">
+          <div class="bid-current-label">📺 Live Projector</div>
+          <button class="btn btn-secondary btn-sm" id="open-projector-btn" style="width:100%; margin-top:8px;">
+            ↗ Open Projector Screen
+          </button>
+        </div>
+
         <div class="bid-info-card mobile-bid-card">
           <div class="bid-current-label">📱 Mobile Bidding</div>
           <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">
