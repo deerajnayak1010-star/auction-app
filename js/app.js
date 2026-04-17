@@ -396,24 +396,33 @@ class App {
         const password = passEl.value;
 
         // Try server login first, fall back to client-side for GitHub Pages
+        let serverHandled = false;
         try {
           const res = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
           });
-          const data = await res.json();
-          if (data.success) {
-            this.isLoggedIn = true;
-            localStorage.setItem('npl_token', data.token);
-            this.saveState();
-            this.ui.showToast('Login successful!', 'success');
-            this.navigate('setup');
-          } else {
-            this.ui.showToast('Invalid username or password', 'error');
+          const ct = res.headers.get('content-type') || '';
+          if (ct.includes('application/json')) {
+            const data = await res.json();
+            serverHandled = true;
+            if (data.success) {
+              this.isLoggedIn = true;
+              localStorage.setItem('npl_token', data.token || 'npl-auth-token');
+              this.saveState();
+              this.ui.showToast('Login successful!', 'success');
+              this.navigate('setup');
+            } else {
+              this.ui.showToast('Invalid username or password', 'error');
+            }
           }
         } catch (_) {
-          // Server unreachable (GitHub Pages / static hosting) — client-side auth
+          // Network error or parse error — fall through to client-side
+        }
+
+        // Client-side fallback (GitHub Pages / static hosting — no server)
+        if (!serverHandled) {
           if (username.toUpperCase() === 'RCB' && password === 'RCB2.0') {
             this.isLoggedIn = true;
             localStorage.setItem('npl_token', 'npl-auth-token');
