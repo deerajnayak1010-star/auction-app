@@ -230,9 +230,12 @@ class App {
       let raw = null;
       try {
         const res = await fetch('/api/state');
-        if (res.ok) raw = await res.text();
+        const ct = res.headers.get('content-type') || '';
+        if (res.ok && ct.includes('application/json')) {
+          raw = await res.text();
+        }
       } catch (e) {
-        console.warn('Failed to fetch state from server');
+        // Server unavailable (GitHub Pages) — will fall back to localStorage
       }
 
       if (!raw) {
@@ -380,7 +383,7 @@ class App {
     }
   }
 
-  onClick(e) {
+  async onClick(e) {
     const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], #login-btn, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #results-tab-squads, #results-tab-analytics, #commentary-toggle-btn, #commentary-header, #open-projector-btn, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn');
     if (!target) return;
 
@@ -389,11 +392,17 @@ class App {
       const userEl = document.getElementById('login-username');
       const passEl = document.getElementById('login-password');
       if (userEl && passEl) {
-        fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: userEl.value, password: passEl.value })
-        }).then(r => r.json()).then(data => {
+        const username = userEl.value.trim();
+        const password = passEl.value;
+
+        // Try server login first, fall back to client-side for GitHub Pages
+        try {
+          const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+          const data = await res.json();
           if (data.success) {
             this.isLoggedIn = true;
             localStorage.setItem('npl_token', data.token);
@@ -403,7 +412,18 @@ class App {
           } else {
             this.ui.showToast('Invalid username or password', 'error');
           }
-        }).catch(() => this.ui.showToast('Server error', 'error'));
+        } catch (_) {
+          // Server unreachable (GitHub Pages / static hosting) — client-side auth
+          if (username.toUpperCase() === 'RCB' && password === 'RCB2.0') {
+            this.isLoggedIn = true;
+            localStorage.setItem('npl_token', 'npl-auth-token');
+            this.saveState();
+            this.ui.showToast('Login successful!', 'success');
+            this.navigate('setup');
+          } else {
+            this.ui.showToast('Invalid username or password', 'error');
+          }
+        }
       }
       return;
     }
