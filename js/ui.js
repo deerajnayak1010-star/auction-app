@@ -243,6 +243,9 @@ export class UI {
             <ul class="rules-list">
               <li>Each team has a fixed budget of <strong>1,00,000 pts</strong></li>
               <li>Base price starts from <strong>1,000 pts</strong></li>
+              <li>Maximum bid for a single player: <strong>89,000 pts</strong>
+                <div style="font-size: 0.82rem; color: var(--text-3); margin-top: 4px;">Budget must reserve 1,000 pts × remaining empty slots</div>
+              </li>
               <li>Bid increments:
                 <div class="rules-table">
                   <div class="rules-row"><span>1,000 – 10,000</span><span>→ +500</span></div>
@@ -275,7 +278,14 @@ export class UI {
             </div>
             <ul class="rules-list">
               <li>Each team must stay within their <strong>total budget</strong></li>
-              <li>Maximum squad size: <strong>14 players</strong></li>
+              <li>Maximum squad size: <strong>14 players</strong>
+                <div class="rules-table" style="margin-top: 6px;">
+                  <div class="rules-row"><span>🏏 Auctioned Players</span><span><strong>12</strong></span></div>
+                  <div class="rules-row"><span>👑 Owner</span><span><strong>1</strong></span></div>
+                  <div class="rules-row"><span>⭐ Icon Player</span><span><strong>1</strong></span></div>
+                  <div class="rules-row" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px; margin-top: 4px;"><span>Total per Team</span><span><strong>14</strong></span></div>
+                </div>
+              </li>
               <li>Build a balanced squad with batsmen, bowlers, and all-rounders</li>
             </ul>
           </div>
