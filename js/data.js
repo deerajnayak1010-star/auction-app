@@ -112,6 +112,7 @@ export const PLAYERS_DATA = [
   { id: 91, name: 'Sanu Manigudde',       role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sanu Manigudde.png', basePrice: 1000 },
   { id: 92, name: 'Pratheesh Reddy',      role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Pratheesh Reddy.png', basePrice: 1000 },
   { id: 93, name: 'Amith Nakre',          role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Amith Nakre.png', basePrice: 1000 },
+  { id: 94, name: 'Shamith Shetty',       role: 'All-Rounder', location: 'Parapu',      batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Shamith Shetty.png', basePrice: 1000 },
 ];
 
 // Role display config

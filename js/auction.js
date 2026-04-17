@@ -7,7 +7,7 @@ export class AuctionEngine {
    * @param {Array} teams - Team objects from selected teams
    * @param {Array} players - Player objects to auction
    */
-  constructor(teams, players) {
+  constructor(teams, players, options = {}) {
     this.teams = new Map();
     teams.forEach(t => {
       this.teams.set(t.id, {
@@ -30,6 +30,14 @@ export class AuctionEngine {
     this.auctionLog = [];       // full activity log
     this.playerIndex = 0;       // how many players have been nominated
     this.phase = 'waiting';     // waiting | bidding | complete
+
+    // Timer settings
+    this.timerDuration = options.timerDuration ?? 30; // seconds, 0 = disabled
+    this.timerStartTime = null;  // timestamp when timer was last (re)started
+    this.timerEnabled = this.timerDuration > 0;
+
+    // Analytics: track bid counts per player sale
+    this.maxBidsPlayer = null;  // { name, bidCount }
   }
 
   // ── Helpers ───────────────────────────────────
@@ -75,12 +83,42 @@ export class AuctionEngine {
     this.phase = 'bidding';
     this.playerIndex++;
 
+    // Start timer
+    this.resetTimer();
+
     this._log('nominate', {
       player: this.currentPlayer,
       index: this.playerIndex,
     });
 
     return this.currentPlayer;
+  }
+
+  // ── Timer ─────────────────────────────────────
+
+  /** Reset the timer (called on nominate and each bid) */
+  resetTimer() {
+    this.timerStartTime = Date.now();
+  }
+
+  /** Get remaining seconds on the timer */
+  getTimerRemaining() {
+    if (!this.timerEnabled || !this.timerStartTime || this.phase !== 'bidding') return null;
+    const elapsed = (Date.now() - this.timerStartTime) / 1000;
+    return Math.max(0, this.timerDuration - elapsed);
+  }
+
+  /** Check if timer has expired */
+  isTimerExpired() {
+    if (!this.timerEnabled) return false;
+    const remaining = this.getTimerRemaining();
+    return remaining !== null && remaining <= 0;
+  }
+
+  /** Set timer duration (0 = disabled) */
+  setTimerDuration(seconds) {
+    this.timerDuration = Math.max(0, seconds);
+    this.timerEnabled = this.timerDuration > 0;
   }
 
   // ── Bidding ───────────────────────────────────
@@ -146,6 +184,9 @@ export class AuctionEngine {
 
     this.currentBidder = teamId;
     const team = this.teams.get(teamId);
+
+    // Reset timer on each bid
+    this.resetTimer();
 
     const entry = {
       teamId,
@@ -276,6 +317,7 @@ export class AuctionEngine {
       soldPrice: this.currentBid,
     });
 
+    const bidCount = this.bidHistory.length;
     const result = {
       player: { ...this.currentPlayer },
       teamId: this.currentBidder,
@@ -283,7 +325,13 @@ export class AuctionEngine {
       teamShortName: team.shortName,
       teamColor: team.color,
       price: this.currentBid,
+      bidCount,
     };
+
+    // Track player with most bids (for analytics)
+    if (!this.maxBidsPlayer || bidCount > this.maxBidsPlayer.bidCount) {
+      this.maxBidsPlayer = { name: this.currentPlayer.name, bidCount };
+    }
 
     this.soldPlayers.push(result);
     this._log('sold', result);
@@ -355,6 +403,12 @@ export class AuctionEngine {
       soldPlayers: [...this.soldPlayers],
       unsoldPlayers: [...this.unsoldPlayers],
       auctionLog: [...this.auctionLog].reverse(),   // newest first
+      // Timer
+      timerEnabled: this.timerEnabled,
+      timerDuration: this.timerDuration,
+      timerRemaining: this.getTimerRemaining(),
+      // Analytics
+      maxBidsPlayer: this.maxBidsPlayer,
     };
   }
 
@@ -390,6 +444,10 @@ export class AuctionEngine {
       auctionLog: [...this.auctionLog],
       playerIndex: this.playerIndex,
       phase: this.phase,
+      timerDuration: this.timerDuration,
+      timerEnabled: this.timerEnabled,
+      timerStartTime: this.timerStartTime,
+      maxBidsPlayer: this.maxBidsPlayer,
     };
   }
 
@@ -411,6 +469,10 @@ export class AuctionEngine {
     engine.auctionLog = data.auctionLog || [];
     engine.playerIndex = data.playerIndex || 0;
     engine.phase = data.phase || 'waiting';
+    engine.timerDuration = data.timerDuration ?? 30;
+    engine.timerEnabled = data.timerEnabled ?? true;
+    engine.timerStartTime = data.timerStartTime || null;
+    engine.maxBidsPlayer = data.maxBidsPlayer || null;
     return engine;
   }
 }

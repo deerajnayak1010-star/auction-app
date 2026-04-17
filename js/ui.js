@@ -34,7 +34,7 @@ export class UI {
   // HEADER
   // ═══════════════════════════════════════════
 
-  renderHeader(currentView, stats = {}) {
+  renderHeader(currentView, stats = {}, soundMuted = false) {
     const views = [
       { id: 'setup',   label: 'Setup' },
       { id: 'players', label: 'Players' },
@@ -60,6 +60,12 @@ export class UI {
             <span>Unsold:<span class="nav-stat-value">${stats.unsold || 0}</span></span>
           ` : ''}
         </div>
+        <button class="btn-commentary-toggle ${currentView === 'auction' ? 'active' : ''}" id="commentary-toggle-btn" title="Toggle Live Commentary">
+          🎙️
+        </button>
+        <button class="btn-sound-toggle" id="sound-toggle-btn" title="${soundMuted ? 'Unmute Sound' : 'Mute Sound'}">
+          ${soundMuted ? '🔇' : '🔊'}
+        </button>
         <button class="btn-reset-auction" id="reset-auction-btn" title="Start New Auction / Reset">🔄 New Auction</button>
         <button class="btn-fullscreen" id="fullscreen-btn" title="${isFs ? 'Exit Fullscreen' : 'Enter Fullscreen'}">
           ${isFs ? '⊗' : '⛶'}
@@ -72,7 +78,7 @@ export class UI {
   // SETUP PAGE
   // ═══════════════════════════════════════════
 
-  renderSetup(teams, selectedTeamIds) {
+  renderSetup(teams, selectedTeamIds, timerDuration = 30) {
     const allSelected = teams.length > 0 && teams.every(t => selectedTeamIds.has(t.id));
 
     this.mainEl.innerHTML = `
@@ -139,6 +145,26 @@ export class UI {
             </div>
           `).join('')}
         </div>
+
+        <!-- Timer Duration Setting -->
+        <div class="timer-setting-card">
+          <div class="timer-setting-header">
+            <span class="timer-setting-icon">⏱️</span>
+            <h3>Bid Timer</h3>
+          </div>
+          <p class="timer-setting-desc">Set countdown duration per bid. Timer resets on each new bid.</p>
+          <div class="timer-setting-options">
+            <select id="timer-duration" class="timer-select">
+              <option value="0" ${timerDuration === 0 ? 'selected' : ''}>Disabled</option>
+              <option value="15" ${timerDuration === 15 ? 'selected' : ''}>15 seconds</option>
+              <option value="20" ${timerDuration === 20 ? 'selected' : ''}>20 seconds</option>
+              <option value="30" ${timerDuration === 30 ? 'selected' : ''}>30 seconds</option>
+              <option value="45" ${timerDuration === 45 ? 'selected' : ''}>45 seconds</option>
+              <option value="60" ${timerDuration === 60 ? 'selected' : ''}>60 seconds</option>
+            </select>
+          </div>
+        </div>
+
         <div class="setup-footer">
           <p>${selectedTeamIds.size} team${selectedTeamIds.size !== 1 ? 's' : ''} selected (minimum 2 required)</p>
           <button class="btn btn-primary btn-lg" id="start-auction-btn" ${selectedTeamIds.size < 2 ? 'disabled' : ''}>
@@ -697,7 +723,20 @@ export class UI {
           ` : ''}
         </div>
 
-        <!-- Mobile Bidding Card -->
+        <!-- Bid Timer -->
+        ${state.timerEnabled && state.phase === 'bidding' ? `
+        <div class="bid-info-card timer-card" id="timer-card">
+          <div class="timer-ring-wrap">
+            <svg class="timer-ring" viewBox="0 0 120 120">
+              <circle class="timer-ring-bg" cx="60" cy="60" r="52" />
+              <circle class="timer-ring-progress" id="timer-ring-progress" cx="60" cy="60" r="52"
+                      stroke-dasharray="326.73" stroke-dashoffset="0" />
+            </svg>
+            <div class="timer-ring-text" id="timer-ring-text">${state.timerDuration}</div>
+          </div>
+          <div class="timer-label">Bid Timer</div>
+        </div>
+        ` : ''}
         <div class="bid-info-card mobile-bid-card">
           <div class="bid-current-label">📱 Mobile Bidding</div>
           <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">
@@ -851,7 +890,7 @@ export class UI {
   // RESULTS PAGE
   // ═══════════════════════════════════════════
 
-  renderResults(state) {
+  renderResults(state, activeTab = 'squads') {
     if (!state) {
       this.mainEl.innerHTML = `
         <div class="auction-complete">
@@ -874,7 +913,7 @@ export class UI {
         <div class="results-header">
           <h2>NAKRE PREMIER LEAGUE 3.0 - 2026</h2>
           <p>${state.soldCount} players sold across ${state.teams.length} teams</p>
-          <div style="margin-top:16px; display:flex; gap:12px; justify-content:center;">
+          <div style="margin-top:16px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
             <button class="btn btn-primary" id="download-all-posters-btn">📥 Download All Team Posters</button>
           </div>
         </div>
@@ -901,60 +940,17 @@ export class UI {
           ` : ''}
         </div>
 
-        <div class="results-teams-grid">
-          ${state.teams.map(team => `
-            <div class="result-team-card">
-              <div class="result-team-header" style="--team-color: ${team.color}">
-                <div class="result-team-logo" style="background: ${team.color}; color: ${team.textColor}; overflow:hidden;">
-                  ${team.logo ? `<img src="${team.logo}" alt="${team.shortName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : team.shortName}
-                </div>
-                <div class="result-team-info">
-                  <div class="result-team-name">${team.name}</div>
-                  <div class="result-team-meta">
-                    <span>Spent: ${fmt(team.totalSpent)}</span>
-                    <span>Purse: ${fmt(team.purse)}</span>
-                    <span>Squad: ${team.squad.length}/14</span>
-                  </div>
-                </div>
-                <div class="result-team-people">
-                  ${team.ownerImage ? `
-                    <div class="result-team-avatar-wrap">
-                      <img class="result-team-avatar" src="${team.ownerImage}" alt="${team.owner}" title="Owner: ${team.owner}">
-                      <span class="result-team-avatar-label">Owner</span>
-                    </div>
-                  ` : ''}
-                  ${team.iconPlayerImage ? `
-                    <div class="result-team-avatar-wrap">
-                      <img class="result-team-avatar icon" src="${team.iconPlayerImage}" alt="${team.iconPlayer}" title="Icon: ${team.iconPlayer}">
-                      <span class="result-team-avatar-label">Icon</span>
-                    </div>
-                  ` : ''}
-                </div>
-              </div>
-              <div class="result-squad-list">
-                ${team.squad.length > 0 ? team.squad.map(p => {
-                  const rc = ROLE_CONFIG[p.role] || {};
-                  return `
-                    <div class="result-squad-item">
-                      <div class="result-squad-player">
-                        <span class="result-squad-role-dot" style="background: ${rc.color || '#6366f1'}"></span>
-                        <span>${p.name}</span>
-                        <span style="color:var(--text-4); font-size:0.7rem;">${rc.icon || ''} ${p.role}${p.isWK ? ' 🧤' : ''}</span>
-                      </div>
-                      <span class="result-squad-price">${fmt(p.soldPrice)}</span>
-                    </div>
-                  `;
-                }).join('') : `
-                  <div class="result-squad-empty">No players acquired</div>
-                `}
-              </div>
-              <div style="padding:8px 20px 14px; display:flex; gap:8px;">
-                <button class="btn btn-ghost btn-sm poster-preview-btn" data-team-id="${team.id}">🖼️ Preview</button>
-                <button class="btn btn-primary btn-sm poster-download-btn" data-team-id="${team.id}">📥 Download Poster</button>
-              </div>
-            </div>
-          `).join('')}
+        <!-- Tab Switcher -->
+        <div class="results-tabs">
+          <button class="results-tab-btn ${activeTab === 'squads' ? 'active' : ''}" id="results-tab-squads">
+            👥 Team Squads
+          </button>
+          <button class="results-tab-btn ${activeTab === 'analytics' ? 'active' : ''}" id="results-tab-analytics">
+            📊 Analytics
+          </button>
         </div>
+
+        ${activeTab === 'squads' ? this._renderSquadsTab(state) : this._renderAnalyticsTab(state)}
 
         ${state.unsoldPlayers.length > 0 ? `
           <div class="unsold-section">
@@ -970,6 +966,205 @@ export class UI {
               `).join('')}
             </div>
           </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  _renderSquadsTab(state) {
+    return `
+      <div class="results-teams-grid">
+        ${state.teams.map(team => `
+          <div class="result-team-card">
+            <div class="result-team-header" style="--team-color: ${team.color}">
+              <div class="result-team-logo" style="background: ${team.color}; color: ${team.textColor}; overflow:hidden;">
+                ${team.logo ? `<img src="${team.logo}" alt="${team.shortName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : team.shortName}
+              </div>
+              <div class="result-team-info">
+                <div class="result-team-name">${team.name}</div>
+                <div class="result-team-meta">
+                  <span>Spent: ${fmt(team.totalSpent)}</span>
+                  <span>Purse: ${fmt(team.purse)}</span>
+                  <span>Squad: ${team.squad.length}/14</span>
+                </div>
+              </div>
+              <div class="result-team-people">
+                ${team.ownerImage ? `
+                  <div class="result-team-avatar-wrap">
+                    <img class="result-team-avatar" src="${team.ownerImage}" alt="${team.owner}" title="Owner: ${team.owner}">
+                    <span class="result-team-avatar-label">Owner</span>
+                  </div>
+                ` : ''}
+                ${team.iconPlayerImage ? `
+                  <div class="result-team-avatar-wrap">
+                    <img class="result-team-avatar icon" src="${team.iconPlayerImage}" alt="${team.iconPlayer}" title="Icon: ${team.iconPlayer}">
+                    <span class="result-team-avatar-label">Icon</span>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+            <div class="result-squad-list">
+              ${team.squad.length > 0 ? team.squad.map(p => {
+                const rc = ROLE_CONFIG[p.role] || {};
+                return `
+                  <div class="result-squad-item">
+                    <div class="result-squad-player">
+                      <span class="result-squad-role-dot" style="background: ${rc.color || '#6366f1'}"></span>
+                      <span>${p.name}</span>
+                      <span style="color:var(--text-4); font-size:0.7rem;">${rc.icon || ''} ${p.role}${p.isWK ? ' 🧤' : ''}</span>
+                    </div>
+                    <span class="result-squad-price">${fmt(p.soldPrice)}</span>
+                  </div>
+                `;
+              }).join('') : `
+                <div class="result-squad-empty">No players acquired</div>
+              `}
+            </div>
+            <div style="padding:8px 20px 14px; display:flex; gap:8px;">
+              <button class="btn btn-ghost btn-sm poster-preview-btn" data-team-id="${team.id}">🖼️ Preview</button>
+              <button class="btn btn-primary btn-sm poster-download-btn" data-team-id="${team.id}">📥 Download Poster</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  _renderAnalyticsTab(state) {
+    // Top 5 most expensive players
+    const top5 = [...state.soldPlayers].sort((a, b) => b.price - a.price).slice(0, 5);
+    const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+
+    // Team spending - sorted by total spent
+    const teamsBySpend = [...state.teams].sort((a, b) => b.totalSpent - a.totalSpent);
+    const maxSpend = Math.max(...state.teams.map(t => t.totalSpent), 1);
+
+    // Category-wise spending per team
+    const categoryData = state.teams.map(team => {
+      const cats = { Batsman: 0, Bowler: 0, 'All-Rounder': 0 };
+      team.squad.forEach(p => {
+        if (cats[p.role] !== undefined) cats[p.role] += p.soldPrice;
+      });
+      return { team, cats };
+    });
+
+    // Most bidding wars (players with most bids)
+    const biddingWars = [...state.soldPlayers]
+      .filter(s => s.bidCount && s.bidCount > 1)
+      .sort((a, b) => (b.bidCount || 0) - (a.bidCount || 0))
+      .slice(0, 5);
+
+    // Budget efficiency: avg price per player
+    const efficiency = state.teams
+      .filter(t => t.squad.length > 0)
+      .map(t => ({
+        team: t,
+        avgPrice: Math.round(t.totalSpent / t.squad.length),
+        playerCount: t.squad.length,
+      }))
+      .sort((a, b) => a.avgPrice - b.avgPrice);
+
+    return `
+      <div class="analytics-dashboard">
+        <!-- Top 5 Most Expensive -->
+        <div class="analytics-card analytics-card-wide">
+          <div class="analytics-card-header">
+            <span class="analytics-card-icon">💰</span>
+            <h3>Top 5 Most Expensive Players</h3>
+          </div>
+          <div class="analytics-leaderboard">
+            ${top5.map((sale, i) => `
+              <div class="leaderboard-row">
+                <span class="leaderboard-rank">${medals[i]}</span>
+                <span class="leaderboard-name">${sale.player.name}</span>
+                <span class="leaderboard-team" style="color: ${sale.teamColor}">${sale.teamShortName}</span>
+                <span class="leaderboard-price">${fmt(sale.price)}</span>
+              </div>
+            `).join('')}
+            ${top5.length === 0 ? '<p style="color:var(--text-4); text-align:center; padding:20px;">No sales yet</p>' : ''}
+          </div>
+        </div>
+
+        <!-- Team Spending Chart -->
+        <div class="analytics-card analytics-card-wide">
+          <div class="analytics-card-header">
+            <span class="analytics-card-icon">📊</span>
+            <h3>Team Spending</h3>
+          </div>
+          <div class="analytics-bar-chart">
+            ${teamsBySpend.map(team => `
+              <div class="bar-chart-row">
+                <span class="bar-chart-label" style="color: ${team.color}">${team.shortName}</span>
+                <div class="bar-chart-track">
+                  <div class="bar-chart-fill" style="width: ${(team.totalSpent / maxSpend * 100)}%; background: ${team.color};"></div>
+                </div>
+                <span class="bar-chart-value">${fmt(team.totalSpent)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Category Breakdown -->
+        <div class="analytics-card">
+          <div class="analytics-card-header">
+            <span class="analytics-card-icon">🏏</span>
+            <h3>Category-wise Spend</h3>
+          </div>
+          <div class="category-table">
+            <div class="category-header-row">
+              <span>Team</span>
+              <span style="color:#3b82f6">🏏 Bat</span>
+              <span style="color:#ef4444">🎯 Bowl</span>
+              <span style="color:#f59e0b">⭐ AR</span>
+            </div>
+            ${categoryData.map(({ team, cats }) => `
+              <div class="category-row">
+                <span style="color:${team.color}; font-weight:600;">${team.shortName}</span>
+                <span>${cats.Batsman > 0 ? fmt(cats.Batsman) : '—'}</span>
+                <span>${cats.Bowler > 0 ? fmt(cats.Bowler) : '—'}</span>
+                <span>${cats['All-Rounder'] > 0 ? fmt(cats['All-Rounder']) : '—'}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Budget Efficiency -->
+        <div class="analytics-card">
+          <div class="analytics-card-header">
+            <span class="analytics-card-icon">⚡</span>
+            <h3>Budget Efficiency</h3>
+          </div>
+          <div class="efficiency-list">
+            ${efficiency.map((e, i) => `
+              <div class="efficiency-row">
+                <span class="efficiency-rank">${i + 1}</span>
+                <span class="efficiency-team" style="color: ${e.team.color}">${e.team.shortName}</span>
+                <span class="efficiency-detail">${e.playerCount} players</span>
+                <span class="efficiency-avg">${fmt(e.avgPrice)} avg</span>
+              </div>
+            `).join('')}
+            ${efficiency.length === 0 ? '<p style="color:var(--text-4); text-align:center; padding:20px;">No data yet</p>' : ''}
+          </div>
+        </div>
+
+        <!-- Bidding Wars -->
+        ${biddingWars.length > 0 ? `
+        <div class="analytics-card analytics-card-wide">
+          <div class="analytics-card-header">
+            <span class="analytics-card-icon">🔥</span>
+            <h3>Biggest Bidding Wars</h3>
+          </div>
+          <div class="analytics-leaderboard">
+            ${biddingWars.map((sale, i) => `
+              <div class="leaderboard-row">
+                <span class="leaderboard-rank">${'🔥'.repeat(Math.min(3, Math.ceil((sale.bidCount || 0) / 3)))}</span>
+                <span class="leaderboard-name">${sale.player.name}</span>
+                <span class="leaderboard-team" style="color: ${sale.teamColor}">${sale.teamShortName}</span>
+                <span class="leaderboard-price">${sale.bidCount || 0} bids</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
         ` : ''}
       </div>
     `;
@@ -1124,6 +1319,173 @@ export class UI {
   closeQRModal() {
     const existing = document.getElementById('qr-modal');
     if (existing) existing.remove();
+  }
+
+  // ═══════════════════════════════════════════
+  // TIMER DISPLAY
+  // ═══════════════════════════════════════════
+
+  /** Update the circular timer ring display */
+  updateTimerDisplay(remaining, duration) {
+    const progressEl = document.getElementById('timer-ring-progress');
+    const textEl = document.getElementById('timer-ring-text');
+    const cardEl = document.getElementById('timer-card');
+    if (!progressEl || !textEl) return;
+
+    const circumference = 326.73; // 2 * PI * 52
+    const fraction = remaining / duration;
+    const offset = circumference * (1 - fraction);
+
+    progressEl.setAttribute('stroke-dashoffset', offset.toFixed(2));
+    textEl.textContent = Math.ceil(remaining);
+
+    // Color transitions based on urgency
+    let color;
+    if (remaining > 15) {
+      color = '#10b981'; // green
+    } else if (remaining > 5) {
+      color = '#f59e0b'; // yellow/amber
+    } else {
+      color = '#ef4444'; // red
+    }
+    progressEl.style.stroke = color;
+    textEl.style.color = color;
+
+    // Pulse animation for last 5 seconds
+    if (cardEl) {
+      if (remaining <= 5 && remaining > 0) {
+        cardEl.classList.add('timer-urgent');
+      } else {
+        cardEl.classList.remove('timer-urgent');
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // SOUND BUTTON
+  // ═══════════════════════════════════════════
+
+  /** Update the sound toggle button icon */
+  updateSoundButton(muted) {
+    const btn = document.getElementById('sound-toggle-btn');
+    if (btn) {
+      btn.innerHTML = muted ? '🔇' : '🔊';
+      btn.title = muted ? 'Unmute Sound' : 'Mute Sound';
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // LIVE COMMENTARY PANEL
+  // ═══════════════════════════════════════════
+
+  /** Render the floating commentary panel (creates if not existing) */
+  renderCommentaryPanel(lines = []) {
+    // Don't duplicate — if panel exists, just populate lines
+    let panel = document.getElementById('commentary-panel');
+    if (panel) return;
+
+    panel = document.createElement('div');
+    panel.id = 'commentary-panel';
+    panel.className = 'commentary-panel';
+    panel.innerHTML = `
+      <div class="commentary-header" id="commentary-header">
+        <div class="commentary-header-left">
+          <div class="commentary-live-dot"></div>
+          <span class="commentary-title">🎙️ Live Commentary</span>
+          <span class="commentary-badge">LIVE</span>
+        </div>
+        <span class="commentary-toggle-icon">▼</span>
+      </div>
+      <div class="commentary-body" id="commentary-body">
+        ${lines.length === 0 ? `
+          <div class="commentary-empty">Commentary will appear here when the auction starts...</div>
+        ` : ''}
+      </div>
+    `;
+
+    document.getElementById('app').appendChild(panel);
+
+    // Populate existing lines
+    if (lines.length > 0) {
+      const body = panel.querySelector('#commentary-body');
+      lines.forEach(line => {
+        this._insertCommentaryLine(body, line, false);
+      });
+      // Scroll to bottom
+      body.scrollTop = body.scrollHeight;
+    }
+  }
+
+  /** Append a single commentary line to the panel (with animation + auto-scroll) */
+  appendCommentaryLine(line) {
+    const body = document.getElementById('commentary-body');
+    if (!body) return;
+
+    // Remove empty state if present
+    const empty = body.querySelector('.commentary-empty');
+    if (empty) empty.remove();
+
+    this._insertCommentaryLine(body, line, true);
+
+    // Auto-scroll to bottom (smooth)
+    requestAnimationFrame(() => {
+      body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' });
+    });
+
+    // Prune old DOM lines (keep max 60 in DOM to prevent bloat)
+    const allLines = body.querySelectorAll('.commentary-line');
+    if (allLines.length > 60) {
+      for (let i = 0; i < allLines.length - 60; i++) {
+        allLines[i].remove();
+      }
+    }
+  }
+
+  /** Internal: insert a line element into the body */
+  _insertCommentaryLine(body, line, animate) {
+    const timeStr = new Date(line.timestamp).toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+
+    const el = document.createElement('div');
+    el.className = `commentary-line type-${line.type}`;
+    if (!animate) el.style.animation = 'none';
+    el.innerHTML = `
+      <span class="commentary-line-time">${timeStr}</span>
+      <span class="commentary-line-text">${line.text}</span>
+    `;
+    body.appendChild(el);
+  }
+
+  /** Toggle the commentary panel expand/collapse */
+  toggleCommentaryPanel() {
+    const panel = document.getElementById('commentary-panel');
+    if (!panel) return;
+    panel.classList.toggle('collapsed');
+
+    // If expanded, scroll to bottom
+    if (!panel.classList.contains('collapsed')) {
+      const body = panel.querySelector('#commentary-body');
+      if (body) {
+        requestAnimationFrame(() => {
+          body.scrollTop = body.scrollHeight;
+        });
+      }
+    }
+  }
+
+  /** Remove the commentary panel from DOM */
+  removeCommentaryPanel() {
+    const panel = document.getElementById('commentary-panel');
+    if (panel) panel.remove();
+  }
+
+  /** Check if commentary panel is currently visible */
+  isCommentaryPanelVisible() {
+    return !!document.getElementById('commentary-panel');
   }
 }
 

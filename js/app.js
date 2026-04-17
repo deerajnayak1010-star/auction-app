@@ -7,6 +7,8 @@ import { AuctionEngine } from './auction.js';
 import { UI } from './ui.js';
 import { generateTeamPoster, downloadCanvas, downloadAllPosters, showPosterPreview } from './poster.js';
 import { WSClient } from './ws-client.js';
+import { AuctionSounds } from './sounds.js';
+import { CommentaryEngine } from './commentary.js';
 
 class App {
   constructor() {
@@ -22,6 +24,22 @@ class App {
     this.wsClient = new WSClient();
     this.mobileSessionUrl = null;
     this.showQRModal = false;
+
+    // Sound effects
+    this.sounds = new AuctionSounds();
+
+    // Timer
+    this.timerInterval = null;
+    this.lastTickSecond = null; // track which second we last ticked
+    this.timerDuration = 30; // default, user can change
+
+    // Analytics
+    this.resultsTab = 'squads'; // 'squads' | 'analytics'
+
+    // Live Commentary
+    this.commentary = new CommentaryEngine();
+    this.commentaryVisible = true;  // panel visibility
+    this.idleCommentaryInterval = null;
   }
 
   init() {
@@ -36,6 +54,11 @@ class App {
 
     // Initialize WebSocket connection
     this.initWebSocket();
+
+    // Set up commentary listener — append lines in real-time
+    this.commentary.onChange((line) => {
+      this.ui.appendCommentaryLine(line);
+    });
 
     // Try to restore saved state
     this.loadState();
@@ -218,7 +241,8 @@ class App {
 
     switch (this.currentView) {
       case 'setup':
-        this.ui.renderSetup(TEAMS_DATA, this.selectedTeamIds);
+        this.ui.renderSetup(TEAMS_DATA, this.selectedTeamIds, this.timerDuration);
+        this.bindTimerSetting();
         break;
       case 'player-select':
         this.ui.renderPlayerSelect(PLAYERS_DATA, this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
@@ -239,9 +263,21 @@ class App {
         }
         this.ui.renderAuction(this.engine.getState());
         this.updateBidButtonStates();
+        this.startTimerTick();
+        // Show commentary panel
+        if (this.commentaryVisible) {
+          this.ui.renderCommentaryPanel(this.commentary.getLines());
+        }
+        this.startIdleCommentary();
         break;
       case 'results':
-        this.ui.renderResults(this.engine ? this.engine.getState() : null);
+        this.ui.renderResults(this.engine ? this.engine.getState() : null, this.resultsTab);
+        this.stopIdleCommentary();
+        this.ui.removeCommentaryPanel();
+        break;
+      default:
+        this.stopIdleCommentary();
+        this.ui.removeCommentaryPanel();
         break;
     }
   }
@@ -291,7 +327,7 @@ class App {
   }
 
   onClick(e) {
-    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn');
+    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #results-tab-squads, #results-tab-analytics, #commentary-toggle-btn, #commentary-header, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn');
     if (!target) return;
 
     // ── Setup: team toggle ──
@@ -441,6 +477,7 @@ class App {
     // ── Complete: re-auction yes ──
     if (target.id === 'reauction-yes-btn') {
       if (this.engine && this.engine.reauctionUnsold()) {
+        this.commentary.onReauction(this.engine.playerPool?.length || 0);
         this.ui.showToast('♻️ Re-auction started with unsold players!', 'success');
         this.navigate('auction');
       }
@@ -462,6 +499,7 @@ class App {
     // ── Results: re-auction unsold (from results page) ──
     if (target.id === 'reauction-btn') {
       if (this.engine.reauctionUnsold()) {
+        this.commentary.onReauction(this.engine.playerPool?.length || 0);
         this.ui.showToast('♻️ Re-auction started with unsold players!', 'success');
         this.navigate('auction');
       }
@@ -518,6 +556,42 @@ class App {
       }
       return;
     }
+
+    // ── Sound toggle ──
+    if (target.id === 'sound-toggle-btn' || target.closest('#sound-toggle-btn')) {
+      const muted = this.sounds.toggleMute();
+      // Sync commentary speech with sound mute
+      this.commentary.setSpeechEnabled(!muted);
+      this.ui.updateSoundButton(muted);
+      this.ui.showToast(muted ? '🔇 Sound muted' : '🔊 Sound enabled', 'info', 1500);
+      return;
+    }
+
+    // ── Results tab: squads ──
+    if (target.id === 'results-tab-squads' || target.closest('#results-tab-squads')) {
+      this.resultsTab = 'squads';
+      this.ui.renderResults(this.engine ? this.engine.getState() : null, this.resultsTab);
+      return;
+    }
+
+    // ── Results tab: analytics ──
+    if (target.id === 'results-tab-analytics' || target.closest('#results-tab-analytics')) {
+      this.resultsTab = 'analytics';
+      this.ui.renderResults(this.engine ? this.engine.getState() : null, this.resultsTab);
+      return;
+    }
+
+    // ── Commentary toggle (header button) ──
+    if (target.id === 'commentary-toggle-btn' || target.closest('#commentary-toggle-btn')) {
+      this.toggleCommentary();
+      return;
+    }
+
+    // ── Commentary panel header click (collapse/expand) ──
+    if (target.id === 'commentary-header' || target.closest('#commentary-header')) {
+      this.ui.toggleCommentaryPanel();
+      return;
+    }
   }
 
   // ═══════════════════════════════════════════
@@ -553,6 +627,12 @@ class App {
     if (this.selectedTeamIds.size < 2) {
       this.ui.showToast('Select at least 2 teams', 'warning');
       return;
+    }
+
+    // Read timer setting
+    const timerInput = document.getElementById('timer-duration');
+    if (timerInput) {
+      this.timerDuration = parseInt(timerInput.value, 10) || 30;
     }
 
     // Pre-select all players by default
@@ -606,8 +686,15 @@ class App {
 
     const selectedTeams = TEAMS_DATA.filter(t => this.selectedTeamIds.has(t.id));
     const selectedPlayers = PLAYERS_DATA.filter(p => this.selectedPlayerIds.has(p.name));
-    this.engine = new AuctionEngine(selectedTeams, selectedPlayers);
+    this.engine = new AuctionEngine(selectedTeams, selectedPlayers, {
+      timerDuration: this.timerDuration,
+    });
     this.saveState();
+
+    // Initialize commentary
+    this.commentary.clear();
+    this.commentary.onAuctionStart(selectedTeams.length, selectedPlayers.length);
+
     this.ui.showToast(`${selectedTeams.length} teams, ${selectedPlayers.length} players ready!`, 'success');
     this.navigate('rules');
   }
@@ -685,10 +772,23 @@ class App {
     const player = this.engine.nominateNext();
     if (!player) {
       this.ui.showToast('All players have been auctioned!', 'info');
+      this.stopTimerTick();
+
+      // Commentary: auction complete
+      const state = this.engine.getState();
+      this.commentary.onAuctionComplete(state.soldCount, state.unsoldCount);
+
       this.render();
       this.broadcastState();
       return;
     }
+
+    this.sounds.playNominate();
+    this.lastTickSecond = null;
+
+    // Commentary: player nominated
+    const state = this.engine.getState();
+    this.commentary.onNominate(player, state.playerIndex, state.totalPlayers, state.remainingPlayers);
 
     this.render();
     this.ui.showToast(`🏏 ${player.name} is up for auction!`, 'info');
@@ -714,7 +814,21 @@ class App {
 
     const result = this.engine.placeBid(teamId);
     if (result.success) {
+      this.sounds.playBid();
+      this.lastTickSecond = null; // reset tick tracking
       const state = this.engine.getState();
+
+      // Commentary: bid placed
+      const team = this.engine.getTeamState(teamId);
+      this.commentary.onBid(
+        team?.shortName || 'Team',
+        team?.name || 'Team',
+        result.bid,
+        state.currentPlayer?.name || 'Player',
+        state.bidHistory,
+        team
+      );
+
       // Full re-render to update sidebar, info panel, and buttons
       this.ui.renderAuction(state, this.wsClient.getConnectedTeams());
       this.updateBidButtonStates();
@@ -733,6 +847,9 @@ class App {
     const playerName = state.currentPlayer?.name || 'Unknown';
     const price = state.currentBid;
 
+    this.stopTimerTick();
+    this.sounds.playSold();
+
     // Show overlay animation
     this.ui.showSoldOverlay();
     this.ui.showToast(
@@ -741,8 +858,26 @@ class App {
       4000
     );
 
+    // Commentary: player sold (before engine state changes)
+    const bidCount = state.bidHistory.length;
+    this.commentary.onSold(
+      playerName,
+      state.currentPlayer?.role,
+      teamName,
+      state.currentBidderTeam?.name || teamName,
+      price,
+      bidCount,
+      state.currentBidderTeam,
+      null // will send auction state after sell
+    );
+
     // Execute the sale
     this.engine.sellPlayer();
+
+    // Commentary: post-sale analytics with updated state
+    const postSaleState = this.engine.getState();
+    this.commentary.generateAnalytics(postSaleState);
+
     this.broadcastState();
     this.saveState();
 
@@ -755,17 +890,147 @@ class App {
 
     const playerName = this.engine.currentPlayer.name;
 
+    this.stopTimerTick();
+    this.sounds.playUnsold();
+
     // Show overlay animation
     this.ui.showUnsoldOverlay();
     this.ui.showToast(`${playerName} went UNSOLD`, 'unsold', 3000);
 
     // Execute
     this.engine.markUnsold();
+
+    // Commentary: player unsold
+    const state = this.engine.getState();
+    this.commentary.onUnsold(playerName, '', state);
+
     this.broadcastState();
     this.saveState();
 
     // Re-render after animation
     setTimeout(() => this.render(), 1000);
+  }
+
+  // ═══════════════════════════════════════════
+  // BID TIMER
+  // ═══════════════════════════════════════════
+
+  /** Start the timer tick interval (called when auction view renders) */
+  startTimerTick() {
+    this.stopTimerTick(); // clear any existing
+    if (!this.engine || !this.engine.timerEnabled) return;
+
+    this.timerInterval = setInterval(() => {
+      if (!this.engine || this.engine.phase !== 'bidding') {
+        this.stopTimerTick();
+        return;
+      }
+
+      const remaining = this.engine.getTimerRemaining();
+      if (remaining === null) return;
+
+      // Update timer display
+      this.ui.updateTimerDisplay(remaining, this.engine.timerDuration);
+
+      // Tick sound for last 5 seconds
+      const sec = Math.ceil(remaining);
+      if (sec <= 5 && sec > 0 && sec !== this.lastTickSecond) {
+        this.lastTickSecond = sec;
+        this.sounds.playTimerTick();
+      }
+
+      // Commentary: timer tick at key thresholds
+      this.commentary.onTimerTick(
+        remaining,
+        this.engine.timerDuration,
+        this.engine.currentPlayer?.name || 'Player',
+        this.engine.currentBidder,
+        this.engine.currentBid
+      );
+
+      // Timer expired
+      if (remaining <= 0) {
+        this.stopTimerTick();
+        this.sounds.playTimerExpired();
+
+        if (this.engine.currentBidder) {
+          // Auto-sell
+          this.sellPlayer();
+        } else {
+          // Auto-unsold
+          this.markUnsold();
+        }
+      }
+    }, 100); // update 10 times per second for smooth animation
+  }
+
+  /** Stop the timer tick interval */
+  stopTimerTick() {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+  }
+
+  /** Bind the timer duration setting on setup page */
+  bindTimerSetting() {
+    const timerInput = document.getElementById('timer-duration');
+    if (timerInput) {
+      timerInput.addEventListener('change', (e) => {
+        this.timerDuration = parseInt(e.target.value, 10) || 30;
+      });
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // LIVE COMMENTARY MANAGEMENT
+  // ═══════════════════════════════════════════
+
+  /** Toggle commentary panel visibility */
+  toggleCommentary() {
+    this.commentaryVisible = !this.commentaryVisible;
+    if (this.commentaryVisible) {
+      this.commentary.setSpeechEnabled(true);
+      this.ui.renderCommentaryPanel(this.commentary.getLines());
+      this.startIdleCommentary();
+      this.ui.showToast('🎙️ Commentary enabled', 'info', 1500);
+    } else {
+      this.commentary.setSpeechEnabled(false);
+      this.ui.removeCommentaryPanel();
+      this.stopIdleCommentary();
+      this.ui.showToast('🎙️ Commentary disabled', 'info', 1500);
+    }
+  }
+
+  /** Start idle/analytics commentary interval */
+  startIdleCommentary() {
+    this.stopIdleCommentary();
+    if (!this.engine || !this.commentaryVisible) return;
+
+    this.idleCommentaryInterval = setInterval(() => {
+      if (!this.engine || this.currentView !== 'auction') {
+        this.stopIdleCommentary();
+        return;
+      }
+
+      const state = this.engine.getState();
+
+      if (state.phase === 'waiting') {
+        // Generate idle commentary during waiting phase
+        this.commentary.generateIdle(state);
+      } else if (state.phase === 'bidding') {
+        // Generate analytics insights during bidding
+        this.commentary.generateAnalytics(state);
+      }
+    }, 10000); // Every 10 seconds
+  }
+
+  /** Stop idle commentary interval */
+  stopIdleCommentary() {
+    if (this.idleCommentaryInterval) {
+      clearInterval(this.idleCommentaryInterval);
+      this.idleCommentaryInterval = null;
+    }
   }
 
   // ═══════════════════════════════════════════
