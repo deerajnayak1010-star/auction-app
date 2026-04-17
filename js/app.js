@@ -291,7 +291,7 @@ class App {
   }
 
   onClick(e) {
-    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn');
+    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn');
     if (!target) return;
 
     // ── Setup: team toggle ──
@@ -347,9 +347,34 @@ class App {
       return;
     }
 
-    // ── Reset auction ──
+    // ── Reset auction (show confirmation) ──
     if (target.id === 'reset-auction-btn') {
+      this.ui.showResetConfirmModal();
+      return;
+    }
+
+    // ── Reset confirm: yes ──
+    if (target.id === 'reset-confirm-yes') {
+      this.ui.closeResetConfirmModal();
       this.resetAuction();
+      return;
+    }
+
+    // ── Reset confirm: no ──
+    if (target.id === 'reset-confirm-no') {
+      this.ui.closeResetConfirmModal();
+      return;
+    }
+
+    // ── Setup: select all teams ──
+    if (target.id === 'select-all-teams-btn' || target.closest('#select-all-teams-btn')) {
+      this.selectAllTeams();
+      return;
+    }
+
+    // ── Rules: download PDF ──
+    if (target.id === 'download-rules-pdf-btn') {
+      this.downloadRulesPDF();
       return;
     }
 
@@ -506,6 +531,22 @@ class App {
       this.selectedTeamIds.add(teamId);
     }
     this.ui.renderSetup(TEAMS_DATA, this.selectedTeamIds);
+  }
+
+  selectAllTeams() {
+    const allSelected = TEAMS_DATA.length > 0 && TEAMS_DATA.every(t => this.selectedTeamIds.has(t.id));
+    if (allSelected) {
+      this.selectedTeamIds.clear();
+    } else {
+      TEAMS_DATA.forEach(t => this.selectedTeamIds.add(t.id));
+    }
+    this.ui.renderSetup(TEAMS_DATA, this.selectedTeamIds);
+  }
+
+  downloadRulesPDF() {
+    // Trigger browser print for the rules page
+    this.ui.showToast('Preparing rules for download...', 'info', 2000);
+    setTimeout(() => window.print(), 300);
   }
 
   startAuction() {
@@ -764,7 +805,7 @@ class App {
 
     this.ui.showToast(`Generating ${team.shortName} poster...`, 'info', 2000);
     const canvas = await generateTeamPoster(team);
-    downloadCanvas(canvas, `NPL_2025_${team.shortName}_Squad.png`);
+    downloadCanvas(canvas, `NPL3_2026_${team.shortName}_Squad.png`);
     this.ui.showToast(`${team.shortName} poster downloaded!`, 'success');
   }
 

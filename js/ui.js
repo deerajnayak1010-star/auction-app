@@ -38,6 +38,7 @@ export class UI {
     const views = [
       { id: 'setup',   label: 'Setup' },
       { id: 'players', label: 'Players' },
+      { id: 'rules',   label: 'Rules' },
       { id: 'auction', label: 'Auction' },
       { id: 'results', label: 'Results' },
     ];
@@ -45,7 +46,7 @@ export class UI {
     const isFs = !!document.fullscreenElement;
 
     this.headerEl.innerHTML = `
-      <div class="nav-brand">NAKRE PREMIER LEAGUE</div>
+      <div class="nav-brand">NAKRE PREMIER LEAGUE 3.0</div>
       <nav class="nav-links">
         ${views.map(v => `
           <button class="nav-link ${currentView === v.id ? 'active' : ''}" data-view="${v.id}">${v.label}</button>
@@ -59,6 +60,7 @@ export class UI {
             <span>Unsold:<span class="nav-stat-value">${stats.unsold || 0}</span></span>
           ` : ''}
         </div>
+        <button class="btn-reset-auction" id="reset-auction-btn" title="Start New Auction / Reset">🔄 New Auction</button>
         <button class="btn-fullscreen" id="fullscreen-btn" title="${isFs ? 'Exit Fullscreen' : 'Enter Fullscreen'}">
           ${isFs ? '⊗' : '⛶'}
         </button>
@@ -71,11 +73,19 @@ export class UI {
   // ═══════════════════════════════════════════
 
   renderSetup(teams, selectedTeamIds) {
+    const allSelected = teams.length > 0 && teams.every(t => selectedTeamIds.has(t.id));
+
     this.mainEl.innerHTML = `
       <div class="setup-page">
         <div class="setup-header">
-          <h1 class="hero-title">NAKRE PREMIER LEAGUE</h1>
+          <h1 class="hero-title">NAKRE PREMIER LEAGUE 3.0 2026</h1>
           <p class="hero-subtitle">Select teams to participate in the auction</p>
+        </div>
+        <div style="text-align:center;">
+          <label class="select-all-teams-label" id="select-all-teams-btn">
+            <span class="custom-checkbox ${allSelected ? 'checked' : ''}"></span>
+            Select All Teams
+          </label>
         </div>
         <div class="teams-grid">
           ${teams.map(team => `
@@ -89,22 +99,40 @@ export class UI {
               <div class="team-name">${team.name}</div>
               <div class="team-purse">${fmt(team.purse)}</div>
               <div class="team-people-row">
-                <div class="team-person">
-                  <div class="team-person-img">
-                    ${team.ownerImage ? `<img src="${team.ownerImage}" alt="${team.owner}">` : '👤'}
-                  </div>
-                  <div class="team-person-info">
-                    <span class="team-person-label">Owner</span>
-                    <span class="team-person-name">${team.owner}</span>
+                <div class="flip-card" data-flip-card>
+                  <div class="flip-card-inner">
+                    <div class="flip-card-front">
+                      <div class="team-person-img">
+                        ${team.ownerImage ? `<img src="${team.ownerImage}" alt="${team.owner}">` : '👤'}
+                      </div>
+                      <div class="team-person-info">
+                        <span class="team-person-label">Owner</span>
+                        <span class="team-person-name">${team.owner}</span>
+                      </div>
+                    </div>
+                    <div class="flip-card-back">
+                      <span class="flip-back-label">Owner</span>
+                      ${team.ownerImage ? `<img src="${team.ownerImage}" alt="${team.owner}">` : '<div style="font-size:2rem;">👤</div>'}
+                      <span class="flip-back-name">${team.owner}</span>
+                    </div>
                   </div>
                 </div>
-                <div class="team-person">
-                  <div class="team-person-img icon-player">
-                    ${team.iconPlayerImage ? `<img src="${team.iconPlayerImage}" alt="${team.iconPlayer}">` : '⭐'}
-                  </div>
-                  <div class="team-person-info">
-                    <span class="team-person-label">Icon Player</span>
-                    <span class="team-person-name" style="color:var(--accent-gold)">${team.iconPlayer}</span>
+                <div class="flip-card" data-flip-card>
+                  <div class="flip-card-inner">
+                    <div class="flip-card-front">
+                      <div class="team-person-img icon-player">
+                        ${team.iconPlayerImage ? `<img src="${team.iconPlayerImage}" alt="${team.iconPlayer}">` : '⭐'}
+                      </div>
+                      <div class="team-person-info">
+                        <span class="team-person-label">Icon Player</span>
+                        <span class="team-person-name" style="color:var(--accent-gold)">${team.iconPlayer}</span>
+                      </div>
+                    </div>
+                    <div class="flip-card-back">
+                      <span class="flip-back-label">Icon Player</span>
+                      ${team.iconPlayerImage ? `<img src="${team.iconPlayerImage}" alt="${team.iconPlayer}">` : '<div style="font-size:2rem;">⭐</div>'}
+                      <span class="flip-back-name" style="color:var(--accent-gold)">${team.iconPlayer}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -119,6 +147,9 @@ export class UI {
         </div>
       </div>
     `;
+
+    // Bind flip card click
+    this._bindFlipCards();
   }
   // ═══════════════════════════════════════════
   // RULES PAGE (post player-select, pre-auction)
@@ -129,11 +160,62 @@ export class UI {
       <div class="rules-page">
         <div class="rules-header">
           <div class="rules-icon">📜</div>
-          <h1 class="rules-title">Auction Rules</h1>
-          <p class="rules-subtitle">Please read the rules carefully before proceeding</p>
+          <h1 class="rules-title">NAKRE PREMIER LEAGUE 3.0 – Auction Guidelines & Rules</h1>
+          <p class="rules-subtitle">Please read all guidelines and rules carefully before proceeding</p>
+          <button class="rules-download-btn" id="download-rules-pdf-btn">📥 Download PDF</button>
         </div>
 
         <div class="rules-grid">
+          <!-- General Guidelines -->
+          <div class="rules-card">
+            <div class="rules-card-header">
+              <span class="rules-card-icon">📋</span>
+              <h3>General Guidelines</h3>
+            </div>
+            <ul class="rules-list">
+              <li>Only <strong>3–4 members per team</strong> are allowed to be present during the auction</li>
+              <li>All participants are expected to maintain <strong>discipline and professionalism</strong> throughout the event</li>
+            </ul>
+          </div>
+
+          <!-- Code of Conduct -->
+          <div class="rules-card rules-card-dont">
+            <div class="rules-card-header">
+              <span class="rules-card-icon">⚖️</span>
+              <h3>Code of Conduct</h3>
+            </div>
+            <ul class="rules-list">
+              <li>No <strong>arguments, fighting, or disruptive behavior</strong> will be tolerated</li>
+              <li>No <strong>alcohol or inappropriate activities</strong> are allowed during the auction</li>
+              <li>Participants must <strong>respect all teams, organizers,</strong> and decisions made during the event</li>
+            </ul>
+          </div>
+
+          <!-- Authority & Decisions -->
+          <div class="rules-card">
+            <div class="rules-card-header">
+              <span class="rules-card-icon">🏛️</span>
+              <h3>Authority & Decisions</h3>
+            </div>
+            <ul class="rules-list">
+              <li>The <strong>NPL Management Team's decision is final</strong> in all matters</li>
+              <li>In case of any disputes, changes, or unexpected situations: the organizers reserve the right to <strong>modify rules or take necessary actions</strong></li>
+              <li>All participants are expected to <strong>comply without objection</strong></li>
+            </ul>
+          </div>
+
+          <!-- Fair Play -->
+          <div class="rules-card rules-card-do">
+            <div class="rules-card-header">
+              <span class="rules-card-icon">🤝</span>
+              <h3>Fair Play</h3>
+            </div>
+            <ul class="rules-list">
+              <li>All teams must follow the auction rules and bidding guidelines <strong>strictly</strong></li>
+              <li>Any <strong>misuse or violation</strong> may result in disqualification or penalties</li>
+            </ul>
+          </div>
+
           <!-- Auction Rules -->
           <div class="rules-card">
             <div class="rules-card-header">
@@ -190,34 +272,6 @@ export class UI {
               <li>Unsold players can be re-auctioned after the main auction round</li>
               <li>Re-auction is based on organizer confirmation</li>
               <li>Same rules apply in the re-auction round</li>
-            </ul>
-          </div>
-
-          <!-- Do's -->
-          <div class="rules-card rules-card-do">
-            <div class="rules-card-header">
-              <span class="rules-card-icon">✅</span>
-              <h3>Do's</h3>
-            </div>
-            <ul class="rules-list">
-              <li>Bid responsibly within your budget</li>
-              <li>Follow increment rules at all times</li>
-              <li>Confirm your team selection before bidding</li>
-              <li>Plan your strategy for key players</li>
-            </ul>
-          </div>
-
-          <!-- Don'ts -->
-          <div class="rules-card rules-card-dont">
-            <div class="rules-card-header">
-              <span class="rules-card-icon">❌</span>
-              <h3>Don'ts</h3>
-            </div>
-            <ul class="rules-list">
-              <li>No consecutive bids by the same team</li>
-              <li>No exceeding your team budget</li>
-              <li>No skipping bid increment rules</li>
-              <li>No disrupting the auction process</li>
             </ul>
           </div>
         </div>
@@ -308,7 +362,7 @@ export class UI {
           ${filtered.length === 0 ? '<p style="grid-column:1/-1; text-align:center; color:var(--text-4); padding:40px;">No players found</p>' : ''}
         </div>
 
-        <div class="setup-footer" style="margin-top:24px;">
+        <div class="setup-footer" style="margin-top:24px; display:flex; flex-direction:column; align-items:center;">
           <p>${selectedPlayerIds.size} player${selectedPlayerIds.size !== 1 ? 's' : ''} selected for auction</p>
           <button class="btn btn-primary btn-lg" id="confirm-players-btn" ${selectedPlayerIds.size === 0 ? 'disabled' : ''}>
             🏏 Proceed to Auction with ${selectedPlayerIds.size} Players
@@ -396,6 +450,7 @@ export class UI {
           <button class="player-img-modal-x" id="player-img-modal-x">&times;</button>
           <img id="player-img-modal-img" src="" alt="">
           <div class="player-img-modal-name" id="player-img-modal-name"></div>
+          <button class="player-img-download-btn" id="player-img-download-btn">📥 Download Full Image</button>
         </div>
       </div>
     `;
@@ -406,12 +461,17 @@ export class UI {
 
   /** Bind click events for player image popup */
   _bindImagePopup() {
+    let currentImgSrc = '';
+    let currentImgName = '';
+
     document.querySelectorAll('.player-img-trigger').forEach(el => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         const img = el.dataset.playerImg;
         const name = el.dataset.playerName;
         if (!img) return;
+        currentImgSrc = img;
+        currentImgName = name;
         const modal = document.getElementById('player-img-modal');
         const modalImg = document.getElementById('player-img-modal-img');
         const modalName = document.getElementById('player-img-modal-name');
@@ -433,6 +493,58 @@ export class UI {
     document.getElementById('player-img-modal-close')?.addEventListener('click', () => {
       document.getElementById('player-img-modal').style.display = 'none';
     });
+
+    // Download button
+    document.getElementById('player-img-download-btn')?.addEventListener('click', () => {
+      if (!currentImgSrc) return;
+      const a = document.createElement('a');
+      a.href = currentImgSrc;
+      a.download = (currentImgName || 'player') + '_photo' + (currentImgSrc.includes('.png') ? '.png' : '.jpg');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+  }
+
+  /** Bind flip card click events */
+  _bindFlipCards() {
+    document.querySelectorAll('[data-flip-card]').forEach(card => {
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        card.classList.toggle('flipped');
+      });
+    });
+  }
+
+  /** Show reset confirmation modal */
+  showResetConfirmModal() {
+    this.closeResetConfirmModal();
+    const modal = document.createElement('div');
+    modal.id = 'reset-confirm-modal';
+    modal.className = 'reset-confirm-overlay';
+    modal.innerHTML = `
+      <div class="reset-confirm-card">
+        <div class="reset-confirm-icon">🔄</div>
+        <h3>Start New Auction?</h3>
+        <p>Are you sure you want to start a new auction? All saved auction data will be cleared.</p>
+        <div class="reset-confirm-actions">
+          <button class="btn btn-danger btn-lg" id="reset-confirm-yes">Yes, Reset</button>
+          <button class="btn btn-ghost btn-lg" id="reset-confirm-no">No, Cancel</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('app').appendChild(modal);
+
+    // Close on overlay click (not on card)
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) this.closeResetConfirmModal();
+    });
+  }
+
+  /** Close reset confirmation modal */
+  closeResetConfirmModal() {
+    const existing = document.getElementById('reset-confirm-modal');
+    if (existing) existing.remove();
   }
 
   // ═══════════════════════════════════════════
@@ -508,7 +620,7 @@ export class UI {
     return `
       <div class="auction-center">
         <div class="player-auction-card bidding" id="player-card">
-          <div class="player-auction-initials" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}99); overflow: hidden; width:140px; height:140px;">
+          <div class="player-auction-initials" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}99); border-radius: var(--radius-md);">
             ${player.image ? `<img src="${player.image}" alt="${player.name}" style="width:100%;height:100%;object-fit:cover;object-position:top;">` : getInitials(player.name)}
           </div>
           <div class="player-auction-name">${player.name}</div>
@@ -612,7 +724,7 @@ export class UI {
         </div>
         ` : ''}
 
-        <div class="bid-info-card" style="flex:1; overflow-y:auto;">
+        <div class="bid-info-card" style="flex:1; overflow-y:auto; min-height:180px;">
           <div class="bid-history-header">
             <div class="bid-history-title">Bid History</div>
             <div class="bid-history-controls">
@@ -630,7 +742,7 @@ export class UI {
                 <span class="bid-history-amount">${fmt(entry.amount)}</span>
               </div>
             `).join('') : `
-              <p style="color: var(--text-4); font-size: 0.78rem; text-align:center; padding: 16px 0;">
+              <p style="color: var(--text-4); font-size: 0.82rem; text-align:center; padding: 20px 0;">
                 ${state.phase === 'bidding' ? 'Waiting for bids...' : 'Nominate a player to start'}
               </p>
             `}
