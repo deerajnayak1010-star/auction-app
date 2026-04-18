@@ -637,6 +637,71 @@ export class UI {
     if (existing) existing.remove();
   }
 
+  /** Show recall confirmation modal */
+  showRecallConfirmModal(playerName, teamName, type = 'sold') {
+    this.closeRecallConfirmModal();
+    const isSold = type === 'sold';
+    const modal = document.createElement('div');
+    modal.id = 'recall-confirm-modal';
+    modal.className = 'reset-confirm-overlay';
+    modal.innerHTML = `
+      <div class="reset-confirm-card recall-confirm-card">
+        <div class="reset-confirm-icon">↩</div>
+        <h3>Recall Last ${isSold ? 'Sale' : 'Unsold'}?</h3>
+        <p>${isSold
+          ? `This will reverse the sale of <strong>${playerName}</strong> from <strong>${teamName}</strong>.`
+          : `This will bring back <strong>${playerName}</strong> from the unsold list.`
+        }</p>
+        <p style="font-size:0.82rem; color:var(--text-3); margin-top:4px;">${isSold
+          ? "The player will be re-opened for bidding at base price. Team's purse will be refunded."
+          : 'The player will be re-opened for bidding at base price.'
+        }</p>
+        <div class="reset-confirm-actions">
+          <button class="btn btn-recall btn-lg" id="recall-confirm-yes">↩ Yes, Recall ${isSold ? 'Sale' : 'Unsold'}</button>
+          <button class="btn btn-ghost btn-lg" id="recall-confirm-no">No, Keep It</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('app').appendChild(modal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) this.closeRecallConfirmModal();
+    });
+  }
+
+  closeRecallConfirmModal() {
+    const existing = document.getElementById('recall-confirm-modal');
+    if (existing) existing.remove();
+  }
+
+  /** Show clear tokens confirmation modal */
+  showClearTokensModal() {
+    this.closeClearTokensModal();
+    const modal = document.createElement('div');
+    modal.id = 'clear-tokens-modal';
+    modal.className = 'reset-confirm-overlay';
+    modal.innerHTML = `
+      <div class="reset-confirm-card">
+        <div class="reset-confirm-icon">🗑️</div>
+        <h3>Clear Token Draw?</h3>
+        <p>This will remove all group assignments and match fixtures.</p>
+        <p style="font-size:0.82rem; color:var(--text-3); margin-top:4px;">You can draw tokens again after clearing.</p>
+        <div class="reset-confirm-actions">
+          <button class="btn btn-lg" id="clear-tokens-yes" style="background: #ef4444; color: #fff;">🗑️ Yes, Clear</button>
+          <button class="btn btn-ghost btn-lg" id="clear-tokens-no">No, Keep It</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('app').appendChild(modal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) this.closeClearTokensModal();
+    });
+  }
+
+  closeClearTokensModal() {
+    const existing = document.getElementById('clear-tokens-modal');
+    if (existing) existing.remove();
+  }
+
   // ═══════════════════════════════════════════
   // SCROLL REVEAL OBSERVER
   // ═══════════════════════════════════════════
@@ -665,9 +730,8 @@ export class UI {
         <div class="about-hero scroll-reveal reveal-scale">
           <div class="about-hero-glow"></div>
           <div class="about-hero-content">
-            <div class="about-avatar-wrap">
-              <img src="images/teams/Deepak Hegde.png" alt="Deepak Hegde" class="about-avatar">
-              <div class="about-avatar-ring"></div>
+            <div class="about-avatar-wrap about-avatar-full">
+              <img src="images/teams/Deepak Hegde_Full.png" alt="Deepak Hegde" class="about-avatar about-avatar-poster">
             </div>
             <h1 class="about-name">Deepak Hegde</h1>
             <p class="about-role">Developer & Architect</p>
@@ -745,9 +809,8 @@ export class UI {
         </div>
         <div class="history-organizer scroll-reveal reveal-left">
           <div class="history-organizer-card glass-card">
-            <div class="about-avatar-wrap">
-              <img src="images/teams/Suraj Shetty_Owner.png" alt="Suraj Shettey" class="about-avatar">
-              <div class="about-avatar-ring" style="border-color: rgba(245,158,11,0.5);"></div>
+            <div class="about-avatar-wrap about-avatar-full">
+              <img src="images/teams/Suraj Shetty_Full.png" alt="Suraj Shettey" class="about-avatar about-avatar-poster">
             </div>
             <div class="history-organizer-info">
               <h2>Suraj Shettey</h2>
@@ -874,6 +937,20 @@ export class UI {
             <h2>Ready for Next Player</h2>
             <p>Player ${state.playerIndex + 1} of ${state.totalPlayers} • ${state.remainingPlayers} remaining</p>
             <button class="btn btn-primary btn-lg" id="nominate-btn">⚡ Nominate Next Player</button>
+            ${state.canRecall ? `
+              <div class="recall-bid-section">
+                <div class="recall-bid-info">
+                  <span class="recall-bid-icon">${state.lastSaleType === 'unsold' ? '❌' : '⚠️'}</span>
+                  <span>${state.lastSaleType === 'unsold'
+                    ? `Last unsold: <strong>${state.lastSalePlayer}</strong>`
+                    : `Last sale: <strong>${state.lastSalePlayer}</strong> → <strong>${state.lastSaleTeam}</strong>`
+                  }</span>
+                </div>
+                <button class="btn btn-recall btn-lg" id="recall-bid-btn">
+                  ↩ Recall Last ${state.lastSaleType === 'unsold' ? 'Unsold' : 'Sale'}
+                </button>
+              </div>
+            ` : ''}
           </div>
         </div>
       `;
@@ -1064,6 +1141,9 @@ export class UI {
         case 'nominate':
           logText = `🏏 Player #${lastLog.index}: ${lastLog.player.name} is up for auction (Base: ${fmt(lastLog.player.basePrice)})`;
           break;
+        case 'recall':
+          logText = `↩ RECALLED: ${lastLog.player.name} sale to ${lastLog.teamShortName} reversed — re-bidding open!`;
+          break;
       }
     }
 
@@ -1120,7 +1200,7 @@ export class UI {
   // RESULTS PAGE
   // ═══════════════════════════════════════════
 
-  renderResults(state, activeTab = 'squads') {
+  renderResults(state, activeTab = 'squads', opts = {}) {
     if (!state) {
       this.mainEl.innerHTML = `
         <div class="auction-complete">
@@ -1173,14 +1253,23 @@ export class UI {
         <!-- Tab Switcher -->
         <div class="results-tabs">
           <button class="results-tab-btn ${activeTab === 'squads' ? 'active' : ''}" id="results-tab-squads">
-            👥 Team Squads
+            👥 Squads
           </button>
           <button class="results-tab-btn ${activeTab === 'analytics' ? 'active' : ''}" id="results-tab-analytics">
             📊 Analytics
           </button>
+          <button class="results-tab-btn ${activeTab === 'scorecard' ? 'active' : ''}" id="results-tab-scorecard">
+            🏆 Scorecard
+          </button>
+          <button class="results-tab-btn ${activeTab === 'fixtures' ? 'active' : ''}" id="results-tab-fixtures">
+            📅 Fixtures
+          </button>
         </div>
 
-        ${activeTab === 'squads' ? this._renderSquadsTab(state) : this._renderAnalyticsTab(state)}
+        ${activeTab === 'squads' ? this._renderSquadsTab(state) : ''}
+        ${activeTab === 'analytics' ? this._renderAnalyticsTab(state) : ''}
+        ${activeTab === 'scorecard' ? this._renderScorecardTab(state, opts) : ''}
+        ${activeTab === 'fixtures' ? this._renderFixturesTab(state) : ''}
 
         ${state.unsoldPlayers.length > 0 ? `
           <div class="unsold-section">
@@ -1396,6 +1485,481 @@ export class UI {
           </div>
         </div>
         ` : ''}
+      </div>
+    `;
+  }
+
+  // ═══════════════════════════════════════════
+  // SCORECARD TAB
+  // ═══════════════════════════════════════════
+
+  _renderScorecardTab(state, opts = {}) {
+    const fmt = AuctionEngine.formatPoints;
+    const matches = opts.matches || [];
+    const honours = opts.honours || null;
+    const view = opts.scorecardView || 'list';
+    const activeMatch = opts.activeMatch || null;
+
+    // ── VIEW: Match Scorecard Editor ──
+    if (view === 'edit' && activeMatch) {
+      return this._renderScorecardEditor(activeMatch, state);
+    }
+
+    // ── VIEW: Match List + Honours ──
+    const honoursHtml = this._renderHonoursSection(state, honours, fmt);
+    const statusBadge = (s) => {
+      const map = { upcoming: '🔜 Upcoming', live: '🔴 Live', completed: '✅ Completed' };
+      const cls = { upcoming: 'badge-upcoming', live: 'badge-live', completed: 'badge-completed' };
+      return `<span class="sc-status-badge ${cls[s] || ''}">${map[s] || s}</span>`;
+    };
+
+    const teamLogo = (logo, short, color, tc) => logo
+      ? `<img src="${logo}" alt="${short}" style="width:32px;height:32px;border-radius:50%;object-fit:contain;">`
+      : `<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:${color};color:${tc};font-size:0.6rem;font-weight:800;">${short}</span>`;
+
+    return `
+      <div class="scorecard-dashboard" style="animation: fadeIn 0.4s ease;">
+        ${honoursHtml}
+
+        <h2 style="text-align:center; margin:32px 0 20px;">🏏 Match Scorecards</h2>
+        ${matches.length > 0 ? `
+          <div class="sc-match-list">
+            ${matches.map(m => `
+              <div class="sc-match-item" data-sc-match="${m.matchId}">
+                <div class="sc-match-item-header">
+                  <span class="sc-match-id">Match ${m.matchId.replace('match-','')}</span>
+                  ${statusBadge(m.status)}
+                </div>
+                <div class="sc-match-item-teams">
+                  ${teamLogo(m.teamALogo, m.teamAShort, m.teamAColor, m.teamATextColor)}
+                  <strong>${m.teamAShort}</strong>
+                  ${m.status === 'completed' ? `<span style="font-size:0.75rem;color:var(--text-3);">${m.innings1.totalRuns}/${m.innings1.wickets}</span>` : ''}
+                  <span class="sc-match-vs">VS</span>
+                  ${m.status === 'completed' ? `<span style="font-size:0.75rem;color:var(--text-3);">${m.innings2.totalRuns}/${m.innings2.wickets}</span>` : ''}
+                  <strong>${m.teamBShort}</strong>
+                  ${teamLogo(m.teamBLogo, m.teamBShort, m.teamBColor, m.teamBTextColor)}
+                </div>
+                <div class="sc-match-item-info">${m.date} • ${m.time} • ${m.venue}</div>
+                ${m.status === 'completed' && m.result.winner ? `<div class="sc-match-result-line">🏆 ${m.result.margin}</div>` : ''}
+                <button class="btn btn-primary btn-sm sc-open-btn" data-sc-match="${m.matchId}">${m.status === 'completed' ? '📊 View Scorecard' : '✏️ Edit Scorecard'}</button>
+              </div>
+            `).join('')}
+          </div>
+        ` : `
+          <div class="fixtures-empty">
+            <p>📅 No matches available yet.</p>
+            <p style="font-size:0.85rem; margin-top:8px;">Draw tokens in the <strong>Fixtures</strong> tab first to generate matches.</p>
+          </div>
+        `}
+
+        <!-- Team Squad Analysis -->
+        <div class="team-scorecards-section" style="margin-top:40px;">
+          <h2 style="text-align:center; margin-bottom:24px; font-size:1.4rem;">📋 Team Squad Analysis</h2>
+          <div class="team-scorecards-grid">
+            ${state.teams.map(team => {
+              const bat = team.squad.filter(p => p.role === 'Batsman').length;
+              const bowl = team.squad.filter(p => p.role === 'Bowler').length;
+              const ar = team.squad.filter(p => p.role === 'All-Rounder').length;
+              const wk = team.squad.filter(p => p.isWK).length;
+              const mx = Math.max(bat, bowl, ar, 1);
+              return `
+                <div class="team-scorecard-card" style="--team-color: ${team.color}">
+                  <div class="team-sc-header" style="background: ${team.color}; color: ${team.textColor}">
+                    <div class="team-sc-logo">${team.logo ? `<img src="${team.logo}" alt="${team.shortName}">` : team.shortName}</div>
+                    <div><div class="team-sc-name">${team.name}</div><div class="team-sc-meta">${team.squad.length}/12 • ${fmt(team.purse)} left</div></div>
+                  </div>
+                  <div class="team-sc-body">
+                    <div class="team-sc-role-row"><span class="team-sc-role-label">🏏 Batsmen</span><div class="team-sc-bar-track"><div class="team-sc-bar-fill" style="width:${(bat/mx)*100}%;background:#3b82f6;"></div></div><span class="team-sc-role-count">${bat}</span></div>
+                    <div class="team-sc-role-row"><span class="team-sc-role-label">🎯 Bowlers</span><div class="team-sc-bar-track"><div class="team-sc-bar-fill" style="width:${(bowl/mx)*100}%;background:#ef4444;"></div></div><span class="team-sc-role-count">${bowl}</span></div>
+                    <div class="team-sc-role-row"><span class="team-sc-role-label">⭐ All-Rounders</span><div class="team-sc-bar-track"><div class="team-sc-bar-fill" style="width:${(ar/mx)*100}%;background:#f59e0b;"></div></div><span class="team-sc-role-count">${ar}</span></div>
+                    <div class="team-sc-extras"><span>🧤 WK: ${wk}</span><span>💰 Spent: ${fmt(team.totalSpent)}</span></div>
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  _renderHonoursSection(state, honours, fmt) {
+    const awards = [];
+    if (honours && honours.completedCount > 0) {
+      const h = honours;
+      awards.push({ icon: '🏅', title: 'Man of the Match', name: h.motm?.name, team: h.motm?.team, stat: `${h.motm?.motmCount || 0} MOTM`, desc: 'Most MOTM Awards' });
+      awards.push({ icon: '⭐', title: 'Man of the Series', name: h.mots?.name, team: h.mots?.team, stat: `${h.mots?.runs || 0}r / ${h.mots?.wickets || 0}w`, desc: 'Best Overall Performer' });
+      awards.push({ icon: '🏏', title: 'Best Batsman', name: h.bestBatsman?.name, team: h.bestBatsman?.team, stat: `${h.bestBatsman?.runs || 0} runs`, desc: 'Most Tournament Runs' });
+      awards.push({ icon: '🎯', title: 'Best Bowler', name: h.bestBowler?.name, team: h.bestBowler?.team, stat: `${h.bestBowler?.wickets || 0} wickets`, desc: 'Most Tournament Wickets' });
+      awards.push({ icon: '👑', title: 'Best All-Rounder', name: h.bestAllRounder?.name, team: h.bestAllRounder?.team, stat: h.bestAllRounder ? `${h.bestAllRounder.runs}r/${h.bestAllRounder.wickets}w` : '—', desc: 'Best Combined Performance' });
+    } else {
+      const soldByRole = (r) => state.soldPlayers.filter(s => s.player.role === r);
+      const best = (a) => a.length > 0 ? a.reduce((m, s) => s.price > m.price ? s : m, a[0]) : null;
+      const mvp = best(state.soldPlayers);
+      const mostBids = state.soldPlayers.length > 0 ? state.soldPlayers.reduce((m, s) => (s.bidCount||0) > (m.bidCount||0) ? s : m, state.soldPlayers[0]) : null;
+      awards.push({ icon: '🏅', title: 'Man of the Match', name: mvp?.player?.name, team: mvp?.teamShortName, stat: mvp ? fmt(mvp.price) : '—', desc: 'Highest Auction Price', color: mvp?.teamColor });
+      awards.push({ icon: '⭐', title: 'Man of the Series', name: mostBids?.player?.name, team: mostBids?.teamShortName, stat: mostBids ? `${mostBids.bidCount} bids` : '—', desc: 'Most Sought After', color: mostBids?.teamColor });
+      awards.push({ icon: '🏏', title: 'Best Batsman', name: best(soldByRole('Batsman'))?.player?.name, team: best(soldByRole('Batsman'))?.teamShortName, stat: best(soldByRole('Batsman')) ? fmt(best(soldByRole('Batsman')).price) : '—', desc: 'Top Batsman Pick' });
+      awards.push({ icon: '🎯', title: 'Best Bowler', name: best(soldByRole('Bowler'))?.player?.name, team: best(soldByRole('Bowler'))?.teamShortName, stat: best(soldByRole('Bowler')) ? fmt(best(soldByRole('Bowler')).price) : '—', desc: 'Top Bowler Pick' });
+      awards.push({ icon: '👑', title: 'Best All-Rounder', name: best(soldByRole('All-Rounder'))?.player?.name, team: best(soldByRole('All-Rounder'))?.teamShortName, stat: best(soldByRole('All-Rounder')) ? fmt(best(soldByRole('All-Rounder')).price) : '—', desc: 'Top All-Rounder Pick' });
+    }
+
+    return `
+      <div class="honours-section">
+        <div class="honours-header">
+          <span class="honours-icon">🏆</span>
+          <h2>Individual Honours</h2>
+          <p class="honours-subtitle">PLAYER AWARDS ${honours?.completedCount ? `(${honours.completedCount} matches)` : '(Auction-Based)'}</p>
+        </div>
+        <div class="honours-grid">
+          ${awards.map((a, i) => `
+            <div class="honour-card" style="animation-delay: ${i * 0.1}s">
+              <div class="honour-icon">${a.icon}</div>
+              <div class="honour-title">${a.title}</div>
+              ${a.name ? `
+                <div class="honour-player-name">${a.name}</div>
+                <div class="honour-team" style="color: ${a.color || 'var(--accent-gold)'}">${a.team || ''}</div>
+                <div class="honour-stat">${a.stat}</div>
+              ` : `<div class="honour-empty">—</div>`}
+              <div class="honour-desc">${a.desc}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  _renderScorecardEditor(match, state) {
+    const m = match;
+    const renderBattingRow = (b, idx) => `
+      <tr class="sc-bat-row" data-idx="${idx}">
+        <td class="sc-bat-name">${b.name}</td>
+        <td><input type="number" class="sc-input" data-field="runs" value="${b.runs}" min="0" placeholder="0"></td>
+        <td><input type="number" class="sc-input" data-field="balls" value="${b.balls}" min="0" placeholder="0"></td>
+        <td><input type="number" class="sc-input" data-field="fours" value="${b.fours}" min="0" placeholder="0"></td>
+        <td><input type="number" class="sc-input" data-field="sixes" value="${b.sixes}" min="0" placeholder="0"></td>
+        <td class="sc-sr">${b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '—'}</td>
+        <td><input type="text" class="sc-input sc-input-wide" data-field="dismissal" value="${b.dismissal || ''}" placeholder="e.g. c X b Y"></td>
+        <td><label class="sc-check"><input type="checkbox" data-field="isNotOut" ${b.isNotOut ? 'checked' : ''}> *</label></td>
+      </tr>`;
+
+    const renderBowlingRow = (b, idx) => `
+      <tr class="sc-bowl-row" data-idx="${idx}">
+        <td class="sc-bat-name">${b.name}</td>
+        <td><input type="text" class="sc-input" data-field="overs" value="${b.overs}" placeholder="0.0"></td>
+        <td><input type="number" class="sc-input" data-field="maidens" value="${b.maidens}" min="0" placeholder="0"></td>
+        <td><input type="number" class="sc-input" data-field="runs" value="${b.runs}" min="0" placeholder="0"></td>
+        <td><input type="number" class="sc-input" data-field="wickets" value="${b.wickets}" min="0" placeholder="0"></td>
+        <td class="sc-econ">${b.overs > 0 ? (b.runs / parseFloat(b.overs)).toFixed(1) : '—'}</td>
+      </tr>`;
+
+    const renderInnings = (inn, num) => {
+      const battingTeam = m[`team${inn.battingTeamId === m.teamAId ? 'A' : 'B'}Short`];
+      const bowlingTeam = m[`team${inn.bowlingTeamId === m.teamAId ? 'A' : 'B'}Short`];
+      return `
+        <div class="sc-innings-card" data-innings="${num}">
+          <div class="sc-innings-header">
+            <h3>Innings ${num} — ${battingTeam} Batting</h3>
+            <div class="sc-innings-summary">
+              <input type="number" class="sc-input sc-summary-input" data-field="totalRuns" value="${inn.totalRuns}" placeholder="0" min="0"> /
+              <input type="number" class="sc-input sc-summary-input" data-field="wickets" value="${inn.wickets}" placeholder="0" min="0" max="10">
+              (<input type="text" class="sc-input sc-summary-input" data-field="overs" value="${inn.overs}" placeholder="0.0"> ov)
+              <span class="sc-rr">RR: ${inn.runRate}</span>
+              ${num === 2 ? `<span class="sc-target">Target: ${m.innings1.totalRuns + 1}</span>` : ''}
+            </div>
+          </div>
+
+          <div class="sc-table-wrap">
+            <table class="sc-table sc-batting-table">
+              <thead><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th><th>Dismissal</th><th>*</th></tr></thead>
+              <tbody>${inn.batting.map((b, i) => renderBattingRow(b, i)).join('')}</tbody>
+            </table>
+          </div>
+
+          <div class="sc-extras-row">
+            <strong>Extras:</strong>
+            <label>Wd <input type="number" class="sc-input sc-extra-input" data-extra="wides" value="${inn.extras.wides}" min="0"></label>
+            <label>Nb <input type="number" class="sc-input sc-extra-input" data-extra="noBalls" value="${inn.extras.noBalls}" min="0"></label>
+            <label>B <input type="number" class="sc-input sc-extra-input" data-extra="byes" value="${inn.extras.byes}" min="0"></label>
+            <label>Lb <input type="number" class="sc-input sc-extra-input" data-extra="legByes" value="${inn.extras.legByes}" min="0"></label>
+            <span class="sc-extras-total">Total: ${inn.extras.total}</span>
+          </div>
+
+          <h4 style="margin-top:16px;">🎯 ${bowlingTeam} Bowling</h4>
+          <div class="sc-table-wrap">
+            <table class="sc-table sc-bowling-table">
+              <thead><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th></tr></thead>
+              <tbody>${inn.bowling.map((b, i) => renderBowlingRow(b, i)).join('')}</tbody>
+            </table>
+          </div>
+        </div>`;
+    };
+
+    return `
+      <div class="scorecard-dashboard sc-editor" style="animation: fadeIn 0.4s ease;" data-match-id="${m.matchId}">
+        <button class="btn btn-ghost" id="sc-back-btn" style="margin-bottom:16px;">← Back to Match List</button>
+
+        <div class="sc-match-header-card">
+          <div class="sc-match-header-teams">
+            <div style="text-align:center;">
+              ${m.teamALogo ? `<img src="${m.teamALogo}" style="width:48px;height:48px;border-radius:50%;">` : ''}
+              <div style="font-weight:700;color:${m.teamAColor};">${m.teamAShort}</div>
+            </div>
+            <div class="sc-match-header-vs">VS</div>
+            <div style="text-align:center;">
+              ${m.teamBLogo ? `<img src="${m.teamBLogo}" style="width:48px;height:48px;border-radius:50%;">` : ''}
+              <div style="font-weight:700;color:${m.teamBColor};">${m.teamBShort}</div>
+            </div>
+          </div>
+          <div class="sc-match-header-info">
+            <span>${m.date} • ${m.time}</span> | <span>${m.venue}</span> | <span>${m.matchType} (${m.oversLimit} ov)</span>
+          </div>
+          <div class="sc-match-header-toss">
+            <label>Toss: <select class="sc-select" data-field="tossWinner">
+              <option value="">Select</option>
+              <option value="${m.teamAId}" ${m.tossWinner===m.teamAId?'selected':''}>${m.teamAShort}</option>
+              <option value="${m.teamBId}" ${m.tossWinner===m.teamBId?'selected':''}>${m.teamBShort}</option>
+            </select></label>
+            <label>Decision: <select class="sc-select" data-field="tossDecision">
+              <option value="">Select</option>
+              <option value="bat" ${m.tossDecision==='bat'?'selected':''}>Bat First</option>
+              <option value="bowl" ${m.tossDecision==='bowl'?'selected':''}>Bowl First</option>
+            </select></label>
+          </div>
+        </div>
+
+        ${renderInnings(m.innings1, 1)}
+        ${renderInnings(m.innings2, 2)}
+
+        <div class="sc-result-card">
+          <h3>🏆 Match Result</h3>
+          <div class="sc-result-form">
+            <label>Winner: <select class="sc-select" data-field="winner">
+              <option value="">Select</option>
+              <option value="${m.teamAId}" ${m.result.winner===m.teamAId?'selected':''}>${m.teamAShort}</option>
+              <option value="${m.teamBId}" ${m.result.winner===m.teamBId?'selected':''}>${m.teamBShort}</option>
+              <option value="tie" ${m.result.winner==='tie'?'selected':''}>Tie</option>
+            </select></label>
+            <label>Margin: <input type="text" class="sc-input" data-field="margin" value="${m.result.margin}" placeholder="e.g. 20 runs"></label>
+            <label>Player of Match: <input type="text" class="sc-input" data-field="playerOfMatch" value="${m.result.playerOfMatch}" placeholder="Player name"></label>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:12px; justify-content:center; margin-top:24px;">
+          <button class="btn btn-primary btn-lg" id="sc-save-btn">💾 Save Scorecard</button>
+          <button class="btn btn-ghost btn-lg" id="sc-back-btn2">← Back</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // ═══════════════════════════════════════════
+  // FIXTURES TAB
+  // ═══════════════════════════════════════════
+
+  _renderFixturesTab(state) {
+    const gd = state.groupDivision;
+    const FIXED_A = 'bfcl'; // BFC Legends
+    const FIXED_B = 'bfc';  // BFC
+
+    // Helper to get team by ID
+    const getTeam = (id) => state.teams.find(t => t.id === id);
+
+    let allFixtures = [];
+    let knockouts = [];
+
+    if (gd) {
+      // Generate all 6 round-robin pairs per group, ordered by round
+      const getRoundRobinPairs = (group) => {
+        const pairs = [];
+        for (let i = 0; i < group.length; i++)
+          for (let j = i + 1; j < group.length; j++)
+            pairs.push([group[i], group[j]]);
+        return pairs; // 6 pairs for 4 teams
+      };
+
+      const pairsA = getRoundRobinPairs(gd.groupA).map(p => ({ pair: p, group: 'A' }));
+      const pairsB = getRoundRobinPairs(gd.groupB).map(p => ({ pair: p, group: 'B' }));
+
+      // Split pairs per group: Day1 picks [0,3,5]=[AvB,BvC,CvD], Day2 picks [1,2,4]=[AvC,AvD,BvD]
+      // Day1: each team plays 1-2 matches; Day2: each team plays 1-2 matches
+      const day1raw = [pairsA[0], pairsB[0], pairsA[3], pairsB[3], pairsA[5], pairsB[5]];
+      const day2raw = [pairsA[1], pairsB[1], pairsA[2], pairsB[2], pairsA[4], pairsB[4]];
+
+      // Reorder within each day to avoid back-to-back same-team
+      const reorderDay = (arr) => {
+        const result = [], rem = [...arr];
+        while (rem.length > 0) {
+          const last = result.length > 0 ? result[result.length - 1].pair : [];
+          const idx = rem.findIndex(m => !m.pair.some(t => last.includes(t)));
+          result.push(idx >= 0 ? rem.splice(idx, 1)[0] : rem.shift());
+        }
+        return result;
+      };
+
+      const scheduled = [...reorderDay(day1raw), ...reorderDay(day2raw)];
+
+      // Assign match numbers, dates, times
+      const matchTimes = ['9:00 AM', '10:00 AM', '11:15 AM', '12:30 PM', '2:00 PM', '3:15 PM'];
+      allFixtures = scheduled.map((s, i) => {
+        const dayIdx = i < 6 ? 0 : 1;
+        const slotIdx = dayIdx === 0 ? i : i - 6;
+        return {
+          matchNum: i + 1,
+          teamA: getTeam(s.pair[0]),
+          teamB: getTeam(s.pair[1]),
+          group: s.group,
+          date: dayIdx === 0 ? '25 April 2026' : '26 April 2026',
+          time: matchTimes[slotIdx] || '',
+        };
+      });
+
+
+      knockouts = [
+        { label: 'Semi-Final 1', desc: 'Group A Winner vs Group B Runner-up', date: '26 April', time: '4:30 PM' },
+        { label: 'Semi-Final 2', desc: 'Group B Winner vs Group A Runner-up', date: '26 April', time: '5:30 PM' },
+        { label: '🏆 FINAL', desc: 'SF1 Winner vs SF2 Winner', date: '26 April', time: '6:30 PM' },
+      ];
+    }
+
+    // Render token slot
+    const renderSlot = (tokenNum, teamId) => {
+      const team = teamId ? getTeam(teamId) : null;
+      if (team) {
+        return `
+          <div class="fixture-token-slot filled" style="--team-color: ${team.color}">
+            <div class="fixture-token-logo" style="background: ${team.color}; color: ${team.textColor}">
+              ${team.logo ? `<img src="${team.logo}" alt="${team.shortName}">` : team.shortName}
+            </div>
+            <div class="fixture-token-name">${team.shortName}</div>
+          </div>
+        `;
+      }
+      return `
+        <div class="fixture-token-slot empty">
+          <div class="fixture-token-placeholder">TOKEN ${tokenNum}</div>
+        </div>
+      `;
+    };
+
+    // Render fixed team slot
+    const renderFixed = (teamId) => {
+      const team = getTeam(teamId);
+      if (!team) return '';
+      return `
+        <div class="fixture-token-slot fixed" style="--team-color: ${team.color}">
+          <div class="fixture-token-logo" style="background: ${team.color}; color: ${team.textColor}">
+            ${team.logo ? `<img src="${team.logo}" alt="${team.shortName}">` : team.shortName}
+          </div>
+          <div class="fixture-token-name">${team.name}</div>
+          <span class="fixture-fixed-badge">FIXED</span>
+        </div>
+      `;
+    };
+
+    // Render match card
+    const renderMatch = (fixture) => `
+      <div class="fixture-match-card" draggable="true" data-match-num="${fixture.matchNum}" data-team-a="${fixture.teamA.id}" data-team-b="${fixture.teamB.id}" data-group="${fixture.group}">
+        <div class="fixture-match-num">Match ${fixture.matchNum}</div>
+        <div class="fixture-match-teams">
+          <div class="fixture-match-team" style="--tc: ${fixture.teamA.color}">
+            <div class="fixture-match-logo" style="background: ${fixture.teamA.color}; color: ${fixture.teamA.textColor}">
+              ${fixture.teamA.logo ? `<img src="${fixture.teamA.logo}" alt="">` : fixture.teamA.shortName}
+            </div>
+            <span>${fixture.teamA.shortName}</span>
+          </div>
+          <div class="fixture-match-vs">VS</div>
+          <div class="fixture-match-team" style="--tc: ${fixture.teamB.color}">
+            <div class="fixture-match-logo" style="background: ${fixture.teamB.color}; color: ${fixture.teamB.textColor}">
+              ${fixture.teamB.logo ? `<img src="${fixture.teamB.logo}" alt="">` : fixture.teamB.shortName}
+            </div>
+            <span>${fixture.teamB.shortName}</span>
+          </div>
+        </div>
+        <div class="fixture-match-info">${fixture.date} • ${fixture.time || ''}</div>
+      </div>
+    `;
+
+    return `
+      <div class="fixtures-dashboard" style="animation: fadeIn 0.4s ease;">
+        <!-- Group Division Header -->
+        <div class="fixtures-header">
+          <h2>NPL 3.0 GROUP DIVISION</h2>
+          <p>25 & 26th April 2026</p>
+          <div style="margin-top:16px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+            <button class="btn btn-primary btn-lg" id="draw-tokens-btn">
+              🎲 ${gd ? 'Re-Draw Tokens' : 'Draw Tokens'}
+            </button>
+            ${gd ? `
+              <button class="btn btn-ghost btn-lg" id="clear-tokens-btn" style="border-color: rgba(239,68,68,0.3); color: #ef4444;">
+                🗑️ Clear Draw
+              </button>
+              <button class="btn btn-primary btn-lg" id="download-fixtures-btn" style="background: linear-gradient(135deg, #10b981, #059669);">
+                📥 Download HD Fixtures
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Group Cards -->
+        <div class="fixtures-groups">
+          <div class="fixture-group-card">
+            <div class="fixture-group-label group-a">GROUP A</div>
+            <div class="fixture-group-slots">
+              ${renderFixed(FIXED_A)}
+              ${gd ? renderSlot(1, gd.groupA[1]) : renderSlot(1, null)}
+              ${gd ? renderSlot(3, gd.groupA[2]) : renderSlot(3, null)}
+              ${gd ? renderSlot(5, gd.groupA[3]) : renderSlot(5, null)}
+            </div>
+          </div>
+          <div class="fixture-group-card">
+            <div class="fixture-group-label group-b">GROUP B</div>
+            <div class="fixture-group-slots">
+              ${renderFixed(FIXED_B)}
+              ${gd ? renderSlot(2, gd.groupB[1]) : renderSlot(2, null)}
+              ${gd ? renderSlot(4, gd.groupB[2]) : renderSlot(4, null)}
+              ${gd ? renderSlot(6, gd.groupB[3]) : renderSlot(6, null)}
+            </div>
+          </div>
+        </div>
+
+        ${gd ? `
+        <!-- Match Schedule -->
+        <div class="fixtures-schedule">
+          <h2 style="text-align:center; margin-bottom:24px;">📅 Match Schedule</h2>
+
+          <div class="fixtures-day-section">
+            <h3 class="fixtures-day-label">🗓️ Day 1 — 25 April 2026 <span style="font-size:0.7rem; color:var(--text-4); font-weight:500; margin-left:8px;">↕ drag matches to reorder</span></h3>
+            <div class="fixtures-match-grid" id="fixtures-day1-grid" data-day="1">
+              ${allFixtures.filter(f => f.date.includes('25')).map(renderMatch).join('')}
+            </div>
+          </div>
+
+          <div class="fixtures-day-section">
+            <h3 class="fixtures-day-label">🗓️ Day 2 — 26 April 2026</h3>
+            <div class="fixtures-match-grid" id="fixtures-day2-grid" data-day="2">
+              ${allFixtures.filter(f => f.date.includes('26')).map(renderMatch).join('')}
+            </div>
+          </div>
+
+          <!-- Knockouts -->
+          <div class="fixtures-day-section">
+            <h3 class="fixtures-day-label">⚡ Knockout Stage — 26 April 2026</h3>
+            <div class="fixtures-match-grid">
+              ${knockouts.map(ko => `
+                <div class="fixture-match-card knockout-card">
+                  <div class="fixture-match-num">${ko.label}</div>
+                  <div class="fixture-knockout-desc">${ko.desc}</div>
+                  <div class="fixture-match-info">${ko.date} • ${ko.time}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+        ` : `
+        <div class="fixtures-empty">
+          <p>🎲 Click <strong>Draw Tokens</strong> to assign teams to groups and generate the match schedule.</p>
+        </div>
+        `}
       </div>
     `;
   }

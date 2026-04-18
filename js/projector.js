@@ -266,6 +266,18 @@ class ProjectorApp {
       return;
     }
 
+    // ── Detect recall → show recall banner then transition ──
+    if (s.phase === 'recall') {
+      // Cancel any celebration if active
+      if (this.celebrationActive) {
+        this.celebration.stop();
+        this.celebrationActive = false;
+        this.celebrationState = null;
+      }
+      this._showRecallBanner(s);
+      return;
+    }
+
     // ── Normal state handling ──
     const currentName = s.currentPlayer?.name || null;
     const playerChanged = currentName !== this.currentPlayerName;
@@ -295,6 +307,26 @@ class ProjectorApp {
         <div class="proj-waiting-icon">🏏</div>
         <div class="proj-waiting-text">Waiting for Next Player<span class="proj-waiting-dots"></span></div>
         <div class="proj-waiting-sub">Player ${idx + 1} of ${total}</div>
+      </div>
+    `;
+  }
+
+  /** Show recall banner animation on projector */
+  _showRecallBanner(s) {
+    const playerName = s.currentPlayer?.name || 'Player';
+    const teamName = s.currentBidderTeam?.name || s.currentBidderTeam?.shortName || 'Team';
+    const teamColor = s.currentBidderTeam?.color || '#f59e0b';
+
+    this.mainEl.innerHTML = `
+      <div class="proj-recall-banner">
+        <div class="proj-recall-glow"></div>
+        <div class="proj-recall-icon">↩</div>
+        <div class="proj-recall-title">SALE RECALLED</div>
+        <div class="proj-recall-player">${playerName}</div>
+        <div class="proj-recall-detail">
+          Sale to <span style="color: ${teamColor}; font-weight: 700;">${teamName}</span> has been reversed
+        </div>
+        <div class="proj-recall-sub">Re-bidding will begin shortly...</div>
       </div>
     `;
   }

@@ -30,6 +30,7 @@ export class AuctionEngine {
     this.unsoldPlayers = [];    // unsold player objects
     this.auctionLog = [];       // full activity log
     this.playerIndex = 0;       // how many players have been nominated
+    this.lastSale = null;       // snapshot of last action (sold/unsold) for recall
     this.phase = 'waiting';     // waiting | bidding | complete
 
     // Timer settings
@@ -39,6 +40,9 @@ export class AuctionEngine {
 
     // Analytics: track bid counts per player sale
     this.maxBidsPlayer = null;  // { name, bidCount }
+
+    // Group division for tournament fixtures
+    this.groupDivision = null;  // { groupA: [...teamIds], groupB: [...teamIds], tokenMap: {...} }
   }
 
   // ── Helpers ───────────────────────────────────
@@ -101,11 +105,15 @@ export class AuctionEngine {
   /**
    * Get the bid increment based on the current bid amount.
    * Up to 10,000 → +500 | 10,000–20,000 → +1,000 | 20,000+ → +2,000
+   * Maximum bid for a single player: 88,000 pts
    */
+  static MAX_BID = 88000;
+
   getIncrement(bid) {
+    if (bid >= AuctionEngine.MAX_BID) return 0;
     if (bid < 10000) return 500;
     if (bid < 20000) return 1000;
-    return 2000;
+    return Math.min(2000, AuctionEngine.MAX_BID - bid);
   }
 
   /** Format points for display: 1000 → "1,000 pts" */
@@ -185,6 +193,9 @@ export class AuctionEngine {
     if (!team) return false;
     if (team.squad.length >= 12) return false;             // max squad
     if (this.currentBidder === teamId) return false;       // already highest bidder
+
+    // Max bid cap reached
+    if (this.currentBid >= AuctionEngine.MAX_BID) return false;
 
     const nextBid = this.getNextBidAmount();
 
@@ -358,6 +369,20 @@ export class AuctionEngine {
     }
 
     const team = this.teams.get(this.currentBidder);
+
+    // Save snapshot for recall BEFORE mutating
+    this.lastSale = {
+      type: 'sold',
+      player: { ...this.currentPlayer },
+      teamId: this.currentBidder,
+      price: this.currentBid,
+      bidCount: this.bidHistory.length,
+      // Team state before sale
+      prevPurse: team.purse,
+      prevTotalSpent: team.totalSpent,
+      prevSquadLength: team.squad.length,
+    };
+
     team.purse -= this.currentBid;
     team.totalSpent += this.currentBid;
     team.squad.push({
@@ -397,6 +422,12 @@ export class AuctionEngine {
     this._log('unsold', { player });
     this._resetCurrent();
 
+    // Save snapshot for recall — unsold players can also be recalled
+    this.lastSale = {
+      type: 'unsold',
+      player: { ...player },
+    };
+
     return player;
   }
 
@@ -408,6 +439,91 @@ export class AuctionEngine {
     this.bidHistory = [];
     this.bidUndoStack = [];
     this.bidRedoStack = [];
+  }
+
+  // ── Recall Last Sale ─────────────────────────
+
+  /** Check if the last sale can be recalled */
+  canRecall() {
+    return this.lastSale !== null && this.phase === 'waiting';
+  }
+
+  /**
+   * Recall (reverse) the most recently sold or unsold player.
+   * For sold: refunds the team's purse, removes the player from their squad.
+   * For unsold: removes the player from the unsold list.
+   * Re-opens bidding for that player at base price.
+   * Returns the recalled player, or null if recall isn't possible.
+   */
+  recallLastSale() {
+    if (!this.canRecall()) return null;
+
+    const lastAction = this.lastSale;
+    const player = lastAction.player;
+
+    if (lastAction.type === 'unsold') {
+      // Remove from unsoldPlayers
+      for (let i = this.unsoldPlayers.length - 1; i >= 0; i--) {
+        if (this.unsoldPlayers[i].name === player.name) {
+          this.unsoldPlayers.splice(i, 1);
+          break;
+        }
+      }
+
+      // Log the recall
+      this._log('recall', {
+        player: { ...player },
+        type: 'unsold',
+      });
+    } else {
+      // type === 'sold' (default / legacy)
+      const { teamId, price, prevPurse, prevTotalSpent, prevSquadLength } = lastAction;
+      const team = this.teams.get(teamId);
+
+      if (!team) return null;
+
+      // Restore team financials
+      team.purse = prevPurse;
+      team.totalSpent = prevTotalSpent;
+
+      // Remove the player from squad
+      team.squad.length = prevSquadLength;
+
+      // Remove from soldPlayers
+      for (let i = this.soldPlayers.length - 1; i >= 0; i--) {
+        if (this.soldPlayers[i].player.name === player.name && this.soldPlayers[i].teamId === teamId) {
+          this.soldPlayers.splice(i, 1);
+          break;
+        }
+      }
+
+      // Log the recall
+      this._log('recall', {
+        player: { ...player },
+        teamId,
+        teamName: team.name,
+        teamShortName: team.shortName,
+        price,
+        type: 'sold',
+      });
+    }
+
+    // Re-open bidding for this player at base price
+    this.currentPlayer = { ...player };
+    this.currentBid = player.basePrice;
+    this.currentBidder = null;
+    this.bidHistory = [];
+    this.bidUndoStack = [];
+    this.bidRedoStack = [];
+    this.phase = 'bidding';
+
+    // Reset timer
+    this.resetTimer();
+
+    // Clear lastSale — can only recall once
+    this.lastSale = null;
+
+    return player;
   }
 
   /** Move all unsold players back into the active pool to be auctioned again */
@@ -458,6 +574,14 @@ export class AuctionEngine {
       timerStartTime: this.timerStartTime,
       // Analytics
       maxBidsPlayer: this.maxBidsPlayer,
+      // Recall
+      canRecall: this.canRecall(),
+      lastSalePlayer: this.lastSale?.player?.name || null,
+      lastSaleTeam: this.lastSale?.teamId ? this.teams.get(this.lastSale.teamId)?.shortName : null,
+      lastSaleType: this.lastSale?.type || null,
+      maxBid: AuctionEngine.MAX_BID,
+      // Group Division
+      groupDivision: this.groupDivision,
     };
   }
 
@@ -497,6 +621,8 @@ export class AuctionEngine {
       timerEnabled: this.timerEnabled,
       timerStartTime: this.timerStartTime,
       maxBidsPlayer: this.maxBidsPlayer,
+      lastSale: this.lastSale ? { ...this.lastSale } : null,
+      groupDivision: this.groupDivision || null,
     };
   }
 
@@ -522,6 +648,8 @@ export class AuctionEngine {
     engine.timerEnabled = data.timerEnabled ?? true;
     engine.timerStartTime = data.timerStartTime || null;
     engine.maxBidsPlayer = data.maxBidsPlayer || null;
+    engine.lastSale = data.lastSale || null;
+    engine.groupDivision = data.groupDivision || null;
     return engine;
   }
 }

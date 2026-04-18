@@ -258,6 +258,10 @@ function filterStateForMobile(state, teamId) {
     myTeamId: teamId,
     bidHistory: (state.bidHistory || []).slice(-5),
     myTeam: state.teams ? state.teams.find(t => t.id === teamId) : null,
+    // Recall
+    canRecall: state.canRecall || false,
+    lastSalePlayer: state.lastSalePlayer || null,
+    lastSaleTeam: state.lastSaleTeam || null,
   };
 }
 
@@ -286,7 +290,11 @@ function filterStateForProjector(state) {
     timerEnabled: state.timerEnabled || false,
     // Bidder team financial info (for projector warning)
     currentBidderPurse: state.currentBidderTeam ? state.currentBidderTeam.purse : null,
-    currentBidderSquadCount: state.currentBidderTeam ? (state.currentBidderTeam.squad?.length ?? 0) : 0
+    currentBidderSquadCount: state.currentBidderTeam ? (state.currentBidderTeam.squad?.length ?? 0) : 0,
+    // Recall
+    canRecall: state.canRecall || false,
+    lastSalePlayer: state.lastSalePlayer || null,
+    lastSaleTeam: state.lastSaleTeam || null,
   };
 }
 
