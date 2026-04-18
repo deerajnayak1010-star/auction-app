@@ -41,6 +41,8 @@ export class UI {
       { id: 'rules',   label: 'Rules' },
       { id: 'auction', label: 'Auction' },
       { id: 'results', label: 'Results' },
+      { id: 'about',   label: 'About' },
+      { id: 'history', label: 'NPL History' },
     ];
 
     const isFs = !!document.fullscreenElement;
@@ -78,7 +80,7 @@ export class UI {
         <button class="header-icon-btn" id="open-projector-btn" title="Open Projector Screen">
           <span class="header-icon-emoji">📺</span>
         </button>
-        <button class="btn-reset-auction" id="reset-auction-btn" title="Start New Auction / Reset">🔄 New Auction</button>
+        <button class="btn-reset-auction" id="reset-auction-btn" title="Reset Auction">🔄</button>
         <button class="btn-fullscreen" id="fullscreen-btn" title="${isFs ? 'Exit Fullscreen' : 'Enter Fullscreen'}">
           ${isFs ? '⊗' : '⛶'}
         </button>
@@ -100,17 +102,17 @@ export class UI {
           <div class="login-icon">🔒</div>
           <h2 class="login-title">Admin Login</h2>
           <p class="login-subtitle">Please sign in to access the auction</p>
-          <div class="login-form">
+          <form class="login-form" onsubmit="event.preventDefault(); document.getElementById('login-btn').click();">
             <div class="input-group" style="text-align: left; margin-bottom: 16px;">
               <label for="login-username" style="display: block; margin-bottom: 6px; font-size: 0.85rem; color: var(--text-2);">Username</label>
-              <input type="text" id="login-username" class="search-input" style="width: 100%; box-sizing: border-box;" placeholder="Enter username">
+              <input type="text" id="login-username" class="search-input" style="width: 100%; box-sizing: border-box;" placeholder="Enter username" autocomplete="username">
             </div>
             <div class="input-group" style="text-align: left; margin-bottom: 24px;">
               <label for="login-password" style="display: block; margin-bottom: 6px; font-size: 0.85rem; color: var(--text-2);">Password</label>
-              <input type="password" id="login-password" class="search-input" style="width: 100%; box-sizing: border-box;" placeholder="Enter password">
+              <input type="password" id="login-password" class="search-input" style="width: 100%; box-sizing: border-box;" placeholder="Enter password" autocomplete="current-password">
             </div>
-            <button class="btn btn-primary btn-lg" id="login-btn" style="width: 100%;">Sign In</button>
-          </div>
+            <button type="submit" class="btn btn-primary btn-lg" id="login-btn" style="width: 100%;">Sign In</button>
+          </form>
         </div>
       </div>
     `;
@@ -616,8 +618,8 @@ export class UI {
     modal.innerHTML = `
       <div class="reset-confirm-card">
         <div class="reset-confirm-icon">🔄</div>
-        <h3>Start New Auction?</h3>
-        <p>Are you sure you want to start a new auction? All saved auction data will be cleared.</p>
+        <h3>Reset Auction?</h3>
+        <p>Are you sure you want to reset? All saved auction data will be cleared.</p>
         <div class="reset-confirm-actions">
           <button class="btn btn-danger btn-lg" id="reset-confirm-yes">Yes, Reset</button>
           <button class="btn btn-ghost btn-lg" id="reset-confirm-no">No, Cancel</button>
@@ -625,22 +627,194 @@ export class UI {
       </div>
     `;
     document.getElementById('app').appendChild(modal);
-
-    // Close on overlay click (not on card)
     modal.addEventListener('click', (e) => {
       if (e.target === modal) this.closeResetConfirmModal();
     });
   }
 
-  /** Close reset confirmation modal */
   closeResetConfirmModal() {
     const existing = document.getElementById('reset-confirm-modal');
     if (existing) existing.remove();
   }
 
   // ═══════════════════════════════════════════
+  // SCROLL REVEAL OBSERVER
+  // ═══════════════════════════════════════════
+
+  _initScrollReveal() {
+    const els = document.querySelectorAll('.scroll-reveal');
+    if (!els.length) return;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+    els.forEach(el => observer.observe(el));
+  }
+
+  // ═══════════════════════════════════════════
+  // ABOUT PAGE
+  // ═══════════════════════════════════════════
+
+  renderAbout() {
+    this.mainEl.innerHTML = `
+      <div class="about-page">
+        <div class="about-hero scroll-reveal reveal-scale">
+          <div class="about-hero-glow"></div>
+          <div class="about-hero-content">
+            <div class="about-avatar-wrap">
+              <img src="images/teams/Deepak Hegde.png" alt="Deepak Hegde" class="about-avatar">
+              <div class="about-avatar-ring"></div>
+            </div>
+            <h1 class="about-name">Deepak Hegde</h1>
+            <p class="about-role">Developer & Architect</p>
+            <div class="about-badge-row">
+              <span class="about-badge">💻 Full-Stack Developer</span>
+              <span class="about-badge">🏏 Cricket Enthusiast</span>
+              <span class="about-badge">🎨 UI/UX Designer</span>
+            </div>
+          </div>
+        </div>
+        <div class="about-section scroll-reveal">
+          <div class="about-section-icon">🏆</div>
+          <h2>About the Auction Platform</h2>
+          <p class="about-lead">
+            The <strong>Nakre Premier League 3.0</strong> Auction Platform is a cutting-edge, real-time bidding system
+            designed and developed by <strong>Deepak Hegde</strong> — built from the ground up to bring the thrill and
+            excitement of a professional cricket auction right to Nakre's doorstep.
+          </p>
+          <p>
+            What started as a simple idea to digitize the local auction process has evolved into a full-featured,
+            professional-grade platform that rivals the technology behind major franchise leagues. Every pixel,
+            every animation, every sound effect has been carefully crafted to deliver an unforgettable experience
+            for players, team owners, and the audience alike.
+          </p>
+        </div>
+        <div class="about-features scroll-reveal">
+          <h2 style="text-align:center; margin-bottom:24px; color:var(--text-1);">Platform Highlights</h2>
+          <div class="about-features-grid">
+            <div class="about-feature-card"><div class="about-feature-icon">⚡</div><h3>Real-Time Bidding</h3><p>Live WebSocket-powered auction with instant bid updates, timer controls, and multi-device sync.</p></div>
+            <div class="about-feature-card"><div class="about-feature-icon">📺</div><h3>Cinematic Projector</h3><p>Full-screen audience display with HD player cards, fireworks celebrations, and crowd sound effects.</p></div>
+            <div class="about-feature-card"><div class="about-feature-icon">📱</div><h3>Mobile Bidding</h3><p>Team owners can bid directly from their phones via QR code — no app install required.</p></div>
+            <div class="about-feature-card"><div class="about-feature-icon">🎙️</div><h3>AI Commentary</h3><p>Intelligent live commentary engine that narrates every bid, every sale, every dramatic moment.</p></div>
+            <div class="about-feature-card"><div class="about-feature-icon">📊</div><h3>Analytics Dashboard</h3><p>Post-auction insights with spending charts, team composition analysis, and player statistics.</p></div>
+            <div class="about-feature-card"><div class="about-feature-icon">🎨</div><h3>Team Posters</h3><p>Auto-generated HD team posters with squad details — ready for social media sharing.</p></div>
+          </div>
+        </div>
+        <div class="about-section about-dev-note scroll-reveal reveal-scale">
+          <blockquote class="about-quote">
+            <span class="about-quote-mark">\u201C</span>
+            Building this platform has been a labor of love. Combining my passion for cricket with technology
+            to create something that brings the entire village together — that's what makes it truly special.
+            Every line of code is written with one goal: making NPL 3.0 an event that Nakre will remember forever.
+            <span class="about-quote-mark">\u201D</span>
+          </blockquote>
+          <p class="about-quote-author">— Deepak Hegde</p>
+        </div>
+        <div class="about-section scroll-reveal" style="text-align:center;">
+          <h3 style="color:var(--text-2); margin-bottom:16px;">Built With</h3>
+          <div class="about-badge-row" style="justify-content:center; flex-wrap:wrap;">
+            <span class="about-badge">JavaScript ES6+</span>
+            <span class="about-badge">HTML5 Canvas</span>
+            <span class="about-badge">Web Audio API</span>
+            <span class="about-badge">WebSockets</span>
+            <span class="about-badge">SQLite</span>
+            <span class="about-badge">Node.js</span>
+            <span class="about-badge">CSS3 Animations</span>
+          </div>
+        </div>
+      </div>
+    `;
+    this._initScrollReveal();
+  }
+
+  // ═══════════════════════════════════════════
+  // NPL HISTORY PAGE
+  // ═══════════════════════════════════════════
+
+  renderHistory() {
+    this.mainEl.innerHTML = `
+      <div class="history-page">
+        <div class="history-hero scroll-reveal reveal-scale">
+          <div class="history-hero-glow"></div>
+          <h1 class="history-title"><span class="history-title-sub">The Legacy of</span>NAKRE PREMIER LEAGUE</h1>
+          <p class="history-tagline">Where passion meets competition. Where Nakre unites under one cricketing dream.</p>
+        </div>
+        <div class="history-organizer scroll-reveal reveal-left">
+          <div class="history-organizer-card glass-card">
+            <div class="about-avatar-wrap">
+              <img src="images/teams/Suraj Shetty_Owner.png" alt="Suraj Shettey" class="about-avatar">
+              <div class="about-avatar-ring" style="border-color: rgba(245,158,11,0.5);"></div>
+            </div>
+            <div class="history-organizer-info">
+              <h2>Suraj Shettey</h2>
+              <p class="about-role" style="color:var(--accent-gold);">Founder & Organizer — NPL</p>
+              <p class="history-organizer-desc">A true visionary and the driving force behind Nakre Premier League, <strong>Suraj Shettey</strong> has single-handedly transformed grassroots cricket in Nakre. What began as a small neighborhood tournament has grown into the most anticipated sporting event of the year — uniting players, families, and fans across the region.</p>
+              <p class="history-organizer-desc">His relentless dedication, organizational excellence, and passion for nurturing local talent has made NPL more than just a tournament — it's a celebration of community, sportsmanship, and the undying spirit of cricket that runs through every lane of Nakre.</p>
+              <div class="about-badge-row" style="margin-top:12px;">
+                <span class="about-badge" style="background:rgba(245,158,11,0.15);color:var(--accent-gold);border-color:rgba(245,158,11,0.3);">👑 Founder</span>
+                <span class="about-badge" style="background:rgba(245,158,11,0.15);color:var(--accent-gold);border-color:rgba(245,158,11,0.3);">🏏 3 Seasons</span>
+                <span class="about-badge" style="background:rgba(245,158,11,0.15);color:var(--accent-gold);border-color:rgba(245,158,11,0.3);">🌟 Visionary Leader</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="history-timeline">
+          <h2 style="text-align:center; margin-bottom:40px; color:var(--text-1); font-size:clamp(1.5rem,3vw,2rem);">The NPL Journey</h2>
+          <div class="history-timeline-item scroll-reveal reveal-left">
+            <div class="history-timeline-marker"><div class="history-timeline-dot" style="background: #6366f1;"></div><div class="history-timeline-line"></div></div>
+            <div class="history-timeline-card glass-card">
+              <div class="history-season-badge" style="background:linear-gradient(135deg, #6366f1, #8b5cf6);">NPL 1.0</div>
+              <h3>The Beginning</h3>
+              <p class="history-season-tagline">Where it all started — the first spark of cricket revolution in Nakre</p>
+              <div class="history-season-desc"><p>The inaugural season of the Nakre Premier League was a historic moment for the community. Organized with sheer determination by Suraj Shettey, NPL 1.0 brought together local talent from every corner of Nakre for the first time in a structured, competitive format.</p><p>What started as a dream became reality — the roar of the crowd, the thrill of the auction, the joy of victory, and the grace of sportsmanship. NPL 1.0 proved that Nakre had the passion, the talent, and the spirit to create something truly extraordinary.</p></div>
+              <div class="history-season-stats"><span>🏏 Season 1</span><span>🎯 The Foundation</span><span>🌱 Where Dreams Began</span></div>
+            </div>
+          </div>
+          <div class="history-timeline-item scroll-reveal reveal-right">
+            <div class="history-timeline-marker"><div class="history-timeline-dot" style="background: #10b981;"></div><div class="history-timeline-line"></div></div>
+            <div class="history-timeline-card glass-card">
+              <div class="history-season-badge" style="background:linear-gradient(135deg, #10b981, #059669);">NPL 2.0</div>
+              <h3>The Evolution</h3>
+              <p class="history-season-tagline">Bigger, better, bolder — NPL levels up</p>
+              <div class="history-season-desc"><p>Building on the success of the first season, NPL 2.0 took everything to the next level. More teams, more players, more intense competition. The league grew beyond expectations, drawing spectators from neighboring villages and establishing NPL as the premier cricketing event in the region.</p><p>Suraj Shettey's vision expanded — better organization, improved infrastructure, and a growing community of cricketers who found their stage. NPL 2.0 wasn't just a tournament; it was a movement.</p></div>
+              <div class="history-season-stats"><span>🏏 Season 2</span><span>📈 Growth & Excellence</span><span>🔥 The Movement Grows</span></div>
+            </div>
+          </div>
+          <div class="history-timeline-item history-current scroll-reveal reveal-left">
+            <div class="history-timeline-marker"><div class="history-timeline-dot" style="background: var(--accent-gold); box-shadow: 0 0 20px rgba(245,158,11,0.5);"></div></div>
+            <div class="history-timeline-card glass-card history-card-current">
+              <div class="history-season-badge" style="background:linear-gradient(135deg, #f59e0b, #d97706);">NPL 3.0</div>
+              <div class="history-current-badge">🔴 CURRENT SEASON</div>
+              <h3>The Revolution</h3>
+              <p class="history-season-tagline">Technology meets tradition — the most ambitious NPL ever</p>
+              <div class="history-season-desc"><p>NPL 3.0 is the most ambitious season yet — featuring <strong>8 powerhouse teams</strong>, <strong>92+ players</strong>, and for the first time ever, a fully digital auction platform with live projector display, mobile bidding, AI commentary, and cinematic celebrations.</p><p>This season represents the perfect fusion of Suraj Shettey's cricketing vision and cutting-edge technology. With real-time WebSocket bidding, HD player cards, fireworks animations, and team poster generation — NPL 3.0 sets a new standard for what a grassroots cricket league can achieve.</p><p style="font-weight:700; color:var(--accent-gold); margin-top:12px;">🏆 This isn't just cricket. This is the Nakre Premier League — where legends are born.</p></div>
+              <div class="history-season-stats"><span>🏏 8 Teams</span><span>👥 92+ Players</span><span>💰 1,00,000 pts Budget</span><span>⚡ Digital Auction</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="about-section about-dev-note scroll-reveal reveal-scale" style="margin-top:40px;">
+          <blockquote class="about-quote">
+            <span class="about-quote-mark">"</span>
+            Cricket is not just a sport in Nakre — it's a way of life. NPL was born from the belief 
+            that every talent deserves a stage, every team deserves a story, and every match deserves 
+            to be remembered. Three seasons in, this dream is stronger than ever.
+            <span class="about-quote-mark">"</span>
+          </blockquote>
+          <p class="about-quote-author">— Suraj Shettey, Founder & Organizer</p>
+        </div>
+      </div>
+    `;
+    this._initScrollReveal();
+  }
+
+  // ═══════════════════════════════════════════
   // AUCTION PAGE
   // ═══════════════════════════════════════════
+
 
   renderAuction(state, connectedMobiles = []) {
     if (state.phase === 'complete') {
@@ -676,7 +850,7 @@ export class UI {
               </div>
               <div class="sidebar-team-info">
                 <div class="sidebar-team-name">
-                  ${team.shortName}
+                  ${team.name}
                   ${isMobileConnected ? '<span class="mobile-indicator" title="Connected via mobile">📱</span>' : ''}
                 </div>
                 <div class="sidebar-team-purse">${fmt(team.purse)}</div>
@@ -732,7 +906,8 @@ export class UI {
             return `
               <button class="team-bid-btn" data-team-id="${team.id}"
                       style="background: ${team.color}; color: ${team.textColor}; border-color: ${team.color}"
-                      ${state.currentBidder === team.id ? 'disabled' : ''}>
+                      ${state.currentBidder === team.id ? 'disabled' : ''}
+                      title="${team.name}">
                 ${team.shortName}
               </button>
             `;

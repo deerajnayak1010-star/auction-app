@@ -13,6 +13,11 @@ class ProjectorApp {
     this.currentPlayerName = null; // track to detect player changes
     this.localMode = false; // true when using BroadcastChannel (no server)
 
+    // Celebration system
+    this.celebration = new ProjectorCelebration();
+    this.celebrationActive = false;
+    this.celebrationState = null; // state snapshot during celebration
+
     // DOM refs (cached after render)
     this.mainEl = document.getElementById('proj-main');
     this.statusDot = document.getElementById('proj-status-dot');
@@ -236,7 +241,32 @@ class ProjectorApp {
     // Update bottom bar stats always
     this.updateBottomBar();
 
-    // Detect if the player changed (need full re-render)
+    // ── Celebration gating ──
+    // If celebration is active, ignore 'waiting'/'idle' (projector shows its own transition)
+    if (this.celebrationActive) {
+      if (s.phase === 'waiting' || s.phase === 'idle') {
+        return; // skip — celebration handles the transition
+      }
+      // A new player was nominated or auction completed — cancel celebration
+      this.celebration.stop();
+      this.celebrationActive = false;
+      this.celebrationState = null;
+    }
+
+    // ── Detect sold/unsold → start celebration ──
+    if (s.phase === 'sold' || s.phase === 'unsold') {
+      this.celebrationState = { ...s };
+      this.celebrationActive = true;
+      this.celebration.start(s.phase, s, () => {
+        // Celebration finished → show waiting screen
+        this.celebrationActive = false;
+        this._showWaitingScreen(this.celebrationState);
+        this.celebrationState = null;
+      });
+      return;
+    }
+
+    // ── Normal state handling ──
     const currentName = s.currentPlayer?.name || null;
     const playerChanged = currentName !== this.currentPlayerName;
     const phaseChanged = !prev || prev.phase !== s.phase;
@@ -256,17 +286,24 @@ class ProjectorApp {
   // FULL RENDER (only on player/phase change)
   // ═══════════════════════════════════════════
 
+  /** Show the waiting screen after a celebration ends */
+  _showWaitingScreen(celebState) {
+    const idx = celebState?.playerIndex || 0;
+    const total = celebState?.totalPlayers || '—';
+    this.mainEl.innerHTML = `
+      <div class="proj-waiting" style="animation: fadeInUp 0.6s ease">
+        <div class="proj-waiting-icon">🏏</div>
+        <div class="proj-waiting-text">Waiting for Next Player<span class="proj-waiting-dots"></span></div>
+        <div class="proj-waiting-sub">Player ${idx + 1} of ${total}</div>
+      </div>
+    `;
+  }
+
   renderFull() {
     const s = this.state;
 
     if (!s || s.phase === 'idle' || s.phase === 'waiting') {
-      this.mainEl.innerHTML = `
-        <div class="proj-waiting">
-          <div class="proj-waiting-icon">🏏</div>
-          <div class="proj-waiting-text">Waiting for Next Player<span class="proj-waiting-dots"></span></div>
-          <div class="proj-waiting-sub">Player ${(s?.playerIndex || 0) + 1} of ${s?.totalPlayers || '—'}</div>
-        </div>
-      `;
+      this._showWaitingScreen(s);
       return;
     }
 

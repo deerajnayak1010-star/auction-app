@@ -335,6 +335,15 @@ wss.on('connection', (ws) => {
         console.log(`[WS] Mobile URL: ${mobileUrl}`);
         break;
 
+      // ── Host sends projector-only event (sold/unsold celebration) ──
+      case 'projector-event':
+        for (const client of projectorClients) {
+          if (client.readyState === 1) {
+            client.send(JSON.stringify(msg.payload));
+          }
+        }
+        break;
+
       // ── Host broadcasts auction state ──
       case 'state-update':
         latestState = msg.state;

@@ -72,7 +72,7 @@ class App {
     } else {
       // Navigate to initial view
       const hash = window.location.hash.slice(1);
-      if (['setup', 'player-select', 'rules', 'players', 'auction', 'results'].includes(hash)) {
+      if (['setup', 'player-select', 'rules', 'players', 'auction', 'results', 'about', 'history'].includes(hash)) {
         this.currentView = hash;
       } else if (hash === 'login') {
         this.currentView = 'setup'; // already logged in
@@ -235,7 +235,7 @@ class App {
       return;
     }
 
-    if (['login', 'setup', 'player-select', 'rules', 'players', 'auction', 'results'].includes(hash)) {
+    if (['login', 'setup', 'player-select', 'rules', 'players', 'auction', 'results', 'about', 'history'].includes(hash)) {
       this.currentView = hash;
       this.render();
     }
@@ -378,6 +378,16 @@ class App {
         break;
       case 'results':
         this.ui.renderResults(this.engine ? this.engine.getState() : null, this.resultsTab);
+        this.stopIdleCommentary();
+        this.ui.removeCommentaryPanel();
+        break;
+      case 'about':
+        this.ui.renderAbout();
+        this.stopIdleCommentary();
+        this.ui.removeCommentaryPanel();
+        break;
+      case 'history':
+        this.ui.renderHistory();
         this.stopIdleCommentary();
         this.ui.removeCommentaryPanel();
         break;
@@ -1015,6 +1025,31 @@ class App {
     }
   }
 
+  /** Send a phase-override state only to projector clients (for celebration animations) */
+  _broadcastProjectorPhase(phase, engineState) {
+    const projState = this._filterStateForProjector(engineState);
+    projState.phase = phase;
+
+    // BroadcastChannel (local tabs)
+    try {
+      if (!this._projectorChannel) {
+        this._projectorChannel = new BroadcastChannel('npl-projector');
+      }
+      this._projectorChannel.postMessage({
+        type: 'state-update',
+        state: projState
+      });
+    } catch (e) {}
+
+    // WebSocket (remote projectors only — bypasses mobile clients)
+    if (this.wsClient.connected) {
+      this.wsClient.sendProjectorEvent({
+        type: 'state-update',
+        state: projState
+      });
+    }
+  }
+
   sellPlayer() {
     if (!this.engine || !this.engine.currentBidder) return;
 
@@ -1025,6 +1060,9 @@ class App {
 
     this.stopTimerTick();
     this.sounds.playSold();
+
+    // Broadcast SOLD state to projector (before engine resets player/bidder)
+    this._broadcastProjectorPhase('sold', state);
 
     // Show overlay animation
     this.ui.showSoldOverlay();
@@ -1068,6 +1106,9 @@ class App {
 
     this.stopTimerTick();
     this.sounds.playUnsold();
+
+    // Broadcast UNSOLD state to projector (before engine resets player)
+    this._broadcastProjectorPhase('unsold', this.engine.getState());
 
     // Show overlay animation
     this.ui.showUnsoldOverlay();

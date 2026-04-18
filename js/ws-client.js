@@ -93,6 +93,11 @@ export class WSClient {
     this.send({ type: 'state-update', state });
   }
 
+  /** Send an event only to projector clients (not mobile) */
+  sendProjectorEvent(payload) {
+    this.send({ type: 'projector-event', payload });
+  }
+
   /** Create a mobile bidding session */
   createSession(teams) {
     const teamInfo = teams.map(t => ({
