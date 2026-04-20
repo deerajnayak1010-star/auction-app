@@ -970,19 +970,24 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
   font-weight: 700;
   cursor: pointer;
   border: 2px solid transparent;
-  transition: var(--transition);
+  transition: all 0.25s ease;
   position: relative;
   min-width: 80px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 16px rgba(59,130,246,0.25);
 }
 .team-bid-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 8px 30px rgba(59,130,246,0.4), 0 0 20px rgba(139,92,246,0.2);
 }
 .team-bid-btn:active:not(:disabled) { transform: scale(0.96); }
 .team-bid-btn:disabled {
-  opacity: 0.25;
+  opacity: 0.2;
   cursor: not-allowed;
   filter: grayscale(0.8);
+  background: rgba(100,100,120,0.3) !important;
+  box-shadow: none;
 }
 
 .auction-actions {
@@ -1008,19 +1013,25 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
 }
 
 .bid-current-label {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-3);
-  font-weight: 600;
-  margin-bottom: 4px;
+  letter-spacing: 2px;
+  color: var(--accent-blue);
+  font-weight: 700;
+  margin-bottom: 6px;
 }
 .bid-current-amount {
   font-family: 'Outfit', sans-serif;
-  font-size: 2.2rem;
-  font-weight: 800;
+  font-size: 3rem;
+  font-weight: 900;
   color: var(--accent-gold);
-  transition: var(--transition);
+  transition: all 0.3s ease;
+  text-shadow: 0 0 20px rgba(245,158,11,0.3), 0 0 40px rgba(245,158,11,0.15);
+  animation: bidAmountGlow 3s ease-in-out infinite;
+}
+@keyframes bidAmountGlow {
+  0%, 100% { text-shadow: 0 0 20px rgba(245,158,11,0.3), 0 0 40px rgba(245,158,11,0.15); }
+  50%      { text-shadow: 0 0 30px rgba(245,158,11,0.5), 0 0 60px rgba(245,158,11,0.25); }
 }
 .bid-current-team {
   font-size: 0.85rem;
