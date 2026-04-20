@@ -305,6 +305,9 @@ export class AuctionEngine {
     this.currentBid = amount;
     this.currentBidder = teamId;
 
+    // Reset timer on each bid, including direct quick bids
+    this.resetTimer();
+
     const entry = {
       teamId,
       teamName: team.shortName,
@@ -341,6 +344,7 @@ export class AuctionEngine {
     this.currentBid = prev.bid;
     this.currentBidder = prev.bidder;
     this.bidHistory = prev.bidHistory;
+    this.resetTimer();
     return true;
   }
 
@@ -357,6 +361,7 @@ export class AuctionEngine {
     this.currentBid = next.bid;
     this.currentBidder = next.bidder;
     this.bidHistory = next.bidHistory;
+    this.resetTimer();
     return true;
   }
 

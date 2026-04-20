@@ -49,6 +49,9 @@ const MIME_TYPES = {
   '.svg':  'image/svg+xml',
   '.ico':  'image/x-icon',
   '.webp': 'image/webp',
+  '.mp4':  'video/mp4',
+  '.webm': 'video/webm',
+  '.mov':  'video/quicktime',
   '.woff': 'font/woff',
   '.woff2':'font/woff2',
 };

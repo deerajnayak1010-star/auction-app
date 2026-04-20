@@ -15,6 +15,7 @@ import { PlayerCardsEngine } from './player-cards.js';
 import { LiveMatchEngine } from './live-match.js';
 import { GalleryManager } from './gallery.js';
 import { AwardsEngine } from './awards.js';
+import { BackgroundMediaManager } from './background-media.js';
 
 class App {
   constructor() {
@@ -61,6 +62,7 @@ class App {
     this.awardsData = [];
     this.awardsRevealedCount = 0;
     this.fixturesLocked = localStorage.getItem('npl_fixtures_locked') === '1';
+    this.backgroundMedia = new BackgroundMediaManager();
   }
 
   async init() {
@@ -70,17 +72,10 @@ class App {
     // Delegate all click events from #app
     document.getElementById('app').addEventListener('click', (e) => this.onClick(e));
 
-    // Close hamburger menu and More dropdown when clicking outside
+    // Close header menus when the pointer/click leaves their trigger areas
     document.addEventListener('click', (e) => {
-      const dd = document.getElementById('hamburger-dropdown');
-      if (dd && dd.style.display !== 'none') {
-        const menu = e.target.closest('.hamburger-menu');
-        if (!menu) dd.style.display = 'none';
-      }
-      const moreDd = document.getElementById('nav-more-dropdown');
-      if (moreDd && moreDd.style.display !== 'none') {
-        const moreMenu = e.target.closest('.nav-more-menu');
-        if (!moreMenu) moreDd.style.display = 'none';
+      if (!e.target.closest('.hamburger-menu') && !e.target.closest('.nav-more-menu')) {
+        this._closeHeaderMenus();
       }
     });
 
@@ -97,6 +92,7 @@ class App {
 
     // Try to restore saved state
     await this.loadState();
+    await this.backgroundMedia.init();
 
     // Enforce login
     if (!this.isLoggedIn) {
@@ -228,9 +224,13 @@ class App {
     const result = this.engine.placeBid(msg.teamId);
     if (result.success) {
       this.wsClient.sendBidResult(msg.teamId, true);
+      this.lastTickSecond = null;
       const state = this.engine.getState();
       this.ui.renderAuction(state, this.wsClient.getConnectedTeams());
       this.updateBidButtonStates();
+      if (state.timerEnabled && state.timerRemaining !== null) {
+        this.ui.updateTimerDisplay(state.timerRemaining, state.timerDuration);
+      }
       this.ui.updateBidDisplay(state);
       this.ui.showToast(`📱 ${msg.teamShortName} bid ${AuctionEngine.formatPoints(result.bid)}`, 'info');
       this.broadcastState();
@@ -388,7 +388,13 @@ class App {
       unsold: this.engine.getState().unsoldCount,
     } : {};
 
-    this.ui.renderHeader(this.currentView, stats, this.sounds.muted, this.commentaryVisible);
+    this.ui.renderHeader(
+      this.currentView,
+      stats,
+      this.sounds.muted,
+      this.commentaryVisible,
+      this.backgroundMedia.getUiState()
+    );
     this.bindNavEvents();
 
     switch (this.currentView) {
@@ -473,6 +479,63 @@ class App {
     document.querySelectorAll('.nav-more-item[data-view]').forEach(btn => {
       btn.addEventListener('click', () => this.navigate(btn.dataset.view));
     });
+    this.bindHeaderMenuEvents();
+  }
+
+  bindHeaderMenuEvents() {
+    ['.nav-more-menu', '.hamburger-menu'].forEach((selector) => {
+      const menu = document.querySelector(selector);
+      if (!menu) return;
+
+      const openMenu = () => this._openHeaderMenu(menu);
+      const closeMenu = () => this._scheduleHeaderMenuClose(menu);
+
+      menu.addEventListener('mouseenter', openMenu);
+      menu.addEventListener('mouseleave', closeMenu);
+      menu.addEventListener('focusin', openMenu);
+      menu.addEventListener('focusout', (event) => {
+        if (!menu.contains(event.relatedTarget)) {
+          closeMenu();
+        }
+      });
+    });
+  }
+
+  _openHeaderMenu(menu) {
+    if (!menu) return;
+    clearTimeout(menu._closeTimer);
+    this._closeHeaderMenus(menu);
+    menu.classList.add('is-open');
+
+    const toggle = menu.querySelector('[id$="-toggle"]');
+    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+  }
+
+  _closeHeaderMenu(menu) {
+    if (!menu) return;
+    clearTimeout(menu._closeTimer);
+    menu.classList.remove('is-open');
+
+    const toggle = menu.querySelector('[id$="-toggle"]');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  }
+
+  _scheduleHeaderMenuClose(menu) {
+    if (!menu) return;
+    clearTimeout(menu._closeTimer);
+    menu._closeTimer = setTimeout(() => {
+      if (!menu.matches(':hover') && !menu.contains(document.activeElement)) {
+        this._closeHeaderMenu(menu);
+      }
+    }, 140);
+  }
+
+  _closeHeaderMenus(except = null) {
+    document.querySelectorAll('.nav-more-menu, .hamburger-menu').forEach((menu) => {
+      if (menu !== except) {
+        this._closeHeaderMenu(menu);
+      }
+    });
   }
 
   bindPoolEvents() {
@@ -510,7 +573,7 @@ class App {
   }
 
   async onClick(e) {
-    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], [data-ball], [data-live-match], [data-lm-new-batsman], [data-lm-next-bowler], [data-lm-coin-flip], [data-lm-dismissal], [data-lm-runout], [data-ro-runs], [data-gallery-filter], [data-delete-photo], [data-generate-card], #login-btn, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #recall-bid-btn, #recall-confirm-yes, #recall-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #results-tab-squads, #results-tab-analytics, #results-tab-standings, #results-tab-stats, #results-tab-scorecard, #results-tab-fixtures, #draw-tokens-btn, #clear-tokens-btn, #clear-tokens-yes, #clear-tokens-no, #download-fixtures-btn, #lock-fixtures-btn, #create-knockout-btn, #sc-back-btn, #sc-back-btn2, #sc-save-btn, .sc-open-btn, #commentary-toggle-btn, #commentary-header, #open-projector-btn, #hamburger-toggle, #nav-more-toggle, .nav-more-item, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn, #live-undo-btn, #live-back-btn, #live-save-scorecard-btn, #lm-start-toss-btn, #lm-confirm-openers-btn, #lm-wd-toggle, #lm-nb-toggle, #lm-bye-toggle, #lm-lb-toggle, #lm-wicket-btn, #lm-modal-close-btn, #lm-save-yes-btn, #lm-save-no-btn, #lm-save-dismiss-btn, #lm-edit-score-btn, #live-edit-score-btn, #ro-swap-strike-btn, #lm-swap-strike-btn, #share-app-btn, #share-copy-wa-btn, #share-copy-ig-btn, #share-tab-wa, #share-tab-ig, #share-modal-close, #awards-reveal-next-btn, #awards-reset-btn, #awards-back-btn, .score-btn, .lm-sub-btn, .lm-modal-option, .lm-modal-close');
+    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], [data-ball], [data-live-match], [data-lm-new-batsman], [data-lm-next-bowler], [data-lm-coin-flip], [data-lm-dismissal], [data-lm-runout], [data-ro-runs], [data-gallery-filter], [data-delete-photo], [data-generate-card], #login-btn, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #recall-bid-btn, #recall-confirm-yes, #recall-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #video-bg-toggle-btn, #results-tab-squads, #results-tab-analytics, #results-tab-standings, #results-tab-stats, #results-tab-scorecard, #results-tab-fixtures, #draw-tokens-btn, #clear-tokens-btn, #clear-tokens-yes, #clear-tokens-no, #download-fixtures-btn, #lock-fixtures-btn, #create-knockout-btn, #sc-back-btn, #sc-back-btn2, #sc-save-btn, .sc-open-btn, #commentary-toggle-btn, #commentary-header, #open-projector-btn, #hamburger-toggle, #nav-more-toggle, .nav-more-item, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn, #live-undo-btn, #live-back-btn, #live-save-scorecard-btn, #lm-start-toss-btn, #lm-confirm-openers-btn, #lm-wd-toggle, #lm-nb-toggle, #lm-bye-toggle, #lm-lb-toggle, #lm-wicket-btn, #lm-modal-close-btn, #lm-save-yes-btn, #lm-save-no-btn, #lm-save-dismiss-btn, #lm-edit-score-btn, #live-edit-score-btn, #ro-swap-strike-btn, #lm-swap-strike-btn, #share-app-btn, #share-copy-wa-btn, #share-copy-ig-btn, #share-tab-wa, #share-tab-ig, #share-modal-close, #awards-reveal-next-btn, #awards-reset-btn, #awards-back-btn, .score-btn, .lm-sub-btn, .lm-modal-option, .lm-modal-close');
     if (!target) return;
 
     // ── Premium Features Click Routing ──
@@ -810,21 +873,17 @@ class App {
 
     // ── Hamburger menu toggle ──
     if (target.id === 'hamburger-toggle' || target.closest('#hamburger-toggle')) {
-      const dd = document.getElementById('hamburger-dropdown');
-      if (dd) dd.style.display = dd.style.display === 'none' ? 'flex' : 'none';
-      // Close More dropdown if open
-      const moreDd = document.getElementById('nav-more-dropdown');
-      if (moreDd) moreDd.style.display = 'none';
+      const menu = document.querySelector('.hamburger-menu');
+      if (menu?.classList.contains('is-open')) this._closeHeaderMenu(menu);
+      else this._openHeaderMenu(menu);
       return;
     }
 
     // ── Nav More dropdown toggle ──
     if (target.id === 'nav-more-toggle' || target.closest('#nav-more-toggle')) {
-      const dd = document.getElementById('nav-more-dropdown');
-      if (dd) dd.style.display = dd.style.display === 'none' ? 'flex' : 'none';
-      // Close hamburger if open
-      const hdd = document.getElementById('hamburger-dropdown');
-      if (hdd) hdd.style.display = 'none';
+      const menu = document.querySelector('.nav-more-menu');
+      if (menu?.classList.contains('is-open')) this._closeHeaderMenu(menu);
+      else this._openHeaderMenu(menu);
       return;
     }
 
@@ -872,16 +931,27 @@ class App {
     if (target.id === 'sound-toggle-btn' || target.closest('#sound-toggle-btn')) {
       const muted = this.sounds.toggleMute();
       this.ui.showToast(muted ? '🔇 Sound muted' : '🔊 Sound enabled', 'info', 1500);
-      const dd = document.getElementById('hamburger-dropdown');
-      if (dd) dd.style.display = 'none';
+      this._closeHeaderMenus();
+      this.render();
+      return;
+    }
+
+    // ── Background video toggle ──
+    if (target.id === 'video-bg-toggle-btn' || target.closest('#video-bg-toggle-btn')) {
+      const state = await this.backgroundMedia.toggleUserPreference();
+      this._closeHeaderMenus();
+      this.ui.showToast(
+        state.active ? '🎬 Cinematic background enabled' : '🖼️ Cinematic poster mode enabled',
+        'info',
+        1600
+      );
       this.render();
       return;
     }
 
     // ── Share App ──
     if (target.id === 'share-app-btn' || target.closest('#share-app-btn')) {
-      const dd = document.getElementById('hamburger-dropdown');
-      if (dd) dd.style.display = 'none';
+      this._closeHeaderMenus();
       this._showShareModal();
       return;
     }
@@ -1055,6 +1125,7 @@ class App {
 
     // ── Open Projector Screen ──
     if (target.id === 'open-projector-btn' || target.closest('#open-projector-btn')) {
+      this._closeHeaderMenus();
       window.open('projector.html', '_blank');
       return;
     }
@@ -1186,9 +1257,13 @@ class App {
 
     const result = this.engine.placeDirectBid(teamId, amount);
     if (result.success) {
+      this.lastTickSecond = null;
       const state = this.engine.getState();
       this.ui.renderAuction(state, this.wsClient.getConnectedTeams());
       this.updateBidButtonStates();
+      if (state.timerEnabled && state.timerRemaining !== null) {
+        this.ui.updateTimerDisplay(state.timerRemaining, state.timerDuration);
+      }
       this.ui.updateBidDisplay(state);
       this.ui.showToast(`Quick bid: ${AuctionEngine.formatPoints(amount)}`, 'success');
       this.broadcastState();
@@ -1201,9 +1276,14 @@ class App {
   handleUndoBid() {
     if (!this.engine) return;
     if (this.engine.undoBid()) {
+      this.lastTickSecond = null;
       const state = this.engine.getState();
       this.ui.renderAuction(state, this.wsClient.getConnectedTeams());
       this.updateBidButtonStates();
+      if (state.timerEnabled && state.timerRemaining !== null) {
+        this.ui.updateTimerDisplay(state.timerRemaining, state.timerDuration);
+      }
+      this.ui.updateBidDisplay(state);
       this.ui.showToast('Bid undone', 'info');
       this.broadcastState();
       this.saveState();
@@ -1213,9 +1293,14 @@ class App {
   handleRedoBid() {
     if (!this.engine) return;
     if (this.engine.redoBid()) {
+      this.lastTickSecond = null;
       const state = this.engine.getState();
       this.ui.renderAuction(state, this.wsClient.getConnectedTeams());
       this.updateBidButtonStates();
+      if (state.timerEnabled && state.timerRemaining !== null) {
+        this.ui.updateTimerDisplay(state.timerRemaining, state.timerDuration);
+      }
+      this.ui.updateBidDisplay(state);
       this.ui.showToast('Bid redone', 'info');
       this.broadcastState();
       this.saveState();
@@ -1938,7 +2023,19 @@ class App {
     document.querySelectorAll('.team-bid-btn').forEach(btn => {
       const teamId = btn.dataset.teamId;
       const canBid = this.engine.canTeamBid(teamId);
+      const isCurrentBidder = this.engine.currentBidder === teamId;
+      const teamLabel = btn.dataset.teamLabel || btn.title || btn.textContent.trim();
+
       btn.disabled = !canBid;
+      btn.classList.toggle('current-bidder', isCurrentBidder);
+      btn.dataset.teamLabel = teamLabel;
+      btn.dataset.bidState = isCurrentBidder ? 'locked' : canBid ? 'ready' : 'disabled';
+      btn.setAttribute('aria-disabled', (!canBid).toString());
+      btn.title = isCurrentBidder
+        ? `${teamLabel} - Highest bidder (locked)`
+        : !canBid
+          ? `${teamLabel} - Bid unavailable`
+          : teamLabel;
     });
   }
 

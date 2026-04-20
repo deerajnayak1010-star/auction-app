@@ -4,19 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NAKRE PREMIER LEAGUE 3.0 2026</title>
-  <meta name="description" content="NAKRE PREMIER LEAGUE 3.0 2026 — Cricket auction application for Nakre. Bid on players, manage budgets, build your dream squad.">
+  <meta name="description" content="NAKRE PREMIER LEAGUE 3.0 2026 - Cricket auction application for Nakre. Bid on players, manage budgets, build your dream squad.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.pixabay.com" crossorigin>
+  <link rel="preconnect" href="https://www.pexels.com" crossorigin>
+  <link rel="preload" as="image" href="images/cricket-bg-poster.svg">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=5">
-  <link rel="stylesheet" href="css/premium-features.css?v=1">
+  <link rel="stylesheet" href="css/styles.css?v=6">
+  <link rel="stylesheet" href="css/premium-features.css?v=2">
 </head>
 <body>
+  <div id="background-stage" class="background-stage" aria-hidden="true">
+    <div class="background-stage__poster"></div>
+    <video id="background-stage-video" class="background-stage__video" muted loop playsinline preload="metadata" tabindex="-1"></video>
+    <div class="background-stage__glow"></div>
+    <div class="background-stage__grain"></div>
+    <div class="background-stage__overlay"></div>
+  </div>
   <div id="app">
     <header id="header"></header>
     <main id="main"></main>
     <div id="toast-container"></div>
   </div>
-  <script type="module" src="js/app.js?v=6"></script>
+  <script type="module" src="js/app.js?v=8"></script>
 </body>
 </html>

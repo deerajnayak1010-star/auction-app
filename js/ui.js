@@ -23,6 +23,52 @@ function abbr(hand) {
   return hand.replace('Right ', 'R').replace('Left ', 'L');
 }
 
+function normalizeHexColor(color) {
+  if (!color || typeof color !== 'string') return null;
+  const trimmed = color.trim();
+  if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed)) return null;
+  if (trimmed.length === 4) {
+    return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`.toLowerCase();
+  }
+  return trimmed.toLowerCase();
+}
+
+function darkenColor(color, amount = 0.3) {
+  const hex = normalizeHexColor(color);
+  if (!hex) return color || '#3b82f6';
+
+  const channels = [1, 3, 5].map(index => parseInt(hex.slice(index, index + 2), 16));
+  const darkened = channels.map(channel => {
+    const value = Math.round(channel * (1 - amount));
+    return Math.max(0, Math.min(255, value));
+  });
+
+  return `#${darkened.map(value => value.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function hexToRgba(color, alpha = 1) {
+  const hex = normalizeHexColor(color);
+  if (!hex) return `rgba(59,130,246,${alpha})`;
+
+  const [r, g, b] = [1, 3, 5].map(index => parseInt(hex.slice(index, index + 2), 16));
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function buildTeamBidStyle(team) {
+  const baseColor = normalizeHexColor(team.color) || '#3b82f6';
+  const deepColor = darkenColor(baseColor, 0.34);
+  const glowColor = hexToRgba(baseColor, 0.34);
+  const textColor = team.textColor || '#ffffff';
+
+  return [
+    `--team-color: ${baseColor}`,
+    `--team-color-deep: ${deepColor}`,
+    `--team-glow: ${glowColor}`,
+    `--team-text: ${textColor}`,
+    `color: ${textColor}`,
+  ].join('; ');
+}
+
 export class UI {
   constructor() {
     this.headerEl = document.getElementById('header');
@@ -34,7 +80,7 @@ export class UI {
   // HEADER
   // ═══════════════════════════════════════════
 
-  renderHeader(currentView, stats = {}, soundMuted = false, commentaryVisible = false) {
+  renderHeaderLegacy(currentView, stats = {}, soundMuted = false, commentaryVisible = false) {
     const primaryViews = [
       { id: 'live-match', label: '🏏 Live' },
       { id: 'auction',    label: '🏷️ Auction' },
@@ -107,6 +153,117 @@ export class UI {
   // LOGIN PAGE
   // ═══════════════════════════════════════════
   
+  renderHeader(currentView, stats = {}, soundMuted = false, commentaryVisible = false, backgroundMediaState = null) {
+    const primaryViews = [
+      { id: 'live-match', icon: '🏏', label: 'Live' },
+      { id: 'auction', icon: '🏷️', label: 'Auction' },
+      { id: 'results', icon: '📊', label: 'Results' },
+      { id: 'gallery', icon: '🖼️', label: 'Gallery' },
+      { id: 'awards', icon: '🏆', label: 'Awards' },
+    ];
+    const moreViews = [
+      { id: 'setup', icon: '⚙️', label: 'Setup' },
+      { id: 'players', icon: '👥', label: 'Players' },
+      { id: 'rules', icon: '📋', label: 'Rules' },
+      { id: 'about', icon: 'ℹ️', label: 'About' },
+      { id: 'history', icon: '📜', label: 'NPL History' },
+    ];
+
+    const isFs = !!document.fullscreenElement;
+    const moreIds = moreViews.map((view) => view.id);
+    const isMoreActive = moreIds.includes(currentView);
+
+    if (currentView === 'login') {
+      this.headerEl.innerHTML = `
+        <div class="nav-brand nav-brand-login" style="margin: 0 auto;">
+          <span class="nav-brand-accent"></span>
+          <span class="nav-brand-text">NAKRE PREMIER LEAGUE 3.0</span>
+        </div>
+      `;
+      return;
+    }
+
+    this.headerEl.innerHTML = `
+      <div class="nav-brand">
+        <span class="nav-brand-accent"></span>
+        <span class="nav-brand-text">NAKRE PREMIER LEAGUE 3.0</span>
+      </div>
+      <nav class="nav-links" aria-label="Primary navigation">
+        ${primaryViews.map((view) => `
+          <button class="nav-link ${currentView === view.id ? 'active' : ''}" data-view="${view.id}">
+            <span class="nav-link-icon">${view.icon}</span>
+            <span class="nav-link-text">${view.label}</span>
+          </button>
+        `).join('')}
+        <div class="nav-more-menu">
+          <button class="nav-link nav-link-more ${isMoreActive ? 'active' : ''}" id="nav-more-toggle" aria-haspopup="true" aria-expanded="false">
+            <span class="nav-link-icon">⚙️</span>
+            <span class="nav-link-text">More</span>
+            <span class="nav-link-caret">▾</span>
+          </button>
+          <div class="nav-more-dropdown" id="nav-more-dropdown" role="menu">
+            ${moreViews.map((view) => `
+              <button class="nav-more-item ${currentView === view.id ? 'active' : ''}" data-view="${view.id}" role="menuitem">
+                <span class="nav-more-item-icon">${view.icon}</span>
+                <span class="nav-more-item-label">${view.label}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      </nav>
+      <div class="nav-right">
+        <div class="nav-stats">
+          ${stats.remaining !== undefined ? `
+            <span class="nav-stat-chip">Remaining <span class="nav-stat-value">${stats.remaining}</span></span>
+            <span class="nav-stat-chip">Sold <span class="nav-stat-value">${stats.sold || 0}</span></span>
+            <span class="nav-stat-chip">Unsold <span class="nav-stat-value">${stats.unsold || 0}</span></span>
+          ` : ''}
+        </div>
+        <div class="nav-actions">
+          <button class="btn-fullscreen" id="fullscreen-btn" title="${isFs ? 'Exit Fullscreen' : 'Enter Fullscreen'}">
+            <span>${isFs ? '⊗' : '⛶'}</span>
+          </button>
+          <div class="hamburger-menu">
+            <button class="hamburger-btn" id="hamburger-toggle" title="Menu" aria-haspopup="true" aria-expanded="false">
+              <span>☰</span>
+            </button>
+            <div class="hamburger-dropdown" id="hamburger-dropdown" role="menu">
+              <button class="hamburger-item ${commentaryVisible ? 'icon-on' : ''}" id="commentary-toggle-btn" role="menuitem">
+                <span class="hamburger-item-icon">🎙️</span>
+                <span class="hamburger-item-text">Commentary ${commentaryVisible ? 'ON' : 'OFF'}</span>
+              </button>
+              <button class="hamburger-item ${!soundMuted ? 'icon-on' : ''}" id="sound-toggle-btn" role="menuitem">
+                <span class="hamburger-item-icon">${soundMuted ? '🔇' : '🔊'}</span>
+                <span class="hamburger-item-text">Sound ${soundMuted ? 'OFF' : 'ON'}</span>
+              </button>
+              <button class="hamburger-item ${backgroundMediaState?.active ? 'icon-on' : ''}" id="video-bg-toggle-btn" role="menuitem">
+                <span class="hamburger-item-icon">${backgroundMediaState?.icon === 'VIDEO' ? '🎬' : '🖼️'}</span>
+                <span class="hamburger-item-text">${backgroundMediaState?.label || 'Background Video ON'}</span>
+              </button>
+              <button class="hamburger-item" id="open-projector-btn" role="menuitem">
+                <span class="hamburger-item-icon">📺</span>
+                <span class="hamburger-item-text">Projector</span>
+              </button>
+              <button class="hamburger-item" id="share-app-btn" role="menuitem">
+                <span class="hamburger-item-icon">📱</span>
+                <span class="hamburger-item-text">Share App</span>
+              </button>
+              <button class="hamburger-item hamburger-item-danger" id="reset-auction-btn" role="menuitem">
+                <span class="hamburger-item-icon">🔁</span>
+                <span class="hamburger-item-text">Reset Auction</span>
+              </button>
+              <div class="hamburger-divider"></div>
+              <button class="hamburger-item hamburger-item-logout" id="logout-btn" role="menuitem">
+                <span class="hamburger-item-icon">🚪</span>
+                <span class="hamburger-item-text">Logout</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   renderLogin() {
     this.mainEl.innerHTML = `
       <div class="login-page">
@@ -970,20 +1127,22 @@ export class UI {
 
     const player = state.currentPlayer;
     const role = ROLE_CONFIG[player.role] || {};
+    const roleColor = role.color || '#3b82f6';
+    const roleGlow = hexToRgba(roleColor, 0.28);
 
     return `
       <div class="auction-center">
         <div class="player-auction-card bidding" id="player-card">
-          <div class="player-auction-initials" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}99); border-radius: var(--radius-md);">
+          <div class="player-auction-initials" style="background: linear-gradient(135deg, ${roleColor}, ${darkenColor(roleColor, 0.18)}); box-shadow: 0 18px 36px rgba(0,0,0,0.34), 0 0 26px ${roleGlow};">
             ${player.image ? `<img src="${player.image}" alt="${player.name}" style="width:100%;height:100%;object-fit:cover;object-position:top;">` : getInitials(player.name)}
           </div>
           <div class="player-auction-name">${player.name}</div>
           <div class="player-auction-meta">
-            <span class="badge badge-role" style="background: ${role.color}22; color: ${role.color}">${role.icon || ''} ${player.role}</span>
-            ${player.isWK ? '<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;">🧤 WK</span>' : ''}
+            <span class="badge badge-role player-auction-role-badge" style="background: ${hexToRgba(roleColor, 0.16)}; color: ${roleColor}">${role.icon || ''} ${player.role}</span>
+            ${player.isWK ? '<span class="badge player-auction-wk-badge" style="background:rgba(16,185,129,0.15);color:#10b981;">🧤 WK</span>' : ''}
             <span>📍 ${player.location}</span>
           </div>
-          <div class="player-auction-meta" style="margin-top:4px; font-size:0.8rem;">
+          <div class="player-auction-meta player-auction-meta-secondary">
             <span>🏏 ${player.batting}</span>
             <span>🎯 ${player.bowling}</span>
           </div>
@@ -992,11 +1151,12 @@ export class UI {
 
         <div class="bid-buttons-grid">
           ${state.teams.map(team => {
+            const isCurrentBidder = state.currentBidder === team.id;
             return `
-              <button class="team-bid-btn" data-team-id="${team.id}"
-                      style="background: ${team.color}; color: ${team.textColor}; border-color: ${team.color}"
-                      ${state.currentBidder === team.id ? 'disabled' : ''}
-                      title="${team.name}">
+              <button class="team-bid-btn ${isCurrentBidder ? 'current-bidder' : ''}" data-team-id="${team.id}"
+                      style="${buildTeamBidStyle(team)}"
+                      ${isCurrentBidder ? 'disabled' : ''}
+                      title="${isCurrentBidder ? `${team.name} - Highest bidder` : team.name}">
                 ${team.shortName}
               </button>
             `;
@@ -1044,9 +1204,9 @@ export class UI {
         <div class="bid-info-card timer-card" id="timer-card">
           <div class="timer-ring-wrap">
             <svg class="timer-ring" viewBox="0 0 120 120">
-              <circle class="timer-ring-bg" cx="60" cy="60" r="52" />
-              <circle class="timer-ring-progress" id="timer-ring-progress" cx="60" cy="60" r="52"
-                      stroke-dasharray="326.73" stroke-dashoffset="0" />
+              <circle class="timer-ring-bg" cx="60" cy="60" r="42" />
+              <circle class="timer-ring-progress" id="timer-ring-progress" cx="60" cy="60" r="42"
+                      stroke-dasharray="263.89" stroke-dashoffset="0" />
             </svg>
             <div class="timer-ring-text" id="timer-ring-text">${state.timerDuration}</div>
           </div>
@@ -1095,7 +1255,7 @@ export class UI {
         </div>
         ` : ''}
 
-        <div class="bid-info-card" style="flex:1; overflow-y:auto; min-height:180px;">
+        <div class="bid-info-card bid-history-card">
           <div class="bid-history-header">
             <div class="bid-history-title">Bid History</div>
             <div class="bid-history-controls">
@@ -2147,32 +2307,32 @@ export class UI {
     const cardEl = document.getElementById('timer-card');
     if (!progressEl || !textEl) return;
 
-    const circumference = 326.73; // 2 * PI * 52
-    const fraction = remaining / duration;
+    const circumference = 263.89; // 2 * PI * 42
+    const safeDuration = Math.max(duration || 0, 1);
+    const clampedRemaining = Math.max(0, remaining);
+    const fraction = Math.max(0, Math.min(1, clampedRemaining / safeDuration));
     const offset = circumference * (1 - fraction);
 
     progressEl.setAttribute('stroke-dashoffset', offset.toFixed(2));
-    textEl.textContent = Math.ceil(remaining);
+    textEl.textContent = Math.ceil(clampedRemaining);
 
     // Color transitions based on urgency
     let color;
-    if (remaining > 15) {
+    if (remaining > 10) {
       color = '#10b981'; // green
     } else if (remaining > 5) {
-      color = '#f59e0b'; // yellow/amber
+      color = '#f59e0b'; // gold
     } else {
       color = '#ef4444'; // red
     }
     progressEl.style.stroke = color;
+    progressEl.style.filter = `drop-shadow(0 0 8px ${hexToRgba(color, 0.45)})`;
     textEl.style.color = color;
 
-    // Pulse animation for last 5 seconds
+    // State-based styling for urgency
     if (cardEl) {
-      if (remaining <= 5 && remaining > 0) {
-        cardEl.classList.add('timer-urgent');
-      } else {
-        cardEl.classList.remove('timer-urgent');
-      }
+      cardEl.classList.toggle('timer-warning', remaining <= 10 && remaining > 5);
+      cardEl.classList.toggle('timer-urgent', remaining <= 5 && remaining > 0);
     }
   }
 
@@ -2184,7 +2344,11 @@ export class UI {
   updateSoundButton(muted) {
     const btn = document.getElementById('sound-toggle-btn');
     if (btn) {
-      btn.innerHTML = muted ? '🔇' : '🔊';
+      btn.classList.toggle('icon-on', !muted);
+      btn.innerHTML = `
+        <span class="hamburger-item-icon">${muted ? '🔇' : '🔊'}</span>
+        <span class="hamburger-item-text">Sound ${muted ? 'OFF' : 'ON'}</span>
+      `;
       btn.title = muted ? 'Unmute Sound' : 'Mute Sound';
     }
   }
@@ -2354,35 +2518,125 @@ export class UI {
       });
       const koLabels = { 'match-13': 'Q1', 'match-14': 'ELIM', 'match-15': 'Q2', 'match-16': 'FINAL' };
       const isTBD = (m) => m.teamAShort === 'TBD' || m.teamBShort === 'TBD';
-      const statusBadge = (m) => m.status === 'completed' ? '<span style="color:#10b981;font-size:0.7rem;">✅ Done</span>' : m.status === 'live' ? '<span style="color:#f59e0b;font-size:0.7rem;">🔴 Live</span>' : '';
+      const completedCount = matchList.filter(m => m.status === 'completed').length;
+      const liveCount = matchList.filter(m => m.status === 'live').length;
+      const upcomingCount = matchList.length - completedCount - liveCount;
+      const statusBadge = (m, forceLocked = false) => {
+        if (forceLocked) {
+          return '<span class="match-select-status is-locked">Waiting</span>';
+        }
+        if (m.status === 'completed') {
+          return '<span class="match-select-status is-completed">Done</span>';
+        }
+        if (m.status === 'live') {
+          return '<span class="match-select-status is-live">Live</span>';
+        }
+        return '<span class="match-select-status is-upcoming">Upcoming</span>';
+      };
+      const renderTeamPill = (short, color, textColor, logo) => `
+        <div class="match-select-team-pill" style="--team-color:${color || 'var(--accent-blue)'};--team-text:${textColor || '#ffffff'}">
+          <span class="match-select-team-logo">
+            ${logo
+              ? `<img src="${logo}" alt="${short}">`
+              : `<span class="match-select-team-fallback">${short}</span>`}
+          </span>
+          <span class="match-select-team-name">${short}</span>
+        </div>
+      `;
 
       const leagueHTML = leagueMatches.length > 0 ? `
-        <h3 style="text-align:center;color:var(--text-2);margin-bottom:12px;">📋 League Matches (${leagueMatches.length})</h3>
-        <div class="match-select-grid">${leagueMatches.map(m => `
-          <div class="match-select-card" data-live-match="${m.matchId}">
-            <div class="match-select-teams">${m.teamAShort} vs ${m.teamBShort}</div>
-            <div class="match-select-info">Match ${m.matchId.replace('match-','')} • ${m.time || m.date || ''}</div>
-            ${statusBadge(m)}
-          </div>`).join('')}
-        </div>` : '';
+        <section class="live-match-section">
+          <div class="live-match-section-header">
+            <div>
+              <div class="live-match-section-kicker">League Stage</div>
+              <h2>League Matches <span>(${leagueMatches.length})</span></h2>
+              <p>Round-robin fixtures ready for ball-by-ball scoring.</p>
+            </div>
+          </div>
+          <div class="match-select-grid">${leagueMatches.map(m => `
+            <div class="match-select-card match-card-league is-${m.status || 'upcoming'}" data-live-match="${m.matchId}">
+              <div class="match-select-card-top">
+                <div>
+                  <div class="match-select-card-label">Match ${m.matchId.replace('match-','')}</div>
+                  <div class="match-select-time">${m.time || m.date || 'Schedule pending'}</div>
+                </div>
+                ${statusBadge(m)}
+              </div>
+              <div class="match-select-teams-row">
+                ${renderTeamPill(m.teamAShort, m.teamAColor, m.teamATextColor, m.teamALogo)}
+                <span class="match-select-divider">vs</span>
+                ${renderTeamPill(m.teamBShort, m.teamBColor, m.teamBTextColor, m.teamBLogo)}
+              </div>
+              <div class="match-select-note">League fixture</div>
+            </div>`).join('')}
+          </div>
+        </section>` : '';
 
       const knockoutHTML = knockoutMatches.length > 0 ? `
-        <h3 style="text-align:center;color:var(--accent-gold);margin:24px 0 12px;">🔥 Knockout Matches (${knockoutMatches.length})</h3>
-        <div class="match-select-grid">${knockoutMatches.map(m => `
-          <div class="match-select-card ${isTBD(m) ? 'knockout-tbd' : ''}" data-live-match="${m.matchId}" ${isTBD(m) ? 'style="opacity:0.6;pointer-events:none;"' : ''}>
-            <div style="font-size:0.65rem;color:var(--accent-gold);font-weight:700;letter-spacing:1px;">${koLabels[m.matchId] || 'KO'}</div>
-            <div class="match-select-teams">${m.teamAShort} vs ${m.teamBShort}</div>
-            <div class="match-select-info">${m.time || m.date || ''}</div>
-            ${isTBD(m) ? '<div style="font-size:0.65rem;color:var(--text-4);">Teams decided after league</div>' : statusBadge(m)}
-          </div>`).join('')}
-        </div>` : `
-        <div style="text-align:center;margin-top:24px;">
+        <section class="live-match-section live-match-section-knockout">
+          <div class="live-match-section-header">
+            <div>
+              <div class="live-match-section-kicker">Knockout Stage</div>
+              <h2>Knockout Matches <span>(${knockoutMatches.length})</span></h2>
+              <p>Qualifier path, eliminator drama, and the final showdown.</p>
+            </div>
+          </div>
+          <div class="match-select-grid">${knockoutMatches.map(m => `
+            <div class="match-select-card match-card-knockout is-${m.status || 'upcoming'} ${isTBD(m) ? 'is-locked' : ''}" data-live-match="${m.matchId}">
+              <div class="match-select-card-top">
+                <div>
+                  <div class="match-select-series-tag">${koLabels[m.matchId] || 'KO'}</div>
+                  <div class="match-select-time">${m.time || m.date || 'Schedule pending'}</div>
+                </div>
+                ${statusBadge(m, isTBD(m))}
+              </div>
+              <div class="match-select-teams-row">
+                ${renderTeamPill(m.teamAShort, m.teamAColor, m.teamATextColor, m.teamALogo)}
+                <span class="match-select-divider">vs</span>
+                ${renderTeamPill(m.teamBShort, m.teamBColor, m.teamBTextColor, m.teamBLogo)}
+              </div>
+              <div class="match-select-note">${isTBD(m) ? 'Teams decided after league stage' : 'Knockout fixture'}</div>
+            </div>`).join('')}
+          </div>
+        </section>` : `
+        <div class="live-match-knockout-cta">
           <button class="btn btn-primary" id="create-knockout-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
             🏆 Create Knockout Matches from Standings
           </button>
         </div>`;
 
-      this.mainEl.innerHTML = `<div class="live-match-page"><div style="text-align:center;margin-bottom:32px;"><h1 class="hero-title" style="font-size:clamp(1.8rem,3.5vw,2.5rem)">🏏 Live Match Scoring</h1><p class="hero-subtitle">Select a match to start ball-by-ball scoring</p></div>${matchList.length > 0 ? `${leagueHTML}${knockoutHTML}` : `<div class="fixtures-empty" style="padding:40px;text-align:center;"><p>📅 No matches available. Draw tokens first.</p></div>`}</div>`;
+      this.mainEl.innerHTML = `
+        <div class="live-match-page live-match-lobby">
+          <div class="live-match-hero">
+            <div class="live-match-hero-kicker">Premium Match Center</div>
+            <h1 class="live-match-title">Live Match Scoring</h1>
+            <p class="live-match-subtitle">Select a fixture to launch premium ball-by-ball scoring with scoreboard, history, and match control in one flow.</p>
+            <div class="live-match-hero-stats">
+              <div class="live-match-stat">
+                <span>${matchList.length}</span>
+                <small>Fixtures</small>
+              </div>
+              <div class="live-match-stat is-live">
+                <span>${liveCount}</span>
+                <small>Live</small>
+              </div>
+              <div class="live-match-stat is-completed">
+                <span>${completedCount}</span>
+                <small>Done</small>
+              </div>
+              <div class="live-match-stat">
+                <span>${upcomingCount}</span>
+                <small>Upcoming</small>
+              </div>
+            </div>
+          </div>
+          ${matchList.length > 0 ? `${leagueHTML}${knockoutHTML}` : `
+            <div class="live-match-empty">
+              <p>📅 No matches available yet.</p>
+              <p>Draw tokens in Fixtures first to build the live match center.</p>
+            </div>
+          `}
+        </div>`;
       return;
     }
     const s = matchState;
@@ -2414,7 +2668,7 @@ export class UI {
 
     // ── SETUP ──
     if (s.phase === 'setup') {
-      this.mainEl.innerHTML = `<div class="live-match-page"><div class="lm-setup-card">
+      this.mainEl.innerHTML = `<div class="live-match-page live-match-setup-view"><div class="lm-setup-card">
         <h2 style="text-align:center;margin-bottom:24px;">⚙️ Match Setup</h2>
         <div class="lm-teams-display">
           <div class="lm-team-badge" style="border-color:${s.teamA.color}">
@@ -2450,7 +2704,7 @@ export class UI {
       const roleIcon = (p) => p.role === 'Batsman' ? '🏏' : p.role === 'Bowler' ? '🎯' : p.role === 'All-Rounder' ? '⭐' : '🧤';
       const batOpts = bt.squad.map(p => `<option value="${p.name}">${p.name} (${roleIcon(p)} ${p.role}${p.isWK?' • WK':''})</option>`).join('');
       const bowlOpts = bwt.squad.map(p => `<option value="${p.name}">${p.name} (${roleIcon(p)} ${p.role})</option>`).join('');
-      this.mainEl.innerHTML = `<div class="live-match-page"><div class="lm-setup-card">${breakSummary}
+      this.mainEl.innerHTML = `<div class="live-match-page live-match-setup-view"><div class="lm-setup-card">${breakSummary}
         <div style="text-align:center;margin-bottom:20px;">
           <div style="display:inline-block;padding:6px 16px;border-radius:8px;background:${bt.color};color:${bt.textColor||'#fff'};font-weight:700;font-size:0.85rem;margin-bottom:8px;">${bt.name || bt.short} — BATTING</div>
           <h2 style="margin:0;">🏏 ${isBreak?'2nd Innings ':''}Select Players</h2>
@@ -2475,7 +2729,7 @@ export class UI {
     if (s.phase === 'new-batsman') {
       const avail = s.availableBatsmen || [];
       // Render scoreboard first, then overlay modal
-      this.mainEl.innerHTML = `<div class="live-match-page">${this._renderLiveScoreboard(s, ballDisp)}</div>`;
+      this.mainEl.innerHTML = `<div class="live-match-page live-match-board-view">${this._renderLiveScoreboard(s, ballDisp)}</div>`;
       // Remove any existing modal
       const old = document.getElementById('lm-batsman-modal');
       if (old) old.remove();
@@ -2491,7 +2745,7 @@ export class UI {
     if (s.phase === 'bowler-select') {
       const avail = s.availableBowlers || [];
       // Render scoreboard first, then overlay modal
-      this.mainEl.innerHTML = `<div class="live-match-page">${this._renderLiveScoreboard(s, ballDisp)}</div>`;
+      this.mainEl.innerHTML = `<div class="live-match-page live-match-board-view">${this._renderLiveScoreboard(s, ballDisp)}</div>`;
       // Remove any existing modal
       const old = document.getElementById('lm-bowler-modal');
       if (old) old.remove();
@@ -2507,7 +2761,7 @@ export class UI {
     if (s.phase === 'result') {
       const allSquadPlayers = [...(s.teamA.squad || []), ...(s.teamB.squad || [])];
       const potmOpts = allSquadPlayers.map(p => `<option value="${p.name}">`).join('');
-      this.mainEl.innerHTML = `<div class="live-match-page"><div class="lm-result-card">` +
+      this.mainEl.innerHTML = `<div class="live-match-page live-match-result-view"><div class="lm-result-card">` +
         `<div class="lm-result-icon">${s.winnerId ? '🏆' : '🤝'}</div>` +
         `<h2 class="lm-result-text">${s.result}</h2>` +
         `<div style="margin-top:20px;display:flex;gap:40px;justify-content:center;">` +
@@ -2537,7 +2791,7 @@ export class UI {
     const maxMH = Math.max(...mh.map(o => o.runs), 1);
     const batsmanCard = (b) => { if(!b) return ''; return `<div class="lm-batsman-card ${b.isStriker?'is-striker':''}"><div class="lm-batsman-name">${b.name} ${b.isStriker?'🏏':''}</div><div class="lm-batsman-stats"><span class="lm-stat-runs">${b.runs}</span><span class="lm-stat-detail">(${b.balls}b)</span><span class="lm-stat-detail">${b.fours}×4</span><span class="lm-stat-detail">${b.sixes}×6</span><span class="lm-stat-sr">SR ${b.balls>0?((b.runs/b.balls)*100).toFixed(1):'0.0'}</span></div></div>`; };
     const bowlerCard = bowler ? `<div class="lm-bowler-card"><div class="lm-bowler-name">🎯 ${bowler.name}</div><div class="lm-bowler-stats"><span>${bowler.overs} ov</span><span>${bowler.runs}r</span><span>${bowler.wickets}w</span><span>Eco ${parseFloat(bowler.overs)>0?(bowler.runs/parseFloat(bowler.overs)).toFixed(1):'0.0'}</span></div></div>` : '';
-    this.mainEl.innerHTML = `<div class="live-match-page">${this._renderLiveScoreboard(s, ballDisp)}<div class="scoring-controls"><button class="score-btn" data-ball="0">•</button><button class="score-btn" data-ball="1">1</button><button class="score-btn" data-ball="2">2</button><button class="score-btn" data-ball="3">3</button><button class="score-btn btn-4" data-ball="4">4</button><button class="score-btn btn-6" data-ball="6">6</button><button class="score-btn btn-w" id="lm-wicket-btn" data-ball="W">W</button><div class="score-btn-group"><button class="score-btn btn-extra" id="lm-wd-toggle">WD▼</button><div class="lm-submenu" id="lm-wd-menu" style="display:none;"><button class="lm-sub-btn" data-ball="WD">WD</button><button class="lm-sub-btn" data-ball="WD+1">WD+1</button><button class="lm-sub-btn" data-ball="WD+2">WD+2</button><button class="lm-sub-btn" data-ball="WD+3">WD+3</button><button class="lm-sub-btn" data-ball="WD+4">WD+4</button><button class="lm-sub-btn" data-ball="WD+ST">WD+St</button><button class="lm-sub-btn" data-ball="WD+RO">WD+RO</button></div></div><div class="score-btn-group"><button class="score-btn btn-extra" id="lm-nb-toggle">NB▼</button><div class="lm-submenu" id="lm-nb-menu" style="display:none;"><button class="lm-sub-btn" data-ball="NB+0">NB+0</button><button class="lm-sub-btn" data-ball="NB+1">NB+1</button><button class="lm-sub-btn" data-ball="NB+2">NB+2</button><button class="lm-sub-btn" data-ball="NB+3">NB+3</button><button class="lm-sub-btn" data-ball="NB+4">NB+4</button><button class="lm-sub-btn" data-ball="NB+6">NB+6</button><button class="lm-sub-btn" data-ball="NB+1B">NB+1B</button><button class="lm-sub-btn" data-ball="NB+2B">NB+2B</button><button class="lm-sub-btn" data-ball="NB+4B">NB+4B</button><button class="lm-sub-btn" data-ball="NB+RO">NB+RO</button></div></div><div class="score-btn-group"><button class="score-btn btn-extra" id="lm-bye-toggle">BYE▼</button><div class="lm-submenu" id="lm-bye-menu" style="display:none;"><button class="lm-sub-btn" data-ball="B1">1B</button><button class="lm-sub-btn" data-ball="B2">2B</button><button class="lm-sub-btn" data-ball="B3">3B</button><button class="lm-sub-btn" data-ball="B4">4B</button></div></div><div class="score-btn-group"><button class="score-btn btn-extra" id="lm-lb-toggle">LB▼</button><div class="lm-submenu" id="lm-lb-menu" style="display:none;"><button class="lm-sub-btn" data-ball="LB1">1LB</button><button class="lm-sub-btn" data-ball="LB2">2LB</button><button class="lm-sub-btn" data-ball="LB3">3LB</button><button class="lm-sub-btn" data-ball="LB4">4LB</button></div></div><button class="score-btn btn-undo" id="live-undo-btn" ${s.canUndo?'':'disabled'}>↩</button><button class="score-btn" id="lm-swap-strike-btn" style="font-size:0.7rem;border-color:rgba(99,102,241,0.3);color:var(--accent-indigo);">🔄</button></div><div class="lm-batsmen-row">${batsmanCard(striker)}${batsmanCard(nonStriker)}</div>${bowlerCard}<div class="live-info-grid"><div class="partnership-card"><div class="partnership-label">Partnership</div><div class="partnership-value">${s.partnership.runs}</div><div class="partnership-balls">(${s.partnership.balls} balls)</div></div><div class="partnership-card"><div class="partnership-label">Extras</div><div class="partnership-value">${ext.total}</div><div class="partnership-balls">W${ext.wides} NB${ext.noBalls} B${ext.byes} LB${ext.legByes}</div></div></div>${mh.length>0?`<div style="margin-top:16px;"><h3 style="font-size:0.9rem;color:var(--text-3);margin-bottom:8px;text-align:center;">📊 Runs per Over</h3><div class="manhattan-chart">${mh.map(o=>`<div class="manhattan-bar" style="height:${Math.max(8,(o.runs/maxMH)*100)}%;background:${s.currentInnings===1?s.teamA.color:s.teamB.color};" data-label="Over ${o.over}: ${o.runs}r"></div>`).join('')}</div></div>`:''}<div style="text-align:center;margin-top:20px;"><button class="btn btn-ghost btn-sm" id="live-back-btn">← Back</button><button class="btn btn-ghost btn-sm" id="live-save-scorecard-btn" style="margin-left:8px;">💾 Save to Scorecard</button></div></div>`;
+    this.mainEl.innerHTML = `<div class="live-match-page live-match-board-view">${this._renderLiveScoreboard(s, ballDisp)}<div class="scoring-controls"><button class="score-btn" data-ball="0">•</button><button class="score-btn" data-ball="1">1</button><button class="score-btn" data-ball="2">2</button><button class="score-btn" data-ball="3">3</button><button class="score-btn btn-4" data-ball="4">4</button><button class="score-btn btn-6" data-ball="6">6</button><button class="score-btn btn-w" id="lm-wicket-btn" data-ball="W">W</button><div class="score-btn-group"><button class="score-btn btn-extra" id="lm-wd-toggle">WD▼</button><div class="lm-submenu" id="lm-wd-menu" style="display:none;"><button class="lm-sub-btn" data-ball="WD">WD</button><button class="lm-sub-btn" data-ball="WD+1">WD+1</button><button class="lm-sub-btn" data-ball="WD+2">WD+2</button><button class="lm-sub-btn" data-ball="WD+3">WD+3</button><button class="lm-sub-btn" data-ball="WD+4">WD+4</button><button class="lm-sub-btn" data-ball="WD+ST">WD+St</button><button class="lm-sub-btn" data-ball="WD+RO">WD+RO</button></div></div><div class="score-btn-group"><button class="score-btn btn-extra" id="lm-nb-toggle">NB▼</button><div class="lm-submenu" id="lm-nb-menu" style="display:none;"><button class="lm-sub-btn" data-ball="NB+0">NB+0</button><button class="lm-sub-btn" data-ball="NB+1">NB+1</button><button class="lm-sub-btn" data-ball="NB+2">NB+2</button><button class="lm-sub-btn" data-ball="NB+3">NB+3</button><button class="lm-sub-btn" data-ball="NB+4">NB+4</button><button class="lm-sub-btn" data-ball="NB+6">NB+6</button><button class="lm-sub-btn" data-ball="NB+1B">NB+1B</button><button class="lm-sub-btn" data-ball="NB+2B">NB+2B</button><button class="lm-sub-btn" data-ball="NB+4B">NB+4B</button><button class="lm-sub-btn" data-ball="NB+RO">NB+RO</button></div></div><div class="score-btn-group"><button class="score-btn btn-extra" id="lm-bye-toggle">BYE▼</button><div class="lm-submenu" id="lm-bye-menu" style="display:none;"><button class="lm-sub-btn" data-ball="B1">1B</button><button class="lm-sub-btn" data-ball="B2">2B</button><button class="lm-sub-btn" data-ball="B3">3B</button><button class="lm-sub-btn" data-ball="B4">4B</button></div></div><div class="score-btn-group"><button class="score-btn btn-extra" id="lm-lb-toggle">LB▼</button><div class="lm-submenu" id="lm-lb-menu" style="display:none;"><button class="lm-sub-btn" data-ball="LB1">1LB</button><button class="lm-sub-btn" data-ball="LB2">2LB</button><button class="lm-sub-btn" data-ball="LB3">3LB</button><button class="lm-sub-btn" data-ball="LB4">4LB</button></div></div><button class="score-btn btn-undo" id="live-undo-btn" ${s.canUndo?'':'disabled'}>↩</button><button class="score-btn" id="lm-swap-strike-btn" style="font-size:0.7rem;border-color:rgba(99,102,241,0.3);color:var(--accent-indigo);">🔄</button></div><div class="lm-batsmen-row">${batsmanCard(striker)}${batsmanCard(nonStriker)}</div>${bowlerCard}<div class="live-info-grid"><div class="partnership-card"><div class="partnership-label">Partnership</div><div class="partnership-value">${s.partnership.runs}</div><div class="partnership-balls">(${s.partnership.balls} balls)</div></div><div class="partnership-card"><div class="partnership-label">Extras</div><div class="partnership-value">${ext.total}</div><div class="partnership-balls">W${ext.wides} NB${ext.noBalls} B${ext.byes} LB${ext.legByes}</div></div></div>${mh.length>0?`<div style="margin-top:16px;"><h3 style="font-size:0.9rem;color:var(--text-3);margin-bottom:8px;text-align:center;">📊 Runs per Over</h3><div class="manhattan-chart">${mh.map(o=>`<div class="manhattan-bar" style="height:${Math.max(8,(o.runs/maxMH)*100)}%;background:${s.currentInnings===1?s.teamA.color:s.teamB.color};" data-label="Over ${o.over}: ${o.runs}r"></div>`).join('')}</div></div>`:''}<div style="text-align:center;margin-top:20px;"><button class="btn btn-ghost btn-sm" id="live-back-btn">← Back</button><button class="btn btn-ghost btn-sm" id="live-save-scorecard-btn" style="margin-left:8px;">💾 Save to Scorecard</button></div></div>`;
   }
 
   _renderLiveScoreboard(s, ballDisp) {
@@ -2569,4 +2823,3 @@ export class UI {
     }).join('')}</div><div style="text-align:center;padding:32px 0;"><button class="btn btn-ghost" id="awards-back-btn">← Back to Results</button>${revealedCount>0?`<button class="btn btn-ghost" id="awards-reset-btn" style="margin-left:8px;">🔄 Reset</button>`:''}</div></div>`;
   }
 }
-
