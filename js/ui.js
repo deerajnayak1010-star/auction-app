@@ -1289,7 +1289,7 @@ export class UI {
         ${activeTab === 'standings' ? this._renderStandingsTab(state, opts) : ''}
         ${activeTab === 'stats' ? this._renderPlayerStatsTab(state, opts) : ''}
         ${activeTab === 'scorecard' ? this._renderScorecardTab(state, opts) : ''}
-        ${activeTab === 'fixtures' ? this._renderFixturesTab(state) : ''}
+        ${activeTab === 'fixtures' ? this._renderFixturesTab(state, opts) : ''}
 
         ${state.unsoldPlayers.length > 0 ? `
           <div class="unsold-section">
@@ -1560,7 +1560,7 @@ export class UI {
                   ${teamLogo(m.teamBLogo, m.teamBShort, m.teamBColor, m.teamBTextColor)}
                 </div>
                 <div class="sc-match-item-info">${m.date} • ${m.time} • ${m.venue}</div>
-                ${m.status === 'completed' ? (m.result.winner ? `<div class="sc-match-result-line">🏆 ${m.result.margin}</div>` : `<div class="sc-match-result-line" style="color:var(--accent-gold);">🤝 Match Tied — Points Shared</div>`) : ''}
+                ${m.status === 'completed' ? (m.result.winner && m.result.winner !== 'tie' ? `<div class="sc-match-result-line">🏆 ${m.result.margin}</div>${m.result.playerOfMatch ? `<div style="font-size:0.8rem;color:var(--accent-gold);margin-top:2px;">⭐ POTM: ${m.result.playerOfMatch}</div>` : ''}` : `<div class="sc-match-result-line" style="color:var(--accent-gold);">🤝 Match Tied — Points Shared</div>`) : ''}
                 <button class="btn btn-primary btn-sm sc-open-btn" data-sc-match="${m.matchId}">${m.status === 'completed' ? '📊 View Scorecard' : '✏️ Edit Scorecard'}</button>
               </div>
             `).join('')}
@@ -1750,44 +1750,33 @@ export class UI {
   // FIXTURES TAB
   // ═══════════════════════════════════════════
 
-  _renderFixturesTab(state) {
+  _renderFixturesTab(state, opts = {}) {
     const gd = state.groupDivision;
-    const FIXED_A = 'bfcl'; // BFC Legends
-    const FIXED_B = 'bfc';  // BFC
-
-    // Helper to get team by ID
+    const FIXED_A = 'bfcl';
+    const FIXED_B = 'bfc';
     const getTeam = (id) => state.teams.find(t => t.id === id);
-
     let allFixtures = [];
     let knockouts = [];
 
     if (gd) {
-      // Round-robin pairs for 4 teams [0,1,2,3]
       const rrPairs = (g) => [
-        [g[0],g[1]], [g[2],g[3]],  // Round 1
-        [g[0],g[2]], [g[1],g[3]],  // Round 2
-        [g[0],g[3]], [g[1],g[2]]   // Round 3
+        [g[0],g[1]], [g[2],g[3]],
+        [g[0],g[2]], [g[1],g[3]],
+        [g[0],g[3]], [g[1],g[2]]
       ];
-
       const pA = rrPairs(gd.groupA);
       const pB = rrPairs(gd.groupB);
-
-      // Day 1: Interleave A,B (Round 1 + Round 2 first half)
       const day1 = [
         { pair: pA[0], group: 'A' }, { pair: pB[0], group: 'B' },
         { pair: pA[1], group: 'A' }, { pair: pB[1], group: 'B' },
         { pair: pA[2], group: 'A' }, { pair: pB[2], group: 'B' },
       ];
-      // Day 2: Interleave A,B (Round 2 second half + Round 3)
       const day2 = [
         { pair: pA[3], group: 'A' }, { pair: pB[3], group: 'B' },
         { pair: pA[4], group: 'A' }, { pair: pB[4], group: 'B' },
         { pair: pA[5], group: 'A' }, { pair: pB[5], group: 'B' },
       ];
-
       const scheduled = [...day1, ...day2];
-
-      // Time slots: 1 hour per match starting 8:30 AM
       const day1Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30'];
       const day2Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30'];
 
@@ -1795,23 +1784,22 @@ export class UI {
         const dayIdx = i < 6 ? 0 : 1;
         const slotIdx = dayIdx === 0 ? i : i - 6;
         const times = dayIdx === 0 ? day1Times : day2Times;
-        return {
-          matchNum: i + 1,
-          teamA: getTeam(s.pair[0]),
-          teamB: getTeam(s.pair[1]),
-          group: s.group,
-          day: dayIdx + 1,
-          date: dayIdx === 0 ? '25 April 2026' : '26 April 2026',
-          time: times[slotIdx] || '',
-        };
+        return { matchNum: i + 1, teamA: getTeam(s.pair[0]), teamB: getTeam(s.pair[1]), group: s.group, day: dayIdx + 1, date: dayIdx === 0 ? '25 April 2026' : '26 April 2026', time: times[slotIdx] || '' };
       });
 
-      knockouts = [
-        { label: 'Qualifier 1', desc: 'A1 vs B1 — Winner → Final', detail: 'Winner → Final', date: '26 April', time: '2:30 – 3:30', accent: '#f59e0b' },
-        { label: 'Eliminator', desc: 'A2 vs B2 — Loser eliminated', detail: 'Loser eliminated', date: '26 April', time: '3:30 – 4:30', accent: '#ef4444' },
-        { label: 'Qualifier 2', desc: 'Loser Q1 vs Winner Eliminator', detail: 'Winner → Final', date: '26 April', time: '4:30 – 5:30', accent: '#6366f1' },
-        { label: '🏆 FINAL', desc: 'Winner Q1 vs Winner Q2', detail: '', date: '26 April', time: '5:30 – 6:30', accent: '#f59e0b' },
+      // Build knockout data — use resolved teams from scorecard if available
+      const koData = opts.knockoutMatches || [];
+      const koMeta = [
+        { label: 'Qualifier 1', desc: 'A1 vs B1 — Winner → Final', matchId: 'match-13', time: '2:30 – 3:30', accent: '#f59e0b' },
+        { label: 'Eliminator', desc: 'A2 vs B2 — Loser eliminated', matchId: 'match-14', time: '3:30 – 4:30', accent: '#ef4444' },
+        { label: 'Qualifier 2', desc: 'Loser Q1 vs Winner Eliminator', matchId: 'match-15', time: '4:30 – 5:30', accent: '#6366f1' },
+        { label: '🏆 FINAL', desc: 'Winner Q1 vs Winner Q2', matchId: 'match-16', time: '5:30 – 6:30', accent: '#f59e0b' },
       ];
+      knockouts = koMeta.map(ko => {
+        const resolved = koData.find(m => m.matchId === ko.matchId);
+        const hasTeams = resolved && resolved.teamAShort !== 'TBD' && resolved.teamBShort !== 'TBD';
+        return { ...ko, teamA: hasTeams ? { short: resolved.teamAShort, color: resolved.teamAColor, textColor: resolved.teamATextColor, logo: resolved.teamALogo } : null, teamB: hasTeams ? { short: resolved.teamBShort, color: resolved.teamBColor, textColor: resolved.teamBTextColor, logo: resolved.teamBLogo } : null };
+      });
     }
 
     // Render token slot
@@ -1944,24 +1932,39 @@ export class UI {
           <div class="fixtures-day-section">
             <h3 class="fixtures-day-label">🔥 Knockout Stage — 26 April 2026 (2:30 – 6:30 PM)</h3>
             <div class="fixtures-match-grid">
-              ${knockouts.map((ko, idx) => `
+              ${knockouts.map((ko, idx) => {
+                const tA = ko.teamA;
+                const tB = ko.teamB;
+                const teamAHTML = tA ? `
+                      <div class="fixture-match-team" style="--tc: ${tA.color};">
+                        <div class="fixture-match-logo" style="background:${tA.color};color:${tA.textColor || '#fff'};">${tA.logo ? `<img src="${tA.logo}" alt="">` : tA.short}</div>
+                        <span>${tA.short}</span>
+                      </div>` : `
+                      <div class="fixture-match-team" style="--tc: #666;">
+                        <div class="fixture-match-logo" style="background:#333;color:#999;">TBD</div>
+                        <span>TBD</span>
+                      </div>`;
+                const teamBHTML = tB ? `
+                      <div class="fixture-match-team" style="--tc: ${tB.color};">
+                        <div class="fixture-match-logo" style="background:${tB.color};color:${tB.textColor || '#fff'};">${tB.logo ? `<img src="${tB.logo}" alt="">` : tB.short}</div>
+                        <span>${tB.short}</span>
+                      </div>` : `
+                      <div class="fixture-match-team" style="--tc: #666;">
+                        <div class="fixture-match-logo" style="background:#333;color:#999;">TBD</div>
+                        <span>TBD</span>
+                      </div>`;
+                return `
                 <div class="fixture-match-card knockout-card" style="border-top:3px solid ${ko.accent};">
                   <div class="fixture-match-num" style="color:${ko.accent};">Match ${13 + idx} — ${ko.label}</div>
-                  <div class="fixture-knockout-desc" style="font-size:0.85rem;margin:8px 0;">${ko.desc}</div>
+                  <div class="fixture-knockout-desc" style="font-size:0.85rem;margin:8px 0;">${tA && tB ? `${tA.short} vs ${tB.short}` : ko.desc}</div>
                   <div class="fixture-match-teams" style="justify-content:center;">
-                    <div class="fixture-match-team" style="--tc: #666;">
-                      <div class="fixture-match-logo" style="background:#333;color:#999;">TBD</div>
-                      <span>TBD</span>
-                    </div>
+                    ${teamAHTML}
                     <div class="fixture-match-vs">VS</div>
-                    <div class="fixture-match-team" style="--tc: #666;">
-                      <div class="fixture-match-logo" style="background:#333;color:#999;">TBD</div>
-                      <span>TBD</span>
-                    </div>
+                    ${teamBHTML}
                   </div>
                   <div class="fixture-match-info">26 April 2026 • ${ko.time}</div>
-                </div>
-              `).join('')}
+                </div>`;
+              }).join('')}
             </div>
             <div style="margin-top:16px; padding:16px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); text-align:center;">
               <div style="font-size:0.85rem; color:var(--text-2); line-height:1.8;">
@@ -2484,7 +2487,28 @@ export class UI {
 
     // ── RESULT ──
     if (s.phase === 'result') {
-      this.mainEl.innerHTML = `<div class="live-match-page"><div class="lm-result-card"><div class="lm-result-icon">${s.winnerId ? '🏆' : '🤝'}</div><h2 class="lm-result-text">${s.result}</h2><div style="margin-top:20px;display:flex;gap:40px;justify-content:center;"><div style="text-align:center;"><span style="color:${s.teamA.color};font-weight:700;">${s.teamA.short}</span><div style="font-size:1.5rem;font-weight:800;">${s.teamAScore.runs}/${s.teamAScore.wickets}</div><div style="font-size:0.8rem;color:var(--text-3);">(${s.teamAScore.overs} ov)</div></div><div style="text-align:center;"><span style="color:${s.teamB.color};font-weight:700;">${s.teamB.short}</span><div style="font-size:1.5rem;font-weight:800;">${s.teamBScore.runs}/${s.teamBScore.wickets}</div><div style="font-size:0.8rem;color:var(--text-3);">(${s.teamBScore.overs} ov)</div></div></div><div style="margin-top:24px;display:flex;flex-direction:column;gap:10px;align-items:center;"><div style="display:flex;gap:12px;justify-content:center;"><button class="btn btn-primary" id="live-save-scorecard-btn">💾 Save to Scorecard</button><button class="btn btn-ghost" id="live-back-btn">← Back</button></div><button class="btn btn-ghost btn-sm" id="live-edit-score-btn" style="color:var(--accent-gold);">↩ Undo Last Ball & Edit Score</button></div></div></div>`;
+      const allSquadPlayers = [...(s.teamA.squad || []), ...(s.teamB.squad || [])];
+      const potmOpts = allSquadPlayers.map(p => `<option value="${p.name}">`).join('');
+      this.mainEl.innerHTML = `<div class="live-match-page"><div class="lm-result-card">` +
+        `<div class="lm-result-icon">${s.winnerId ? '🏆' : '🤝'}</div>` +
+        `<h2 class="lm-result-text">${s.result}</h2>` +
+        `<div style="margin-top:20px;display:flex;gap:40px;justify-content:center;">` +
+          `<div style="text-align:center;"><span style="color:${s.teamA.color};font-weight:700;">${s.teamA.short}</span><div style="font-size:1.5rem;font-weight:800;">${s.teamAScore.runs}/${s.teamAScore.wickets}</div><div style="font-size:0.8rem;color:var(--text-3);">(${s.teamAScore.overs} ov)</div></div>` +
+          `<div style="text-align:center;"><span style="color:${s.teamB.color};font-weight:700;">${s.teamB.short}</span><div style="font-size:1.5rem;font-weight:800;">${s.teamBScore.runs}/${s.teamBScore.wickets}</div><div style="font-size:0.8rem;color:var(--text-3);">(${s.teamBScore.overs} ov)</div></div>` +
+        `</div>` +
+        `<div style="margin-top:24px;text-align:center;">` +
+          `<label style="font-size:0.85rem;color:var(--accent-gold);display:block;margin-bottom:6px;">⭐ Player of the Match</label>` +
+          `<input type="text" id="lm-potm-input" list="lm-potm-list" value="${s.playerOfMatch || ''}" placeholder="Select or type player name" style="width:260px;max-width:90%;padding:10px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-card);color:var(--text-1);font-size:0.95rem;text-align:center;outline:none;">` +
+          `<datalist id="lm-potm-list">${potmOpts}</datalist>` +
+        `</div>` +
+        `<div style="margin-top:20px;display:flex;flex-direction:column;gap:10px;align-items:center;">` +
+          `<div style="display:flex;gap:12px;justify-content:center;">` +
+            `<button class="btn btn-primary" id="live-save-scorecard-btn">💾 Save to Scorecard</button>` +
+            `<button class="btn btn-ghost" id="live-back-btn">← Back</button>` +
+          `</div>` +
+          `<button class="btn btn-ghost btn-sm" id="live-edit-score-btn" style="color:var(--accent-gold);">↩ Undo Last Ball &amp; Edit Score</button>` +
+        `</div>` +
+      `</div></div>`;
       return;
     }
 

@@ -2018,6 +2018,16 @@ class App {
       }
     }
 
+    // Fixtures opts — pass knockout match data so UI can show resolved teams
+    if (this.resultsTab === 'fixtures') {
+      opts.knockoutMatches = [
+        this.scorecardMgr.getMatch('match-13'),
+        this.scorecardMgr.getMatch('match-14'),
+        this.scorecardMgr.getMatch('match-15'),
+        this.scorecardMgr.getMatch('match-16'),
+      ].filter(Boolean);
+    }
+
     // Inject fixtures lock state
     if (state) state.fixturesLocked = this.fixturesLocked;
 
@@ -2084,53 +2094,42 @@ class App {
       if (!this.engine) return true;
       const state = this.engine.getState();
       const gd = state.groupDivision;
-      if (!gd) { this.ui.showToast('⚠️ Draw tokens first!', 'warning'); return true; }
+      if (!gd) { this.ui.showToast('\u26A0\uFE0F Draw tokens first!', 'warning'); return true; }
 
       try {
         const allMatches = this.scorecardMgr.getAllMatches();
-        // Check how many league matches (match-1 to match-12) are completed
         const leagueCompleted = allMatches.filter(m => {
           const num = parseInt(m.matchId.replace('match-',''));
           return num <= 12 && m.status === 'completed';
         }).length;
         if (leagueCompleted < 12) {
-          this.ui.showToast(`⚠️ Complete all league matches first! (${leagueCompleted}/12 done)`, 'warning');
+          this.ui.showToast(`\u26A0\uFE0F Complete all league matches first! (${leagueCompleted}/12 done)`, 'warning');
           return true;
         }
 
         const standings = StandingsEngine.compute(allMatches, gd, state.teams);
         if (!standings || !standings.groupA || !standings.groupB || standings.groupA.length < 2 || standings.groupB.length < 2) {
-          this.ui.showToast('⚠️ Unable to compute standings.', 'warning');
+          this.ui.showToast('\u26A0\uFE0F Unable to compute standings.', 'warning');
           return true;
         }
 
         const gA = standings.groupA, gB = standings.groupB;
         const getTeam = (t) => state.teams.find(tt => tt.id === (t.id || t)) || t;
-        const koMatches = [
-          { id: 'match-13', a: getTeam(gA[0].team), b: getTeam(gB[0].team), time: '2:30 – 3:30' },
-          { id: 'match-14', a: getTeam(gA[1].team), b: getTeam(gB[1].team), time: '3:30 – 4:30' },
-          { id: 'match-15', time: '4:30 – 5:30' },  // Loser Q1 vs Winner Elim - TBD
-          { id: 'match-16', time: '5:30 – 6:30' },  // Final - TBD
-        ];
-
         const tbdTeam = { id: 'tbd', name: 'TBD', shortName: 'TBD', color: '#666', textColor: '#fff', logo: '', squad: [] };
 
-        koMatches.forEach(km => {
-          // Remove old TBD entry if exists
-          if (this.scorecardMgr.getMatch(km.id)) {
-            this.scorecardMgr.matches.delete(km.id);
-          }
-          const teamA = km.a || tbdTeam;
-          const teamB = km.b || tbdTeam;
-          this.scorecardMgr.createMatch(km.id, teamA, teamB, {
-            venue: 'Nakre Ground', date: '26 April 2026', time: km.time
-          });
-        });
+        // Q1: A1 vs B1
+        this._resolveKnockoutSlot('match-13', getTeam(gA[0].team), getTeam(gB[0].team));
+        // Eliminator: A2 vs B2
+        this._resolveKnockoutSlot('match-14', getTeam(gA[1].team), getTeam(gB[1].team));
+        // Q2 and Final: TBD initially (will auto-fill as matches complete)
+        this._resolveKnockoutSlot('match-15', tbdTeam, tbdTeam);
+        this._resolveKnockoutSlot('match-16', tbdTeam, tbdTeam);
 
-        this.ui.showToast(`🏆 Knockout matches created! Q1: ${gA[0].team.shortName || gA[0].team.name} vs ${gB[0].team.shortName || gB[0].team.name}`, 'success');
+        this.saveState();
+        this.ui.showToast(`\uD83C\uDFC6 Knockout matches created! Q1: ${gA[0].team.shortName || gA[0].team.name} vs ${gB[0].team.shortName || gB[0].team.name}`, 'success');
         this._renderLiveMatchView();
       } catch(e) {
-        this.ui.showToast('⚠️ Error computing standings: ' + e.message, 'error');
+        this.ui.showToast('\u26A0\uFE0F Error computing standings: ' + e.message, 'error');
       }
       return true;
     }
@@ -2261,6 +2260,12 @@ class App {
 
     // Save to scorecard
     if (target.id === 'live-save-scorecard-btn' && this.liveMatchEngine) {
+      // Capture Player of the Match from input if present
+      const potmInput = document.getElementById('lm-potm-input');
+      if (potmInput && potmInput.value.trim()) {
+        this.liveMatchEngine.playerOfMatch = potmInput.value.trim();
+        this._saveLiveMatch();
+      }
       this._showSaveConfirmModal('Save to Scorecard');
       return true;
     }
@@ -2325,6 +2330,12 @@ class App {
 
     // ── Save confirmation modal buttons ──
     if (target.id === 'lm-save-yes-btn') {
+      // Capture Player of the Match from input if present
+      const potmEl = document.getElementById('lm-potm-input');
+      if (potmEl && potmEl.value.trim() && this.liveMatchEngine) {
+        this.liveMatchEngine.playerOfMatch = potmEl.value.trim();
+        this._saveLiveMatch();
+      }
       this._closeModal();
       this._syncLiveToScorecard();
       this.ui.showToast('✅ Saved to scorecard!', 'success');
@@ -2403,9 +2414,171 @@ class App {
 
   _syncLiveToScorecard() {
     if (this.liveMatchEngine) {
+      // Auto-compute POTM if match is complete but POTM wasn't set
+      if (this.liveMatchEngine.isComplete && !this.liveMatchEngine.playerOfMatch) {
+        this.liveMatchEngine._autoPickPOTM();
+        this._saveLiveMatch();
+      }
       this.liveMatchEngine.syncToScorecard(this.scorecardMgr);
       this.saveState();
+
+      // Auto-create knockout matches when all league matches are done
+      if (this.liveMatchEngine.isComplete) {
+        this._autoCreateKnockoutIfReady();
+        // Progress knockout bracket when a knockout match completes
+        this._progressKnockoutBracket(this.liveMatchEngine.matchId);
+      }
     }
+  }
+
+  /**
+   * Auto-create knockout matches from standings when all 12 league matches are completed.
+   */
+  _autoCreateKnockoutIfReady() {
+    if (!this.engine) return;
+    const state = this.engine.getState();
+    const gd = state.groupDivision;
+    if (!gd) return;
+
+    const allMatches = this.scorecardMgr.getAllMatches();
+    const leagueCompleted = allMatches.filter(m => {
+      const num = parseInt(m.matchId.replace('match-',''));
+      return num <= 12 && m.status === 'completed';
+    }).length;
+
+    if (leagueCompleted < 12) return;
+
+    // Check if knockouts already have real teams (not TBD)
+    const q1 = this.scorecardMgr.getMatch('match-13');
+    if (q1 && q1.teamAShort !== 'TBD') return; // Already created
+
+    try {
+      const standings = StandingsEngine.compute(allMatches, gd, state.teams);
+      if (!standings || !standings.groupA || !standings.groupB ||
+          standings.groupA.length < 2 || standings.groupB.length < 2) return;
+
+      const gA = standings.groupA, gB = standings.groupB;
+      const getTeam = (t) => state.teams.find(tt => tt.id === (t.teamId || t.id || t)) || t;
+      const tbdTeam = { id: 'tbd', name: 'TBD', shortName: 'TBD', color: '#666', textColor: '#fff', logo: '', squad: [] };
+
+      // Q1: A1 vs B1
+      this._resolveKnockoutSlot('match-13', getTeam(gA[0]), getTeam(gB[0]));
+      // Eliminator: A2 vs B2
+      this._resolveKnockoutSlot('match-14', getTeam(gA[1]), getTeam(gB[1]));
+      // Q2 and Final: TBD initially
+      this._resolveKnockoutSlot('match-15', tbdTeam, tbdTeam);
+      this._resolveKnockoutSlot('match-16', tbdTeam, tbdTeam);
+
+      this.saveState();
+      this.ui.showToast(`\uD83C\uDFC6 Knockout matches auto-created! Q1: ${gA[0].team?.shortName || gA[0].teamId} vs ${gB[0].team?.shortName || gB[0].teamId}`, 'success', 5000);
+    } catch(e) {
+      console.error('Auto-knockout creation failed:', e);
+    }
+  }
+
+  /**
+   * IPL-style knockout bracket progression.
+   * Called after each knockout match completes to auto-fill the next round.
+   *
+   * Q1 (match-13):  Winner → Final teamA,   Loser → Q2 teamA
+   * Eliminator (match-14): Winner → Q2 teamB
+   * Q2 (match-15):  Winner → Final teamB
+   */
+  _progressKnockoutBracket(completedMatchId) {
+    if (!this.engine) return;
+    const num = parseInt(completedMatchId.replace('match-',''));
+    if (num < 13 || num > 16) return; // Not a knockout match
+
+    const match = this.scorecardMgr.getMatch(completedMatchId);
+    if (!match || match.status !== 'completed') return;
+
+    const winnerId = match.result?.winner;
+    if (!winnerId) return;
+
+    const state = this.engine.getState();
+    const getFullTeam = (id) => state.teams.find(t => t.id === id);
+    const loserId = winnerId === match.teamAId ? match.teamBId : match.teamAId;
+    const winnerTeam = getFullTeam(winnerId);
+    const loserTeam = getFullTeam(loserId);
+
+    if (!winnerTeam) return;
+
+    const tbdTeam = { id: 'tbd', name: 'TBD', shortName: 'TBD', color: '#666', textColor: '#fff', logo: '', squad: [] };
+
+    try {
+      if (num === 13) {
+        // Qualifier 1 complete: Winner → Final (teamA), Loser → Q2 (teamA)
+        const q2 = this.scorecardMgr.getMatch('match-15');
+        const final_ = this.scorecardMgr.getMatch('match-16');
+
+        // Q2: teamA = Q1 loser, teamB = keep existing (Eliminator winner) or TBD
+        const q2TeamB = (q2 && q2.teamBShort !== 'TBD') ? getFullTeam(q2.teamBId) || tbdTeam : tbdTeam;
+        if (!q2 || q2.status === 'upcoming') {
+          this._resolveKnockoutSlot('match-15', loserTeam, q2TeamB);
+        }
+
+        // Final: teamA = Q1 winner, teamB = keep existing (Q2 winner) or TBD
+        const finalTeamB = (final_ && final_.teamBShort !== 'TBD') ? getFullTeam(final_.teamBId) || tbdTeam : tbdTeam;
+        if (!final_ || final_.status === 'upcoming') {
+          this._resolveKnockoutSlot('match-16', winnerTeam, finalTeamB);
+        }
+
+        this.saveState();
+        this.ui.showToast(`\uD83C\uDFC6 Q1 done! ${winnerTeam.shortName} → Final, ${loserTeam.shortName} → Q2`, 'success', 5000);
+
+      } else if (num === 14) {
+        // Eliminator complete: Winner → Q2 (teamB)
+        const q2 = this.scorecardMgr.getMatch('match-15');
+
+        // Q2: teamA = keep existing (Q1 loser) or TBD, teamB = Eliminator winner
+        const q2TeamA = (q2 && q2.teamAShort !== 'TBD') ? getFullTeam(q2.teamAId) || tbdTeam : tbdTeam;
+        if (!q2 || q2.status === 'upcoming') {
+          this._resolveKnockoutSlot('match-15', q2TeamA, winnerTeam);
+        }
+
+        this.saveState();
+        this.ui.showToast(`\uD83D\uDD25 Eliminator done! ${winnerTeam.shortName} → Q2, ${loserTeam.shortName} eliminated`, 'success', 5000);
+
+      } else if (num === 15) {
+        // Qualifier 2 complete: Winner → Final (teamB)
+        const final_ = this.scorecardMgr.getMatch('match-16');
+
+        // Final: teamA = keep existing (Q1 winner), teamB = Q2 winner
+        const finalTeamA = (final_ && final_.teamAShort !== 'TBD') ? getFullTeam(final_.teamAId) || tbdTeam : tbdTeam;
+        if (!final_ || final_.status === 'upcoming') {
+          this._resolveKnockoutSlot('match-16', finalTeamA, winnerTeam);
+        }
+
+        this.saveState();
+        this.ui.showToast(`\uD83D\uDD25 Q2 done! ${winnerTeam.shortName} → Final, ${loserTeam.shortName} eliminated`, 'success', 5000);
+      }
+    } catch(e) {
+      console.error('Knockout bracket progression failed:', e);
+    }
+  }
+
+  /**
+   * Helper: Create or re-create a knockout match slot with resolved teams.
+   * Preserves squad data by looking up full team info from auction state.
+   */
+  _resolveKnockoutSlot(matchId, teamA, teamB) {
+    const timeMap = { 'match-13': '2:30 \u2013 3:30', 'match-14': '3:30 \u2013 4:30', 'match-15': '4:30 \u2013 5:30', 'match-16': '5:30 \u2013 6:30' };
+
+    // Build full team objects with squads
+    const buildTeam = (t) => {
+      if (!t || t.id === 'tbd') return { id: 'tbd', name: 'TBD', shortName: 'TBD', color: '#666', textColor: '#fff', logo: '', squad: [] };
+      const squad = this._getTeamSquad(t.id);
+      return { ...t, squad };
+    };
+
+    // Remove existing match
+    if (this.scorecardMgr.getMatch(matchId)) {
+      this.scorecardMgr.matches.delete(matchId);
+    }
+
+    this.scorecardMgr.createMatch(matchId, buildTeam(teamA), buildTeam(teamB), {
+      venue: 'Nakre Ground', date: '26 April 2026', time: timeMap[matchId] || ''
+    });
   }
 
   _toggleSubmenu(menuId) {
@@ -2683,7 +2856,17 @@ Built entirely with vanilla HTML/CSS/JS — no frameworks needed! 💪
       const matchId = genBtn.dataset.generateCard;
       const match = this.scorecardMgr.getMatch(matchId);
       if (match) {
-        GalleryManager.generateResultCard(match).then(canvas => {
+        // Find POTM player image from auction data
+        let potmImage = '';
+        if (match.result?.playerOfMatch && this.engine) {
+          const auctionState = this.engine.getState();
+          const allPlayers = auctionState.players || [];
+          const potmPlayer = allPlayers.find(p => p.name === match.result.playerOfMatch);
+          if (potmPlayer && potmPlayer.image) {
+            potmImage = potmPlayer.image;
+          }
+        }
+        GalleryManager.generateResultCard(match, {}, potmImage).then(canvas => {
           const link = document.createElement('a');
           link.download = `NPL3_Match_${matchId.replace('match-','')}_Result.png`;
           link.href = canvas.toDataURL('image/png');

@@ -21,7 +21,7 @@ export class LiveMatchEngine {
     this.fallOfWickets = []; this.fallOfWickets2 = [];
     this.isFreeHit = false;
     this.partnershipRuns = 0; this.partnershipBalls = 0;
-    this.isComplete = false; this.result = null; this.winnerId = null;
+    this.isComplete = false; this.result = null; this.winnerId = null; this.playerOfMatch = '';
     this.matchType = match.matchType || 'group';
     this.innings1BattingTeamId = null; // tracks which team batted in innings 1
     this.undoStack = [];
@@ -232,6 +232,7 @@ export class LiveMatchEngine {
         this.isComplete=true;this.winnerId=this.battingTeamId;
         this.result=`${this._getBattingTeam().short} won by ${maxWk-total.wickets} wickets`;
         this.phase='result';
+        this._autoPickPOTM();
       }
     }
     return this.getState();
@@ -260,6 +261,7 @@ export class LiveMatchEngine {
           this.result=`${this._getBattingTeam().short} won by ${maxWk-inn2.wickets} wickets`;
         }
         this.isComplete=true;this.phase='result';
+        this._autoPickPOTM();
       }
     }
   }
@@ -290,11 +292,99 @@ export class LiveMatchEngine {
     });
   }
 
+  /**
+   * Auto-compute Player of the Match based on performance.
+   * Score = batting runs + (4s * 2) + (6s * 3) + (wickets * 25) + SR bonus + economy bonus
+   * If there's a winner, prioritize that team's best performer.
+   * If tied, pick the overall best from both teams.
+   */
+  _autoPickPOTM() {
+    if (this.playerOfMatch) return; // Don't overwrite manual selection
+
+    const playerScores = new Map(); // name → { score, team }
+
+    // Aggregate batting stats from both innings
+    const processBatting = (bc, teamId) => {
+      bc.forEach(b => {
+        if (!b.didBat) return;
+        const key = b.name;
+        if (!playerScores.has(key)) playerScores.set(key, { score: 0, team: teamId, runs: 0, wickets: 0 });
+        const ps = playerScores.get(key);
+        ps.runs += b.runs || 0;
+        // Batting score: runs + fours bonus + sixes bonus + strike rate bonus
+        let batScore = (b.runs || 0);
+        batScore += (b.fours || 0) * 2;  // Bonus for boundaries
+        batScore += (b.sixes || 0) * 3;  // Bonus for sixes
+        if (b.balls > 0 && b.runs >= 10) {
+          const sr = (b.runs / b.balls) * 100;
+          if (sr > 150) batScore += 10;
+          else if (sr > 120) batScore += 5;
+        }
+        ps.score += batScore;
+      });
+    };
+
+    // Aggregate bowling stats from both innings
+    const processBowling = (bwc, teamId) => {
+      bwc.forEach(b => {
+        if (b.balls <= 0) return;
+        const key = b.name;
+        if (!playerScores.has(key)) playerScores.set(key, { score: 0, team: teamId, runs: 0, wickets: 0 });
+        const ps = playerScores.get(key);
+        ps.wickets += b.wickets || 0;
+        // Bowling score: wickets * 25 + economy bonus
+        let bowlScore = (b.wickets || 0) * 25;
+        const oversFloat = parseFloat(b.overs) || 0;
+        if (oversFloat > 0) {
+          const econ = b.runs / oversFloat;
+          if (econ < 4) bowlScore += 15;
+          else if (econ < 6) bowlScore += 8;
+          else if (econ < 8) bowlScore += 3;
+        }
+        ps.score += bowlScore;
+      });
+    };
+
+    // Determine which team batted/bowled in each innings
+    const inn1BatTeam = this.innings1BattingTeamId;
+    const inn1BowlTeam = inn1BatTeam === this.teamA.id ? this.teamB.id : this.teamA.id;
+
+    // Innings 1: battingCard = inn1BatTeam batting, bowlingCard = inn1BowlTeam bowling
+    processBatting(this.battingCard, inn1BatTeam);
+    processBowling(this.bowlingCard, inn1BowlTeam);
+
+    // Innings 2: battingCard2 = inn1BowlTeam batting, bowlingCard2 = inn1BatTeam bowling
+    if (this.battingCard2.length > 0) {
+      processBatting(this.battingCard2, inn1BowlTeam);
+      processBowling(this.bowlingCard2, inn1BatTeam);
+    }
+
+    const entries = [...playerScores.entries()].map(([name, data]) => ({ name, ...data }));
+    if (entries.length === 0) return;
+
+    // Sort by score descending
+    entries.sort((a, b) => b.score - a.score);
+
+    if (this.winnerId) {
+      // Pick the best performer from the winning team
+      const winnerPlayers = entries.filter(e => e.team === this.winnerId);
+      if (winnerPlayers.length > 0) {
+        this.playerOfMatch = winnerPlayers[0].name;
+      } else {
+        this.playerOfMatch = entries[0].name;
+      }
+    } else {
+      // Tied match: pick overall best
+      this.playerOfMatch = entries[0].name;
+    }
+  }
+
   setCoinFlipWinner(teamId) {
     this.winnerId=teamId;
     const team=teamId===this.teamA.id?this.teamA:this.teamB;
     this.result=`${team.short} won by Coin Toss`;
     this.isComplete=true;this.phase='result';
+    this._autoPickPOTM();
   }
 
   // Get over-by-over history with ball details
@@ -338,7 +428,6 @@ export class LiveMatchEngine {
 
   syncToScorecard(scorecardMgr) {
     const match=scorecardMgr.getMatch(this.matchId);if(!match)return;
-    match.status=this.isComplete?'completed':'live';
     match.tossWinner=this.tossWinner;match.tossDecision=this.tossDecision;match.oversLimit=this.oversLimit;
     const mapInn=(bc,bwc,ext,balls,inn)=>{
       let runs=0,wk=0,lg=0;balls.forEach(b=>{runs+=b.totalRuns||0;if(b.wicket)wk++;if(!b.isWide&&!b.isNoBall)lg++;});
@@ -369,7 +458,8 @@ export class LiveMatchEngine {
         match.innings1.target=match.innings2.totalRuns+1;
       }
     }
-    if(this.isComplete){match.result.winner=this.winnerId||'';match.result.margin=this.result||'';}
+    if(this.isComplete){match.result.winner=this.winnerId||'';match.result.margin=this.result||'';match.result.playerOfMatch=this.playerOfMatch||'';}
+    match.status = this.isComplete ? 'completed' : 'live';
   }
 
   getState() {
@@ -397,7 +487,7 @@ export class LiveMatchEngine {
       fallOfWickets:[...this._fow],
       manhattan1:this.getManhattan(1),manhattan2:this.getManhattan(2),
       overHistory:this.getOverHistory(this.currentInnings),
-      isFreeHit:this.isFreeHit,isComplete:this.isComplete,result:this.result,winnerId:this.winnerId,
+      isFreeHit:this.isFreeHit,isComplete:this.isComplete,result:this.result,winnerId:this.winnerId,playerOfMatch:this.playerOfMatch,
       matchType:this.matchType,
       availableBatsmen:this.getAvailableBatsmen(),availableBowlers:this.getAvailableBowlers(),
       canUndo:this.undoStack.length>0
@@ -417,7 +507,7 @@ export class LiveMatchEngine {
       fallOfWickets:this.fallOfWickets,fallOfWickets2:this.fallOfWickets2,
       isFreeHit:this.isFreeHit,
       partnershipRuns:this.partnershipRuns,partnershipBalls:this.partnershipBalls,
-      isComplete:this.isComplete,result:this.result,winnerId:this.winnerId,
+      isComplete:this.isComplete,result:this.result,winnerId:this.winnerId,playerOfMatch:this.playerOfMatch,
       matchType:this.matchType,innings1BattingTeamId:this.innings1BattingTeamId
     };
   }
@@ -440,7 +530,7 @@ export class LiveMatchEngine {
     e.fallOfWickets=data.fallOfWickets||[];e.fallOfWickets2=data.fallOfWickets2||[];
     e.isFreeHit=data.isFreeHit||false;
     e.partnershipRuns=data.partnershipRuns||0;e.partnershipBalls=data.partnershipBalls||0;
-    e.isComplete=data.isComplete||false;e.result=data.result||null;e.winnerId=data.winnerId||null;
+    e.isComplete=data.isComplete||false;e.result=data.result||null;e.winnerId=data.winnerId||null;e.playerOfMatch=data.playerOfMatch||'';
     e.innings1BattingTeamId=data.innings1BattingTeamId||data.battingTeamId||null;
     return e;
   }

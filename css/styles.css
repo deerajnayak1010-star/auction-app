@@ -47,6 +47,29 @@
 /* ── Reset & Base ──────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Disable text selection globally */
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+/* Allow selection in inputs and textareas */
+input, textarea, select, [contenteditable] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Remove focus outlines on interactive elements */
+button:focus, .btn:focus, .score-btn:focus, .lm-modal-option:focus,
+.lm-sub-btn:focus, .ro-chip:focus, .filter-btn:focus, .nav-link:focus,
+[data-lm-runout]:focus, [data-lm-dismissal]:focus, [data-lm-new-batsman]:focus,
+[data-lm-next-bowler]:focus {
+  outline: none;
+}
+
 html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
