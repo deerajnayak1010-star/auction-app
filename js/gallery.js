@@ -172,7 +172,7 @@ export class GalleryManager {
         } catch(e) { potmImg = null; }
       }
 
-      const potmCardH = potmImg ? 300 : 180;
+      const potmCardH = potmImg ? 310 : 180;
       // POTM card background
       const potmGrad = ctx.createLinearGradient(120, potmY, W - 120, potmY + potmCardH);
       potmGrad.addColorStop(0, 'rgba(99, 102, 241, 0.12)');
@@ -197,49 +197,54 @@ export class GalleryManager {
       ctx.fillRect(200, potmY, W - 400, 2);
 
       if (potmImg) {
-        // Layout: Photo on left, text on right
-        const photoR = 75;
-        const photoCX = 280;
-        const photoCY = potmY + 100;
+        // Layout: Large square photo on left, text on right
+        const photoSize = 200;
+        const photoX = 160;
+        const photoY = potmY + 50;
+        const borderR = 12;
 
-        // Gradient ring around photo
+        // Gradient border around square photo
         ctx.save();
-        ctx.beginPath();
-        ctx.arc(photoCX, photoCY, photoR + 4, 0, Math.PI * 2);
-        const ringGrad = ctx.createLinearGradient(photoCX - photoR, photoCY - photoR, photoCX + photoR, photoCY + photoR);
+        const ringGrad = ctx.createLinearGradient(photoX, photoY, photoX + photoSize, photoY + photoSize);
         ringGrad.addColorStop(0, '#f59e0b');
         ringGrad.addColorStop(0.5, '#a78bfa');
         ringGrad.addColorStop(1, '#f59e0b');
         ctx.strokeStyle = ringGrad;
         ctx.lineWidth = 4;
+        GalleryManager._roundRect(ctx, photoX - 2, photoY - 2, photoSize + 4, photoSize + 4, borderR + 2);
         ctx.stroke();
         ctx.restore();
 
-        // Circular clip for player photo
+        // Square clip with rounded corners for player photo
         ctx.save();
-        ctx.beginPath();
-        ctx.arc(photoCX, photoCY, photoR, 0, Math.PI * 2);
+        GalleryManager._roundRect(ctx, photoX, photoY, photoSize, photoSize, borderR);
         ctx.clip();
-        const aspect = potmImg.width / potmImg.height;
-        let sx = 0, sy = 0, sw = potmImg.width, sh = potmImg.height;
-        if (aspect > 1) { sx = (potmImg.width - potmImg.height) / 2; sw = potmImg.height; }
-        else { sy = (potmImg.height - potmImg.width) / 2; sh = potmImg.width; }
-        ctx.drawImage(potmImg, sx, sy, sw, sh, photoCX - photoR, photoCY - photoR, photoR * 2, photoR * 2);
+        // Center-crop the image to fill the square
+        const imgW = potmImg.width, imgH = potmImg.height;
+        const scale = Math.max(photoSize / imgW, photoSize / imgH);
+        const cropW = photoSize / scale, cropH = photoSize / scale;
+        const sx = (imgW - cropW) / 2, sy = (imgH - cropH) / 2;
+        ctx.drawImage(potmImg, sx, sy, cropW, cropH, photoX, photoY, photoSize, photoSize);
         ctx.restore();
 
-        // Text on right side
-        const textX = 560;
+        // Text on right side — vertically centered with photo
+        const textX = 620;
+        const textBaseY = photoY;
+
         ctx.fillStyle = '#a78bfa';
-        ctx.font = '16px Inter, sans-serif';
+        ctx.font = 'bold 16px Inter, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('⭐ PLAYER OF THE MATCH ⭐', textX, potmY + 50);
+        ctx.letterSpacing = '2px';
+        ctx.fillText('⭐ PLAYER OF THE MATCH ⭐', textX, textBaseY + 20);
+        ctx.letterSpacing = '0px';
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 40px Outfit, sans-serif';
-        ctx.fillText(match.result.playerOfMatch, textX, potmY + 105);
+        ctx.font = 'bold 42px Outfit, sans-serif';
+        ctx.fillText(match.result.playerOfMatch, textX, textBaseY + 80);
 
-        ctx.fillStyle = 'rgba(245,158,11,0.4)';
-        ctx.fillRect(textX - 50, potmY + 125, 100, 2);
+        // Gold accent line
+        ctx.fillStyle = 'rgba(245,158,11,0.5)';
+        ctx.fillRect(textX - 60, textBaseY + 98, 120, 3);
 
         // Performance stats
         const allBatting = [...(match.innings1?.batting || []), ...(match.innings2?.batting || [])];
@@ -250,23 +255,23 @@ export class GalleryManager {
         if (potmBat) perfParts.push(`${potmBat.runs}(${potmBat.balls})`);
         if (potmBowl && parseInt(potmBowl.wickets) > 0) perfParts.push(`${potmBowl.wickets}/${potmBowl.runs}`);
         if (perfParts.length > 0) {
-          ctx.fillStyle = '#94a3b8';
-          ctx.font = '22px Inter, sans-serif';
-          ctx.fillText(perfParts.join(' • '), textX, potmY + 165);
+          ctx.fillStyle = '#e2e8f0';
+          ctx.font = 'bold 26px Inter, sans-serif';
+          ctx.fillText(perfParts.join('  •  '), textX, textBaseY + 140);
         }
 
-        // Additional batting/bowling details
-        let detailY = potmY + 200;
+        // Detailed stats
+        let detailY = textBaseY + 175;
         if (potmBat) {
-          ctx.fillStyle = '#64748b';
-          ctx.font = '16px Inter, sans-serif';
-          ctx.fillText(`${potmBat.fours || 0}×4  ${potmBat.sixes || 0}×6  SR: ${potmBat.strikeRate || '-'}`, textX, detailY);
-          detailY += 28;
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '18px Inter, sans-serif';
+          ctx.fillText(`${potmBat.fours || 0}×4   ${potmBat.sixes || 0}×6   SR: ${potmBat.strikeRate || '-'}`, textX, detailY);
+          detailY += 30;
         }
         if (potmBowl && parseInt(potmBowl.wickets) > 0) {
-          ctx.fillStyle = '#64748b';
-          ctx.font = '16px Inter, sans-serif';
-          ctx.fillText(`${potmBowl.overs || 0} ov  Eco: ${potmBowl.economy || '-'}`, textX, detailY);
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '18px Inter, sans-serif';
+          ctx.fillText(`${potmBowl.overs || 0} ov   Eco: ${potmBowl.economy || '-'}`, textX, detailY);
         }
       } else {
         // No photo — centered text layout

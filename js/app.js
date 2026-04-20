@@ -2682,12 +2682,8 @@ class App {
   }
 
   _closeModal() {
-    const modal = document.getElementById('lm-dismissal-modal');
-    if (modal) modal.remove();
-    const saveModal = document.getElementById('lm-save-confirm-modal');
-    if (saveModal) saveModal.remove();
-    const shareModal = document.getElementById('share-app-modal');
-    if (shareModal) shareModal.remove();
+    const ids = ['lm-dismissal-modal', 'lm-save-confirm-modal', 'lm-batsman-modal', 'lm-bowler-modal', 'share-app-modal'];
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
   }
 
   _showShareModal() {

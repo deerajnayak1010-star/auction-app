@@ -2474,14 +2474,32 @@ export class UI {
     // ── NEW BATSMAN ──
     if (s.phase === 'new-batsman') {
       const avail = s.availableBatsmen || [];
-      this.mainEl.innerHTML = `<div class="live-match-page">${this._renderLiveScoreboard(s, ballDisp)}<div class="lm-modal-overlay"><div class="lm-modal"><h3>🏏 Select New Batsman</h3><button class="lm-modal-close" id="lm-modal-close-btn">&times;</button><div class="lm-modal-list">${avail.map(p=>`<button class="lm-modal-option" data-lm-new-batsman="${p.name}">${p.name}</button>`).join('')}${avail.length===0?'<p style="color:var(--text-4);">No batsmen available</p>':''}</div></div></div></div>`;
+      // Render scoreboard first, then overlay modal
+      this.mainEl.innerHTML = `<div class="live-match-page">${this._renderLiveScoreboard(s, ballDisp)}</div>`;
+      // Remove any existing modal
+      const old = document.getElementById('lm-batsman-modal');
+      if (old) old.remove();
+      const modal = document.createElement('div');
+      modal.className = 'lm-modal-overlay';
+      modal.id = 'lm-batsman-modal';
+      modal.innerHTML = `<div class="lm-modal"><h3>🏏 Select New Batsman</h3><button class="lm-modal-close" id="lm-modal-close-btn">&times;</button><div class="lm-modal-list">${avail.map(p=>`<button class="lm-modal-option" data-lm-new-batsman="${p.name}">${p.name}</button>`).join('')}${avail.length===0?'<p style="color:var(--text-4);">No batsmen available</p>':''}</div></div>`;
+      document.getElementById('app').appendChild(modal);
       return;
     }
 
     // ── BOWLER SELECT ──
     if (s.phase === 'bowler-select') {
       const avail = s.availableBowlers || [];
-      this.mainEl.innerHTML = `<div class="live-match-page">${this._renderLiveScoreboard(s, ballDisp)}<div class="lm-modal-overlay"><div class="lm-modal"><h3>🎯 Select Next Bowler</h3><button class="lm-modal-close" id="lm-modal-close-btn">&times;</button><div class="lm-modal-list">${avail.map(p=>`<button class="lm-modal-option" data-lm-next-bowler="${p.name}">${p.name}</button>`).join('')}</div></div></div></div>`;
+      // Render scoreboard first, then overlay modal
+      this.mainEl.innerHTML = `<div class="live-match-page">${this._renderLiveScoreboard(s, ballDisp)}</div>`;
+      // Remove any existing modal
+      const old = document.getElementById('lm-bowler-modal');
+      if (old) old.remove();
+      const modal = document.createElement('div');
+      modal.className = 'lm-modal-overlay';
+      modal.id = 'lm-bowler-modal';
+      modal.innerHTML = `<div class="lm-modal"><h3>🎯 Select Next Bowler</h3><button class="lm-modal-close" id="lm-modal-close-btn">&times;</button><div class="lm-modal-list">${avail.map(p=>`<button class="lm-modal-option" data-lm-next-bowler="${p.name}">${p.name}</button>`).join('')}</div></div>`;
+      document.getElementById('app').appendChild(modal);
       return;
     }
 
