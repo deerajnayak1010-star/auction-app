@@ -17,15 +17,16 @@
        ════════════════════════════════════════════ */
 
     :root {
-      --bg-primary:    #030712;
-      --bg-card:       rgba(10, 15, 40, 0.9);
-      --bg-card-solid: #0a0f28;
+      --bg-primary:    #050816;
+      --bg-card:       rgba(15, 20, 55, 0.85);
+      --bg-card-solid: #0d1235;
 
-      --accent-blue:   #3b82f6;
-      --accent-gold:   #f59e0b;
-      --accent-red:    #ef4444;
-      --accent-green:  #10b981;
       --accent-indigo: #6366f1;
+      --accent-gold:   #f59e0b;
+      --accent-green:  #10b981;
+      --accent-red:    #ef4444;
+      --accent-blue:   #3b82f6;
+      --accent-pink:   #ec4899;
 
       --text-1: #f1f5f9;
       --text-2: #94a3b8;
@@ -62,9 +63,9 @@
       position: fixed;
       inset: 0;
       background:
-        radial-gradient(ellipse 80% 50% at 20% 0%, rgba(59,130,246,0.12), transparent 60%),
-        radial-gradient(ellipse 60% 40% at 85% 100%, rgba(245,158,11,0.06), transparent 50%),
-        radial-gradient(ellipse 70% 50% at 50% 50%, rgba(59,130,246,0.04), transparent 50%);
+        radial-gradient(ellipse 80% 50% at 20% 0%, rgba(99,102,241,0.12), transparent 60%),
+        radial-gradient(ellipse 60% 40% at 85% 100%, rgba(236,72,153,0.08), transparent 50%),
+        radial-gradient(ellipse 70% 50% at 50% 50%, rgba(245,158,11,0.05), transparent 50%);
       pointer-events: none;
       z-index: 0;
       animation: bgShift 20s ease-in-out infinite alternate;
@@ -209,24 +210,6 @@
       height: 100%;
       object-fit: cover;
       object-position: top;
-      position: relative;
-      z-index: 1;
-    }
-    /* Spotlight glow behind player */
-    .proj-player-img::after {
-      content: '';
-      position: absolute;
-      top: 30%; left: 50%;
-      width: 80%; height: 60%;
-      transform: translateX(-50%);
-      background: radial-gradient(ellipse, rgba(59,130,246,0.35) 0%, rgba(245,158,11,0.15) 40%, transparent 70%);
-      filter: blur(40px);
-      z-index: 0;
-      animation: spotlightPulse 4s ease-in-out infinite;
-    }
-    @keyframes spotlightPulse {
-      0%, 100% { opacity: 0.7; transform: translateX(-50%) scale(1); }
-      50%      { opacity: 1;   transform: translateX(-50%) scale(1.15); }
     }
     .proj-player-img .proj-initial {
       font-family: 'Outfit', sans-serif;
@@ -394,16 +377,15 @@
 
     /* ── Bid Status Box ── */
     .proj-bid-box {
-      background: rgba(10, 15, 40, 0.95);
-      border: 2px solid rgba(59,130,246,0.25);
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
       border-radius: var(--radius-xl);
-      padding: clamp(24px, 3vw, 48px);
+      padding: clamp(20px, 2.5vw, 40px);
       text-align: center;
       box-shadow:
-        0 20px 60px rgba(0,0,0,0.5),
-        0 0 40px rgba(59,130,246,0.1),
+        0 16px 40px rgba(0,0,0,0.4),
         inset 0 1px 0 rgba(255,255,255,0.05);
-      backdrop-filter: blur(24px);
+      backdrop-filter: blur(20px);
       position: relative;
       overflow: hidden;
     }
@@ -411,21 +393,16 @@
       content: '';
       position: absolute;
       top: 0; left: 0; right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, transparent, var(--accent-blue), var(--accent-gold), var(--accent-blue), transparent);
-      animation: bidBoxShine 3s linear infinite;
-    }
-    @keyframes bidBoxShine {
-      0%   { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-gold), var(--accent-indigo), transparent);
     }
     .proj-bid-label {
-      font-size: clamp(0.9rem, 1.3vw, 1.3rem);
-      color: var(--accent-blue);
+      font-size: clamp(0.85rem, 1.2vw, 1.2rem);
+      color: var(--text-3);
       text-transform: uppercase;
-      letter-spacing: 4px;
-      font-weight: 700;
-      margin-bottom: 12px;
+      letter-spacing: 3px;
+      font-weight: 600;
+      margin-bottom: 8px;
     }
     .proj-bid-label.sold-label   { color: var(--accent-green); }
     .proj-bid-label.unsold-label { color: var(--accent-red); }
@@ -454,22 +431,20 @@
       align-items: center;
       justify-content: center;
       gap: 14px;
-      font-size: clamp(1.4rem, 2.2vw, 2.2rem);
+      font-size: clamp(1.2rem, 2vw, 2rem);
       font-weight: 700;
-      min-height: 56px;
+      min-height: 50px;
     }
     .proj-bidder img {
-      width: clamp(40px, 4vw, 60px);
-      height: clamp(40px, 4vw, 60px);
+      width: clamp(36px, 3.5vw, 56px);
+      height: clamp(36px, 3.5vw, 56px);
       object-fit: contain;
       border-radius: 50%;
-      border: 2px solid rgba(59,130,246,0.3);
-      box-shadow: 0 0 16px rgba(59,130,246,0.2);
     }
     .proj-bidder-none {
       color: var(--text-4);
       font-weight: 500;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
     }
 
     /* ── Timer Ring ── */
@@ -495,11 +470,11 @@
     }
     .proj-timer-progress {
       fill: none;
-      stroke: var(--accent-blue);
+      stroke: var(--accent-green);
       stroke-width: 6;
       stroke-linecap: round;
       transition: stroke 0.5s ease;
-      filter: drop-shadow(0 0 10px currentColor);
+      filter: drop-shadow(0 0 8px currentColor);
     }
     .proj-timer-text {
       position: absolute;
@@ -524,16 +499,16 @@
       letter-spacing: 2px;
       margin-top: 4px;
     }
-    .proj-timer-ring-container.warning .proj-timer-progress { stroke: var(--accent-gold); filter: drop-shadow(0 0 12px rgba(245,158,11,0.5)); }
-    .proj-timer-ring-container.warning .proj-timer-value    { color: var(--accent-gold); text-shadow: 0 0 20px rgba(245,158,11,0.3); }
-    .proj-timer-ring-container.danger .proj-timer-progress  { stroke: var(--accent-red); filter: drop-shadow(0 0 16px rgba(239,68,68,0.6)); }
-    .proj-timer-ring-container.danger .proj-timer-value     { color: var(--accent-red); text-shadow: 0 0 20px rgba(239,68,68,0.4); }
+    .proj-timer-ring-container.warning .proj-timer-progress { stroke: var(--accent-gold); }
+    .proj-timer-ring-container.warning .proj-timer-value    { color: var(--accent-gold); }
+    .proj-timer-ring-container.danger .proj-timer-progress  { stroke: var(--accent-red); }
+    .proj-timer-ring-container.danger .proj-timer-value     { color: var(--accent-red); }
     .proj-timer-ring-container.danger {
-      animation: timerPulse 0.8s ease-in-out infinite;
+      animation: timerPulse 1s ease-in-out infinite;
     }
     @keyframes timerPulse {
       0%, 100% { transform: scale(1); }
-      50%      { transform: scale(1.06); }
+      50%      { transform: scale(1.04); }
     }
 
     /* ── Sold/Unsold result in timer area ── */
