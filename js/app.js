@@ -2856,14 +2856,29 @@ Built entirely with vanilla HTML/CSS/JS — no frameworks needed! 💪
       const matchId = genBtn.dataset.generateCard;
       const match = this.scorecardMgr.getMatch(matchId);
       if (match) {
-        // Find POTM player image from auction data
+        // Find POTM player image from data (players + team owners/icons)
         let potmImage = '';
-        if (match.result?.playerOfMatch && this.engine) {
-          const auctionState = this.engine.getState();
-          const allPlayers = auctionState.players || [];
-          const potmPlayer = allPlayers.find(p => p.name === match.result.playerOfMatch);
+        if (match.result?.playerOfMatch) {
+          const potmName = match.result.playerOfMatch;
+
+          // 1. Check regular players pool (PLAYERS_DATA imported from data.js)
+          const potmPlayer = PLAYERS_DATA.find(p => p.name === potmName);
           if (potmPlayer && potmPlayer.image) {
             potmImage = potmPlayer.image;
+          }
+
+          // 2. Check team owners and icon players (TEAMS_DATA imported from data.js)
+          if (!potmImage) {
+            for (const t of TEAMS_DATA) {
+              if (t.owner === potmName && t.ownerImage) {
+                potmImage = t.ownerImage;
+                break;
+              }
+              if (t.iconPlayer === potmName && t.iconPlayerImage) {
+                potmImage = t.iconPlayerImage;
+                break;
+              }
+            }
           }
         }
         GalleryManager.generateResultCard(match, {}, potmImage).then(canvas => {
