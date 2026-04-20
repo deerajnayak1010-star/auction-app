@@ -12,6 +12,453 @@ function getInitials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+function renderRulesPremiumView() {
+    const overview = [
+      { label: 'Budget Cap', value: '1,00,000 pts' },
+      { label: 'Auctioned Slots', value: '12 per team' },
+      { label: 'Full Squad Size', value: '14 players' },
+      { label: 'Room Limit', value: '3-4 members' },
+    ];
+
+    const ruleCards = [
+      {
+        className: 'rules-card rules-card-finance',
+        badge: 'Budget & pacing',
+        icon: '💰',
+        title: 'Auction Rules',
+        content: `
+          <ul class="rules-list">
+            <li>Each team has a fixed budget of <strong>1,00,000 pts</strong></li>
+            <li>Base price starts from <strong>1,000 pts</strong></li>
+            <li>
+              Maximum bid for a single player: <strong>89,000 pts</strong>
+              <div class="rules-list-note">Budget must reserve 1,000 pts × remaining empty slots.</div>
+            </li>
+            <li>
+              Bid increments:
+              <div class="rules-table">
+                <div class="rules-row"><span>1,000 - 10,000</span><span>+500</span></div>
+                <div class="rules-row"><span>10,000 - 20,000</span><span>+1,000</span></div>
+                <div class="rules-row"><span>Above 20,000</span><span>+2,000</span></div>
+              </div>
+            </li>
+          </ul>
+        `,
+      },
+      {
+        className: 'rules-card rules-card-bidding',
+        badge: 'Live room discipline',
+        icon: '🏏',
+        title: 'Bidding Rules',
+        content: `
+          <ul class="rules-list">
+            <li>A team <strong>cannot bid consecutively</strong> on the same player</li>
+            <li>Minimum bid increment must be followed on every raise</li>
+            <li>Every bid must stay within the team's <strong>remaining budget</strong></li>
+            <li>Once sold, a player cannot be re-auctioned except in the unsold round</li>
+          </ul>
+        `,
+      },
+      {
+        className: 'rules-card rules-card-building',
+        badge: 'Squad composition',
+        icon: '👥',
+        title: 'Team Building',
+        content: `
+          <ul class="rules-list">
+            <li>Each team must stay within their <strong>total budget</strong></li>
+            <li>
+              Maximum squad size: <strong>14 players</strong>
+              <div class="rules-table">
+                <div class="rules-row"><span>Auctioned Players</span><span><strong>12</strong></span></div>
+                <div class="rules-row"><span>Owner</span><span><strong>1</strong></span></div>
+                <div class="rules-row"><span>Icon Player</span><span><strong>1</strong></span></div>
+                <div class="rules-row"><span>Total per Team</span><span><strong>14</strong></span></div>
+              </div>
+            </li>
+            <li>Build a balanced squad with batsmen, bowlers, and all-rounders</li>
+          </ul>
+        `,
+      },
+      {
+        className: 'rules-card rules-card-reauction',
+        badge: 'Second chance pool',
+        icon: '♻️',
+        title: 'Re-Auction',
+        content: `
+          <ul class="rules-list">
+            <li>Unsold players can be re-auctioned after the main auction round</li>
+            <li>Re-auction starts only after organizer confirmation</li>
+            <li>The same financial and bidding rules apply in the re-auction round</li>
+          </ul>
+        `,
+      },
+      {
+        className: 'rules-card rules-card-general',
+        badge: 'Venue protocol',
+        icon: '📋',
+        title: 'General Guidelines',
+        content: `
+          <ul class="rules-list">
+            <li>Only <strong>3-4 members per team</strong> are allowed to be present during the auction</li>
+            <li>All participants are expected to maintain <strong>discipline and professionalism</strong> throughout the event</li>
+          </ul>
+        `,
+      },
+      {
+        className: 'rules-card rules-card-dont',
+        badge: 'Zero tolerance',
+        icon: '⚖️',
+        title: 'Code of Conduct',
+        content: `
+          <ul class="rules-list">
+            <li>No <strong>arguments, fighting, or disruptive behavior</strong> will be tolerated</li>
+            <li>No <strong>alcohol or inappropriate activities</strong> are allowed during the auction</li>
+            <li>Participants must <strong>respect all teams, organizers,</strong> and decisions made during the event</li>
+          </ul>
+        `,
+      },
+      {
+        className: 'rules-card rules-card-do',
+        badge: 'Fair competition',
+        icon: '🤝',
+        title: 'Fair Play',
+        content: `
+          <ul class="rules-list">
+            <li>All teams must follow the auction rules and bidding guidelines <strong>strictly</strong></li>
+            <li>Any <strong>misuse or violation</strong> may result in disqualification or penalties</li>
+          </ul>
+        `,
+      },
+      {
+        className: 'rules-card rules-card-authority',
+        badge: 'Final word',
+        icon: '🏛️',
+        title: 'Authority & Decisions',
+        content: `
+          <ul class="rules-list">
+            <li>The <strong>NPL Management Team's decision is final</strong> in all matters</li>
+            <li>In case of disputes, changes, or unexpected situations, the organizers may <strong>modify rules or take necessary actions</strong></li>
+            <li>All participants are expected to <strong>comply without objection</strong></li>
+          </ul>
+        `,
+      },
+    ];
+
+    this.mainEl.innerHTML = `
+      <div class="rules-page">
+        <section class="rules-hero">
+          <div class="rules-hero-copy">
+            <span class="section-kicker">Auction Command Center</span>
+            <div class="rules-header">
+              <div class="rules-icon">📜</div>
+              <h1 class="rules-title">NAKRE PREMIER LEAGUE 3.0 Auction Guidelines</h1>
+              <p class="rules-subtitle">Read the room rules, budget logic, and conduct standards before the bidding floor goes live.</p>
+            </div>
+            <div class="rules-overview">
+              ${overview.map((item) => `
+                <div class="rules-overview-card">
+                  <span class="rules-overview-label">${item.label}</span>
+                  <strong class="rules-overview-value">${item.value}</strong>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <aside class="rules-hero-panel">
+            <span class="rules-stage-note">Live Room Checklist</span>
+            <h2>Keep the auction premium, fair, and easy to run under pressure.</h2>
+            <p>The guide below covers budget pacing, team balance, conduct expectations, and organizer authority so every table plays by the same standard.</p>
+            <div class="rules-timeline">
+              <div class="rules-timeline-step">
+                <span>01</span>
+                <div>
+                  <strong>Confirm budget logic</strong>
+                  <p>Understand caps, reserve points, and increments before the first bid is placed.</p>
+                </div>
+              </div>
+              <div class="rules-timeline-step">
+                <span>02</span>
+                <div>
+                  <strong>Protect squad balance</strong>
+                  <p>Build a legal roster that leaves enough flexibility for every required role.</p>
+                </div>
+              </div>
+              <div class="rules-timeline-step">
+                <span>03</span>
+                <div>
+                  <strong>Respect the desk</strong>
+                  <p>Keep the room disciplined and follow organizer rulings without delay.</p>
+                </div>
+              </div>
+            </div>
+            <button class="rules-download-btn" id="download-rules-pdf-btn">Download Rules PDF</button>
+          </aside>
+        </section>
+
+        <div class="rules-grid">
+          ${ruleCards.map((card) => `
+            <article class="${card.className}">
+              <div class="rules-card-meta">
+                <span class="rules-card-badge">${card.badge}</span>
+                <span class="rules-card-icon">${card.icon}</span>
+              </div>
+              <div class="rules-card-header">
+                <h3>${card.title}</h3>
+              </div>
+              ${card.content}
+            </article>
+          `).join('')}
+        </div>
+
+        <div class="rules-footer">
+          <p class="rules-footer-note">Once every team is aligned on these standards, move straight into the live auction experience.</p>
+          <button class="btn btn-primary btn-lg" id="proceed-rules-btn">
+            Proceed to Auction
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+function renderGalleryPremiumView(photos = [], matches = [], filter = 'all') {
+    const filtered = filter === 'all' ? photos : photos.filter((photo) => photo.day === filter);
+    const completedMatches = matches.filter((match) => match.status === 'completed');
+    const latestPhoto = [...photos].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0];
+    const galleryStats = [
+      { label: 'Memories Stored', value: photos.length.toString() },
+      { label: 'Visible in View', value: filtered.length.toString() },
+      { label: 'Result Cards Ready', value: completedMatches.length.toString() },
+      { label: 'Latest Capture', value: latestPhoto ? formatGalleryStamp(latestPhoto.timestamp) : 'Waiting' },
+    ];
+    const galleryFilters = [
+      { value: 'all', label: 'All Moments' },
+      { value: 'Day 1', label: 'Day 1' },
+      { value: 'Day 2', label: 'Day 2' },
+    ];
+
+    this.mainEl.innerHTML = `
+      <div class="gallery-page">
+        <section class="gallery-hero">
+          <div class="gallery-hero-copy">
+            <span class="section-kicker">Memory Vault</span>
+            <div class="gallery-header">
+              <h1 class="gallery-title">NPL 3.0 Gallery</h1>
+              <p class="gallery-subtitle">Capture matchday energy, build a polished highlight wall, and create share-ready result assets from one premium space.</p>
+            </div>
+            <div class="gallery-stat-grid">
+              ${galleryStats.map((item) => `
+                <div class="gallery-stat-card">
+                  <span class="gallery-stat-label">${item.label}</span>
+                  <strong class="gallery-stat-value">${item.value}</strong>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <aside class="gallery-hero-panel">
+            <span class="gallery-panel-kicker">Upload Station</span>
+            <h2>Drag in matchday photos and keep every moment ready for display.</h2>
+            <p>High-quality stills make the awards, gallery wall, and social cards feel like a finished event product instead of an archive dump.</p>
+            <label class="gallery-upload-zone" id="gallery-upload-zone">
+              <div class="gallery-upload-icon">📷</div>
+              <div class="gallery-upload-text">Click or drag photos here to upload</div>
+              <div class="gallery-upload-subtext">Multiple images supported. Ideal for team shots, action frames, and celebration moments.</div>
+              <input type="file" id="gallery-file-input" accept="image/*" multiple style="display:none;">
+            </label>
+          </aside>
+        </section>
+
+        <section class="gallery-toolbar">
+          <div class="gallery-toolbar-copy">
+            <span class="gallery-toolbar-label">Showing</span>
+            <strong>${filter === 'all' ? 'All matchdays' : escapeHtml(filter)}</strong>
+          </div>
+          <div class="gallery-filters">
+            ${galleryFilters.map((item) => `
+              <button class="filter-btn gallery-filter-btn ${filter === item.value ? 'active' : ''}" data-gallery-filter="${item.value}">
+                ${item.label}
+              </button>
+            `).join('')}
+          </div>
+        </section>
+
+        ${filtered.length > 0 ? `
+          <section class="gallery-grid">
+            ${filtered.map((photo) => {
+              const caption = escapeHtml(photo.caption || 'NPL tournament moment');
+              const photoDay = escapeHtml(photo.day || 'Matchday');
+              const photoStamp = escapeHtml(formatGalleryStamp(photo.timestamp));
+
+              return `
+                <article class="gallery-item" data-photo-id="${photo.id}">
+                  <img src="${photo.dataUrl}" alt="${caption}">
+                  <div class="gallery-item-overlay">
+                    <div class="gallery-item-tags">
+                      <span class="gallery-item-chip">${photoDay}</span>
+                      <span class="gallery-item-chip gallery-item-chip-muted">${photoStamp}</span>
+                    </div>
+                    <div class="gallery-item-caption">${caption}</div>
+                  </div>
+                  <button class="gallery-item-delete" data-delete-photo="${photo.id}" aria-label="Delete photo">&times;</button>
+                </article>
+              `;
+            }).join('')}
+          </section>
+        ` : `
+          <section class="gallery-empty">
+            <div class="gallery-empty-icon">📷</div>
+            <h2>No photos in this view yet</h2>
+            <p>Upload the first matchday image to start the NPL memory wall and keep the presentation feeling event-ready.</p>
+          </section>
+        `}
+
+        ${completedMatches.length > 0 ? `
+          <section class="social-cards-section">
+            <div class="gallery-section-head">
+              <div>
+                <span class="section-kicker">Share-ready graphics</span>
+                <h2>Match Result Cards</h2>
+              </div>
+              <p>Generate polished social cards for every completed fixture in one tap.</p>
+            </div>
+            <div class="social-cards-grid">
+              ${completedMatches.map((match) => {
+                const matchNumber = escapeHtml(match.matchId?.replace('match-', '') || '');
+                const resultMargin = match.result?.margin ? escapeHtml(match.result.margin) : 'Result ready for export';
+                const playerOfMatch = match.result?.playerOfMatch ? escapeHtml(match.result.playerOfMatch) : 'Awaiting POTM';
+
+                return `
+                  <article class="social-card-preview">
+                    <div class="social-card-topline" style="background: linear-gradient(90deg, ${match.teamAColor || '#3b82f6'}, #f59e0b, ${match.teamBColor || '#ef4444'});"></div>
+                    <div class="social-card-body">
+                      <span class="social-card-match">Match ${matchNumber}</span>
+                      <div class="social-card-fixture">
+                        <span>${escapeHtml(match.teamAShort)}</span>
+                        <span class="social-card-vs">VS</span>
+                        <span>${escapeHtml(match.teamBShort)}</span>
+                      </div>
+                      <p class="social-card-caption">${resultMargin}</p>
+                      <div class="social-card-meta">Player of the Match: ${playerOfMatch}</div>
+                    </div>
+                    <div class="social-card-actions">
+                      <button class="btn btn-primary btn-sm" data-generate-card="${match.matchId}">Generate Card</button>
+                    </div>
+                  </article>
+                `;
+              }).join('')}
+            </div>
+          </section>
+        ` : ''}
+      </div>
+    `;
+  }
+
+function renderAwardsPremiumView(awards = [], revealedCount = 0) {
+    const totalAwards = awards.length;
+    const revealed = Math.min(revealedCount, totalAwards);
+    const remaining = Math.max(totalAwards - revealed, 0);
+    const progress = totalAwards > 0 ? Math.round((revealed / totalAwards) * 100) : 0;
+
+    this.mainEl.innerHTML = `
+      <div class="awards-page">
+        <section class="awards-stage">
+          <div class="awards-stage-copy">
+            <span class="section-kicker">Ceremony Mode</span>
+            <div class="awards-hero">
+              <h1>✨ NPL 3.0 Awards Night ✨</h1>
+              <p>Reveal each honour one by one and keep the spotlight exactly where it belongs.</p>
+            </div>
+
+            <div class="awards-progress">
+              <div class="awards-progress-track">
+                <span class="awards-progress-fill" style="width: ${progress}%;"></span>
+              </div>
+              <div class="awards-progress-meta">
+                <strong>${revealed}</strong> of ${totalAwards} awards revealed
+              </div>
+            </div>
+
+            <div class="awards-hero-actions">
+              ${remaining > 0 ? `
+                <button class="awards-reveal-btn" id="awards-reveal-next-btn">Reveal Next Award (${revealed}/${totalAwards})</button>
+              ` : `
+                <div class="awards-stage-pill">All awards revealed</div>
+              `}
+            </div>
+          </div>
+
+          <aside class="awards-stage-side">
+            <div class="awards-stage-stat">
+              <span class="awards-stage-stat-label">Ceremony Progress</span>
+              <strong class="awards-stage-stat-value">${progress}%</strong>
+            </div>
+            <div class="awards-stage-stat">
+              <span class="awards-stage-stat-label">Still Sealed</span>
+              <strong class="awards-stage-stat-value">${remaining}</strong>
+            </div>
+            <div class="awards-stage-stat">
+              <span class="awards-stage-stat-label">Grand Finale Card</span>
+              <strong class="awards-stage-stat-value">Champion Team</strong>
+            </div>
+          </aside>
+        </section>
+
+        ${totalAwards > 0 ? `
+          <section class="awards-grid">
+            ${awards.map((award, index) => {
+              const isRevealed = index < revealed;
+              const isRevealing = index === revealed - 1;
+              const teamTone = award.teamColor || '#94a3b8';
+
+              return `
+                <article
+                  class="award-card ${isRevealed ? 'revealed' : 'unrevealed'} ${isRevealing ? 'revealing' : ''} ${award.id === 'champion' ? 'champion-card' : ''}"
+                  data-award-index="${index}"
+                  style="--award-gradient: ${award.gradient || 'linear-gradient(135deg, #6366f1, #3b82f6)'};"
+                >
+                  <div class="award-card-beam"></div>
+                  <div class="award-card-status">${isRevealed ? 'Revealed' : 'Sealed'}</div>
+                  ${!isRevealed ? `
+                    <div class="award-envelope">
+                      <div class="award-envelope-icon">🎭</div>
+                      <div class="award-envelope-text">${escapeHtml(award.title || 'Award')}</div>
+                      <div class="award-envelope-subtitle">${escapeHtml(award.category || 'Ceremony Award')}</div>
+                    </div>
+                  ` : ''}
+                  <div class="award-content">
+                    <div class="award-icon-wrap">
+                      <div class="award-icon">${award.icon || '🏆'}</div>
+                    </div>
+                    <div class="award-category">${escapeHtml(award.category || 'Ceremony Award')}</div>
+                    <div class="award-title">${escapeHtml(award.title || 'Award')}</div>
+                    ${award.subtitle ? `<div class="award-subtitle">${escapeHtml(award.subtitle)}</div>` : ''}
+                    <div class="award-highlight">${escapeHtml(award.winner || 'To be announced')}</div>
+                    <div class="award-meta">
+                      ${award.team ? `<span class="award-team" style="background: ${hexToRgba(teamTone, 0.16)}; color: ${teamTone};">${escapeHtml(award.team)}</span>` : ''}
+                      ${award.stat ? `<div class="award-stat">${escapeHtml(award.stat)}</div>` : ''}
+                    </div>
+                    ${award.desc ? `<div class="award-desc">${escapeHtml(award.desc)}</div>` : ''}
+                  </div>
+                </article>
+              `;
+            }).join('')}
+          </section>
+        ` : `
+          <section class="awards-empty-state">
+            <div class="awards-empty-icon">🏆</div>
+            <h2>Awards unlock after the matches do</h2>
+            <p>Complete fixtures and save scorecards to generate the full awards ceremony automatically.</p>
+          </section>
+        `}
+
+        <div class="awards-controls">
+          <button class="btn btn-ghost" id="awards-back-btn">Back to Results</button>
+          ${revealed > 0 ? `<button class="btn btn-ghost" id="awards-reset-btn">Reset Ceremony</button>` : ''}
+        </div>
+      </div>
+    `;
+  }
 /** Format points for display */
 function fmt(pts) {
   return AuctionEngine.formatPoints(pts);
@@ -54,6 +501,28 @@ function hexToRgba(color, alpha = 1) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatGalleryStamp(timestamp) {
+  if (!timestamp) return 'Awaiting upload';
+
+  try {
+    return new Intl.DateTimeFormat('en-IN', {
+      day: 'numeric',
+      month: 'short',
+    }).format(new Date(timestamp));
+  } catch {
+    return 'Matchday';
+  }
+}
+
 function buildTeamBidStyle(team) {
   const baseColor = normalizeHexColor(team.color) || '#3b82f6';
   const deepColor = darkenColor(baseColor, 0.34);
@@ -70,6 +539,18 @@ function buildTeamBidStyle(team) {
 }
 
 export class UI {
+  renderRulesPremium() {
+    return renderRulesPremiumView.call(this);
+  }
+
+  renderGalleryPremium(photos = [], matches = [], filter = 'all') {
+    return renderGalleryPremiumView.call(this, photos, matches, filter);
+  }
+
+  renderAwardsPremium(awards = [], revealedCount = 0) {
+    return renderAwardsPremiumView.call(this, awards, revealedCount);
+  }
+
   constructor() {
     this.headerEl = document.getElementById('header');
     this.mainEl = document.getElementById('main');
@@ -1055,7 +1536,7 @@ export class UI {
     }
 
     this.mainEl.innerHTML = `
-      <div class="auction-layout">
+      <div class="auction-layout" data-auction-signature="${this.getAuctionDomSignature(state)}" data-auction-phase="${state.phase}">
         ${this._renderTeamsSidebar(state, connectedMobiles)}
         ${this._renderAuctionCenter(state)}
         ${this._renderInfoPanel(state, connectedMobiles)}
@@ -1076,19 +1557,20 @@ export class UI {
           const isMobileConnected = connectedIds.has(team.id);
           return `
             <div class="sidebar-team ${isHighest ? 'highest-bidder' : ''} ${isFull ? 'squad-full' : ''}"
+                 data-team-id="${team.id}"
                  style="--team-color: ${team.color}">
               <div class="sidebar-team-logo" style="background: ${team.color}; color: ${team.textColor}; overflow:hidden;">
                 ${team.logo ? `<img src="${team.logo}" alt="${team.shortName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : team.shortName}
               </div>
               <div class="sidebar-team-info">
-                <div class="sidebar-team-name">
+                <div class="sidebar-team-name" data-sidebar-team-name>
                   ${team.name}
                   ${isMobileConnected ? '<span class="mobile-indicator" title="Connected via mobile">📱</span>' : ''}
                 </div>
-                <div class="sidebar-team-purse">${fmt(team.purse)}</div>
-                <div class="sidebar-team-squad">${team.squad.length}/12 players</div>
+                <div class="sidebar-team-purse" data-sidebar-team-purse>${fmt(team.purse)}</div>
+                <div class="sidebar-team-squad" data-sidebar-team-squad>${team.squad.length}/12 players</div>
                 <div class="purse-bar">
-                  <div class="purse-bar-fill ${barClass}" style="width: ${pursePct}%"></div>
+                  <div class="purse-bar-fill ${barClass}" data-sidebar-team-purse-fill style="width: ${pursePct}%"></div>
                 </div>
               </div>
             </div>
@@ -1186,14 +1668,14 @@ export class UI {
           <div class="bid-current-label">Current Bid</div>
           <div class="bid-current-amount" id="bid-amount">${state.phase === 'bidding' ? fmt(state.currentBid) : '—'}</div>
           ${bidderTeam ? `
-            <div class="bid-current-team" style="color: ${bidderTeam.color}">
+            <div class="bid-current-team" id="bid-current-team" style="color: ${bidderTeam.color}">
               🏆 ${bidderTeam.name}
             </div>
           ` : `
-            <div class="bid-current-team">No bids yet</div>
+            <div class="bid-current-team" id="bid-current-team">No bids yet</div>
           `}
           ${state.phase === 'bidding' ? `
-            <div class="bid-increment-info">
+            <div class="bid-increment-info" id="bid-next-info">
               Next bid: ${fmt(state.nextBidAmount)} (+${fmt(state.increment)})
             </div>
           ` : ''}
@@ -1219,7 +1701,7 @@ export class UI {
         <div class="bid-info-card mobile-bid-card">
           <div class="bid-current-label">📱 Mobile Bidding</div>
           <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">
-            <span style="font-size:0.78rem; color:${mobileCount > 0 ? 'var(--accent-green)' : 'var(--text-4)'}">
+            <span id="mobile-bid-status" style="font-size:0.78rem; color:${mobileCount > 0 ? 'var(--accent-green)' : 'var(--text-4)'}">
               ${mobileCount > 0 ? `${mobileCount} device${mobileCount !== 1 ? 's' : ''} connected` : 'No devices connected'}
             </span>
             <button class="btn btn-primary btn-sm" id="generate-qr-btn" style="font-size:0.72rem; padding:5px 12px;">
@@ -1227,7 +1709,7 @@ export class UI {
             </button>
           </div>
           ${mobileCount > 0 ? `
-            <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:8px;">
+            <div id="mobile-bid-chips" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:8px;">
               ${connectedMobiles.map(m => `
                 <span style="font-size:0.65rem; padding:2px 8px; border-radius:var(--radius-full); background:rgba(16,185,129,0.1); color:var(--accent-green); border:1px solid rgba(16,185,129,0.2);">
                   📱 ${m.teamShortName}
@@ -1263,32 +1745,20 @@ export class UI {
               <button class="btn-undo-redo" id="redo-bid-btn" title="Redo bid" ${!state.canRedo ? 'disabled' : ''}>↪ Redo</button>
             </div>
           </div>
-          <div class="bid-history-list">
-            ${hasBids ? [...state.bidHistory].reverse().map(entry => `
-              <div class="bid-history-entry">
-                <span class="bid-history-team">
-                  <span class="bid-history-dot" style="background: ${entry.teamColor}"></span>
-                  ${entry.teamName}
-                </span>
-                <span class="bid-history-amount">${fmt(entry.amount)}</span>
-              </div>
-            `).join('') : `
-              <p style="color: var(--text-4); font-size: 0.82rem; text-align:center; padding: 20px 0;">
-                ${state.phase === 'bidding' ? 'Waiting for bids...' : 'Nominate a player to start'}
-              </p>
-            `}
+          <div class="bid-history-list" id="bid-history-list">
+            ${this.renderBidHistoryEntries(state, hasBids)}
           </div>
         </div>
 
         <div class="bid-info-card">
           <div class="bid-current-label">Auction Progress</div>
           <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:0.78rem;">
-            <span style="color:var(--accent-green)">Sold: ${state.soldCount}</span>
-            <span style="color:var(--accent-red)">Unsold: ${state.unsoldCount}</span>
-            <span style="color:var(--text-3)">Left: ${state.remainingPlayers}</span>
+            <span id="auction-progress-sold" style="color:var(--accent-green)">Sold: ${state.soldCount}</span>
+            <span id="auction-progress-unsold" style="color:var(--accent-red)">Unsold: ${state.unsoldCount}</span>
+            <span id="auction-progress-remaining" style="color:var(--text-3)">Left: ${state.remainingPlayers}</span>
           </div>
           <div class="purse-bar" style="margin-top:8px; height:6px;">
-            <div class="purse-bar-fill" style="width: ${((state.soldCount + state.unsoldCount) / state.totalPlayers * 100)}%; background: var(--accent-indigo);"></div>
+            <div class="purse-bar-fill" id="auction-progress-bar" style="width: ${((state.soldCount + state.unsoldCount) / state.totalPlayers * 100)}%; background: var(--accent-indigo);"></div>
           </div>
         </div>
       </div>
@@ -1322,7 +1792,7 @@ export class UI {
     return `
       <div class="auction-log">
         <span class="auction-log-label">LIVE</span>
-        <span class="auction-log-text">${logText}</span>
+        <span class="auction-log-text" id="auction-log-text">${logText}</span>
       </div>
     `;
   }
@@ -1371,6 +1841,184 @@ export class UI {
   // ═══════════════════════════════════════════
   // RESULTS PAGE
   // ═══════════════════════════════════════════
+
+  getAuctionDomSignature(state) {
+    return `${state.phase}:${state.currentPlayer?.name || 'idle'}`;
+  }
+
+  buildAuctionLogText(state) {
+    const lastLog = state.auctionLog[0];
+    if (!lastLog) return 'Auction started. Nominate the first player.';
+
+    switch (lastLog.type) {
+      case 'sold':
+        return `ðŸŽ‰ ${lastLog.teamShortName} bought ${lastLog.player.name} for ${fmt(lastLog.price)}`;
+      case 'unsold':
+        return `âŒ ${lastLog.player.name} went UNSOLD`;
+      case 'bid':
+        return `ðŸ“¢ ${lastLog.teamName} bid ${fmt(lastLog.amount)} for ${lastLog.playerName}`;
+      case 'nominate':
+        return `ðŸ Player #${lastLog.index}: ${lastLog.player.name} is up for auction (Base: ${fmt(lastLog.player.basePrice)})`;
+      case 'recall':
+        return `â†© RECALLED: ${lastLog.player.name} sale to ${lastLog.teamShortName} reversed â€” re-bidding open!`;
+      default:
+        return 'Auction in progress.';
+    }
+  }
+
+  renderBidHistoryEntries(state, hasBids = state.bidHistory.length > 0) {
+    if (!hasBids) {
+      return `
+        <p style="color: var(--text-4); font-size: 0.82rem; text-align:center; padding: 20px 0;">
+          ${state.phase === 'bidding' ? 'Waiting for bids...' : 'Nominate a player to start'}
+        </p>
+      `;
+    }
+
+    return [...state.bidHistory].reverse().map((entry) => `
+      <div class="bid-history-entry">
+        <span class="bid-history-team">
+          <span class="bid-history-dot" style="background: ${entry.teamColor}"></span>
+          ${entry.teamName}
+        </span>
+        <span class="bid-history-amount">${fmt(entry.amount)}</span>
+      </div>
+    `).join('');
+  }
+
+  syncAuctionRealtime(state, connectedMobiles = [], { flashBid = true } = {}) {
+    if (state.phase !== 'bidding') return false;
+
+    const layout = this.mainEl.querySelector('.auction-layout');
+    if (!layout) return false;
+
+    const signature = this.getAuctionDomSignature(state);
+    if (layout.dataset.auctionSignature !== signature) return false;
+
+    layout.dataset.auctionPhase = state.phase;
+    const connectedIds = new Set(connectedMobiles.map((mobile) => mobile.teamId));
+
+    state.teams.forEach((team) => {
+      const card = layout.querySelector(`.sidebar-team[data-team-id="${team.id}"]`);
+      if (!card) return;
+
+      const pursePct = (team.purse / 100000) * 100;
+      const barClass = pursePct < 15 ? 'critical' : pursePct < 40 ? 'low' : '';
+
+      card.classList.toggle('highest-bidder', state.currentBidder === team.id);
+      card.classList.toggle('squad-full', team.squad.length >= 12);
+
+      const nameEl = card.querySelector('[data-sidebar-team-name]');
+      if (nameEl) {
+        nameEl.innerHTML = `
+          ${escapeHtml(team.name)}
+          ${connectedIds.has(team.id) ? '<span class="mobile-indicator" title="Connected via mobile">ðŸ“±</span>' : ''}
+        `;
+      }
+
+      const purseEl = card.querySelector('[data-sidebar-team-purse]');
+      if (purseEl) purseEl.textContent = fmt(team.purse);
+
+      const squadEl = card.querySelector('[data-sidebar-team-squad]');
+      if (squadEl) squadEl.textContent = `${team.squad.length}/12 players`;
+
+      const fillEl = card.querySelector('[data-sidebar-team-purse-fill]');
+      if (fillEl) {
+        fillEl.className = `purse-bar-fill ${barClass}`.trim();
+        fillEl.style.width = `${pursePct}%`;
+      }
+    });
+
+    const bidderTeamEl = document.getElementById('bid-current-team');
+    if (bidderTeamEl) {
+      if (state.currentBidderTeam) {
+        bidderTeamEl.textContent = `ðŸ† ${state.currentBidderTeam.name}`;
+        bidderTeamEl.style.color = state.currentBidderTeam.color;
+      } else {
+        bidderTeamEl.textContent = 'No bids yet';
+        bidderTeamEl.style.color = '';
+      }
+    }
+
+    const nextInfoEl = document.getElementById('bid-next-info');
+    if (nextInfoEl) {
+      nextInfoEl.textContent = `Next bid: ${fmt(state.nextBidAmount)} (+${fmt(state.increment)})`;
+    }
+
+    const mobileStatusEl = document.getElementById('mobile-bid-status');
+    if (mobileStatusEl) {
+      mobileStatusEl.textContent = connectedMobiles.length > 0
+        ? `${connectedMobiles.length} device${connectedMobiles.length !== 1 ? 's' : ''} connected`
+        : 'No devices connected';
+      mobileStatusEl.style.color = connectedMobiles.length > 0 ? 'var(--accent-green)' : 'var(--text-4)';
+    }
+
+    let chipsEl = document.getElementById('mobile-bid-chips');
+    if (!chipsEl && connectedMobiles.length > 0) {
+      const mobileCard = layout.querySelector('.mobile-bid-card');
+      if (mobileCard) {
+        mobileCard.insertAdjacentHTML('beforeend', '<div id="mobile-bid-chips" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:8px;"></div>');
+        chipsEl = document.getElementById('mobile-bid-chips');
+      }
+    }
+    if (chipsEl) {
+      if (connectedMobiles.length === 0) {
+        chipsEl.remove();
+      } else {
+        chipsEl.innerHTML = connectedMobiles.map((mobile) => `
+          <span style="font-size:0.65rem; padding:2px 8px; border-radius:var(--radius-full); background:rgba(16,185,129,0.1); color:var(--accent-green); border:1px solid rgba(16,185,129,0.2);">
+            ðŸ“± ${escapeHtml(mobile.teamShortName)}
+          </span>
+        `).join('');
+      }
+    }
+
+    const quickAmountEl = document.getElementById('quick-bid-amount');
+    if (quickAmountEl && document.activeElement !== quickAmountEl) {
+      quickAmountEl.value = state.nextBidAmount;
+    }
+
+    const quickTeamEl = document.getElementById('quick-bid-team');
+    if (quickTeamEl) {
+      const previousValue = quickTeamEl.value;
+      quickTeamEl.innerHTML = `
+        <option value="">Select Team</option>
+        ${state.teams.map((team) => `
+          <option value="${team.id}" ${state.currentBidder === team.id ? 'disabled' : ''}>${team.shortName} (${fmt(team.purse)})</option>
+        `).join('')}
+      `;
+      if (previousValue && previousValue !== state.currentBidder) {
+        quickTeamEl.value = previousValue;
+      }
+    }
+
+    const historyEl = document.getElementById('bid-history-list');
+    if (historyEl) {
+      historyEl.innerHTML = this.renderBidHistoryEntries(state);
+    }
+
+    const soldEl = document.getElementById('auction-progress-sold');
+    if (soldEl) soldEl.textContent = `Sold: ${state.soldCount}`;
+
+    const unsoldEl = document.getElementById('auction-progress-unsold');
+    if (unsoldEl) unsoldEl.textContent = `Unsold: ${state.unsoldCount}`;
+
+    const remainingEl = document.getElementById('auction-progress-remaining');
+    if (remainingEl) remainingEl.textContent = `Left: ${state.remainingPlayers}`;
+
+    const progressBarEl = document.getElementById('auction-progress-bar');
+    if (progressBarEl) {
+      progressBarEl.style.width = `${((state.soldCount + state.unsoldCount) / state.totalPlayers) * 100}%`;
+    }
+
+    const logEl = document.getElementById('auction-log-text');
+    if (logEl) {
+      logEl.textContent = this.buildAuctionLogText(state);
+    }
+
+    this.updateBidDisplay(state, { flash: flashBid });
+    return true;
+  }
 
   renderResults(state, activeTab = 'squads', opts = {}) {
     if (!state) {
@@ -1525,6 +2173,434 @@ export class UI {
             </div>
           </div>
         `).join('')}
+      </div>
+    `;
+  }
+
+  renderResults(state, activeTab = 'squads', opts = {}) {
+    if (!state) {
+      this.mainEl.innerHTML = `
+        <div class="auction-complete">
+          <h2 style="font-size:1.8rem; color:var(--text-2); -webkit-text-fill-color:var(--text-2);">No Auction Data</h2>
+          <p>Start an auction first to see results here.</p>
+          <button class="btn btn-primary" id="goto-setup-btn">Go to Setup</button>
+        </div>
+      `;
+      return;
+    }
+
+    const totalSpent = state.teams.reduce((sum, t) => sum + t.totalSpent, 0);
+    const totalRemaining = state.teams.reduce((sum, t) => sum + t.purse, 0);
+    const soldCount = state.soldCount ?? state.soldPlayers.length;
+    const unsoldCount = state.unsoldCount ?? state.unsoldPlayers.length;
+    const auctionSlots = Math.max(state.teams.length * 12, 1);
+    const auctionCompletion = Math.round((soldCount / auctionSlots) * 100);
+    const averageSale = soldCount > 0 ? Math.round(totalSpent / soldCount) : 0;
+    const mostExpensive = state.soldPlayers.length > 0
+      ? state.soldPlayers.reduce((max, sale) => sale.price > max.price ? sale : max, state.soldPlayers[0])
+      : null;
+    const spendLeaderboard = [...state.teams].sort((a, b) => {
+      if (b.totalSpent !== a.totalSpent) return b.totalSpent - a.totalSpent;
+      return b.squad.length - a.squad.length;
+    });
+    const leaderTeam = spendLeaderboard[0] || null;
+    const fullestSquadTeam = [...state.teams].sort((a, b) => {
+      if (b.squad.length !== a.squad.length) return b.squad.length - a.squad.length;
+      return b.totalSpent - a.totalSpent;
+    })[0] || null;
+    const roleTotals = state.soldPlayers.reduce((acc, sale) => {
+      const role = sale.player?.role;
+      if (role && acc[role] !== undefined) acc[role] += 1;
+      return acc;
+    }, { Batsman: 0, Bowler: 0, 'All-Rounder': 0 });
+    const tabConfig = {
+      squads: {
+        label: 'Squads',
+        title: 'Squad Dossiers',
+        eyebrow: 'Team control room',
+        description: 'Review every roster, purse balance, and poster export action from one polished board.',
+      },
+      analytics: {
+        label: 'Analytics',
+        title: 'Auction Analytics',
+        eyebrow: 'Market intelligence',
+        description: 'Track expensive signings, bidding wars, and how each squad distributed its spend.',
+      },
+      standings: {
+        label: 'Standings',
+        title: 'Points Table And Standings',
+        eyebrow: 'Tournament picture',
+        description: 'Monitor qualifiers, net run rate, and who is setting the pace in each group.',
+      },
+      stats: {
+        label: 'Player Stats',
+        title: 'Player Performance Deck',
+        eyebrow: 'Individual leaders',
+        description: 'Spot the best batting, bowling, and all-round numbers as the tournament unfolds.',
+      },
+      scorecard: {
+        label: 'Scorecard',
+        title: 'Match Scorecards',
+        eyebrow: 'Game control',
+        description: 'Jump into completed and upcoming matches with a cleaner presentation layer.',
+      },
+      fixtures: {
+        label: 'Fixtures',
+        title: 'Fixtures And Brackets',
+        eyebrow: 'Schedule board',
+        description: 'Manage the draw, knockout flow, and full competition calendar from one place.',
+      },
+    };
+    const activeTabConfig = tabConfig[activeTab] || tabConfig.squads;
+    const activeTabContent =
+      activeTab === 'squads' ? this._renderSquadsTab(state) :
+      activeTab === 'analytics' ? this._renderAnalyticsTab(state) :
+      activeTab === 'standings' ? this._renderStandingsTab(state, opts) :
+      activeTab === 'stats' ? this._renderPlayerStatsTab(state, opts) :
+      activeTab === 'scorecard' ? this._renderScorecardTab(state, opts) :
+      this._renderFixturesTab(state, opts);
+
+    this.mainEl.innerHTML = `
+      <div class="results-page results-page-premium">
+        <section class="results-hero">
+          <div class="results-hero-copy">
+            <span class="results-kicker">Auction Command Center</span>
+            <h2>NAKRE PREMIER LEAGUE 3.0 Results</h2>
+            <p>
+              ${soldCount} players have been allocated across ${state.teams.length} squads.
+              ${leaderTeam ? `${leaderTeam.name} currently leads the spending race at ${fmt(leaderTeam.totalSpent)}.` : 'As the board fills up, the headline moments will appear here.'}
+            </p>
+
+            <div class="results-hero-actions">
+              <button class="btn btn-primary" id="download-all-posters-btn">Download All Team Posters</button>
+              <span class="results-hero-chip">${auctionCompletion}% auction complete</span>
+            </div>
+
+            <div class="results-stats">
+              <article class="results-stat-card">
+                <span class="results-stat-label">Total spend</span>
+                <strong class="results-stat-value">${fmt(totalSpent)}</strong>
+                <span class="results-stat-note">${fmt(totalRemaining)} still available across the room</span>
+              </article>
+              <article class="results-stat-card">
+                <span class="results-stat-label">Auction board</span>
+                <strong class="results-stat-value">${soldCount}/${auctionSlots}</strong>
+                <span class="results-stat-note">${unsoldCount} players currently remain unsold</span>
+              </article>
+              <article class="results-stat-card">
+                <span class="results-stat-label">Average sale</span>
+                <strong class="results-stat-value">${soldCount > 0 ? fmt(averageSale) : 'Waiting'}</strong>
+                <span class="results-stat-note">${fullestSquadTeam ? `${fullestSquadTeam.shortName} has the deepest squad so far` : 'No squad depth yet'}</span>
+              </article>
+              <article class="results-stat-card">
+                <span class="results-stat-label">Spend leader</span>
+                <strong class="results-stat-value">${leaderTeam ? leaderTeam.shortName : 'TBD'}</strong>
+                <span class="results-stat-note">${leaderTeam ? `${leaderTeam.squad.length} players secured` : 'No team has pulled ahead yet'}</span>
+              </article>
+            </div>
+
+            <div class="results-role-summary">
+              ${Object.entries(roleTotals).map(([role, count]) => {
+                const roleConfig = ROLE_CONFIG[role] || {};
+                return `
+                  <div class="results-role-pill" style="--role-color:${roleConfig.color || '#6366f1'};">
+                    <span>${role}</span>
+                    <strong>${count}</strong>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <aside class="results-spotlight" style="--spotlight-color:${mostExpensive?.teamColor || '#6366f1'};">
+            <span class="results-spotlight-label">Headline Signing</span>
+            ${mostExpensive ? `
+              <div class="results-spotlight-player">
+                <div class="results-spotlight-avatar">
+                  ${mostExpensive.player.image
+                    ? `<img src="${mostExpensive.player.image}" alt="${mostExpensive.player.name}">`
+                    : `<span>${getInitials(mostExpensive.player.name)}</span>`}
+                </div>
+                <div class="results-spotlight-copy">
+                  <h3>${mostExpensive.player.name}</h3>
+                  <p>${mostExpensive.player.role} signed by ${mostExpensive.teamName}</p>
+                </div>
+              </div>
+              <div class="results-spotlight-price">${fmt(mostExpensive.price)}</div>
+              <div class="results-spotlight-meta">
+                <span>${mostExpensive.teamShortName}</span>
+                <span>${mostExpensive.bidCount || 1} bids</span>
+              </div>
+              <p class="results-spotlight-footnote">
+                ${mostExpensive.player.location ? `${mostExpensive.player.location} pool` : 'Premium acquisition'} with room-shifting impact.
+              </p>
+            ` : `
+              <div class="results-spotlight-empty">
+                <h3>The headline card is waiting</h3>
+                <p>Once a marquee player is sold, the biggest deal of the auction will be featured here automatically.</p>
+              </div>
+            `}
+          </aside>
+        </section>
+
+        ${spendLeaderboard.length > 0 ? `
+          <section class="results-marquee">
+            ${spendLeaderboard.slice(0, 3).map((team, index) => `
+              <article class="results-marquee-card" style="--team-color:${team.color}; --team-text:${team.textColor};">
+                <span class="results-marquee-rank">${String(index + 1).padStart(2, '0')}</span>
+                <div class="results-marquee-main">
+                  <div class="results-marquee-logo" style="background:${team.color}; color:${team.textColor};">
+                    ${team.logo
+                      ? `<img src="${team.logo}" alt="${team.shortName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+                      : team.shortName}
+                  </div>
+                  <div class="results-marquee-copy">
+                    <span class="results-marquee-label">${index === 0 ? 'Spend leader' : 'On the charge'}</span>
+                    <strong>${team.name}</strong>
+                    <span>${fmt(team.totalSpent)} committed across ${team.squad.length} players</span>
+                  </div>
+                </div>
+                <div class="results-marquee-bar">
+                  <span style="width:${leaderTeam ? Math.max(18, (team.totalSpent / Math.max(leaderTeam.totalSpent, 1)) * 100) : 18}%;"></span>
+                </div>
+              </article>
+            `).join('')}
+          </section>
+        ` : ''}
+
+        <section class="results-tabs-shell">
+          <div class="results-tabs">
+            ${Object.entries(tabConfig).map(([tabId, meta]) => `
+              <button class="results-tab-btn ${activeTab === tabId ? 'active' : ''}" id="results-tab-${tabId}">
+                <span class="results-tab-btn-label">${meta.label}</span>
+                <span class="results-tab-btn-meta">${meta.eyebrow}</span>
+              </button>
+            `).join('')}
+          </div>
+        </section>
+
+        <section class="results-content-shell">
+          <div class="results-content-header">
+            <div>
+              <span class="results-section-kicker">${activeTabConfig.eyebrow}</span>
+              <h3>${activeTabConfig.title}</h3>
+            </div>
+            <p>${activeTabConfig.description}</p>
+          </div>
+
+          ${activeTabContent}
+        </section>
+
+        ${state.unsoldPlayers.length > 0 ? `
+          <section class="unsold-section unsold-section-premium">
+            <div class="unsold-section-header">
+              <div>
+                <span class="results-section-kicker">Reserve pool</span>
+                <h3>Unsold Players (${state.unsoldPlayers.length})</h3>
+                <p>Keep these names ready for a quick re-auction round once the room is aligned.</p>
+              </div>
+              <button id="reauction-btn" class="btn btn-primary">
+                Re-auction Unsold Players
+              </button>
+            </div>
+            <div class="unsold-grid">
+              ${state.unsoldPlayers.map(player => `
+                <span class="unsold-chip">${player.name} - ${player.role}</span>
+              `).join('')}
+            </div>
+          </section>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  _renderSquadsTab(state) {
+    const spendRank = new Map(
+      [...state.teams]
+        .sort((a, b) => {
+          if (b.totalSpent !== a.totalSpent) return b.totalSpent - a.totalSpent;
+          return b.squad.length - a.squad.length;
+        })
+        .map((team, index) => [team.id, index + 1])
+    );
+
+    return `
+      <div class="results-teams-grid">
+        ${state.teams.map(team => {
+          const squadLimit = 12;
+          const squadSize = team.squad.length;
+          const auctionBudget = Math.max(team.totalSpent + team.purse, 1);
+          const spendPercent = Math.round((team.totalSpent / auctionBudget) * 100);
+          const squadPercent = Math.round((squadSize / squadLimit) * 100);
+          const roleBreakdown = { Batsman: 0, Bowler: 0, 'All-Rounder': 0 };
+          team.squad.forEach(player => {
+            if (roleBreakdown[player.role] !== undefined) roleBreakdown[player.role] += 1;
+          });
+          const sortedSquad = [...team.squad].sort((a, b) => {
+            if (b.soldPrice !== a.soldPrice) return b.soldPrice - a.soldPrice;
+            return a.name.localeCompare(b.name);
+          });
+          const marqueePlayer = sortedSquad[0] || null;
+          const bargainPlayer = [...sortedSquad].sort((a, b) => {
+            if (a.soldPrice !== b.soldPrice) return a.soldPrice - b.soldPrice;
+            return a.name.localeCompare(b.name);
+          })[0] || null;
+
+          return `
+            <article class="result-team-card" style="--team-color:${team.color}; --team-text:${team.textColor};">
+              <div class="result-team-header">
+                <div class="result-team-brand">
+                  <span class="result-team-rank">#${String(spendRank.get(team.id)).padStart(2, '0')}</span>
+                  <div class="result-team-logo" style="background:${team.color}; color:${team.textColor}; overflow:hidden;">
+                    ${team.logo ? `<img src="${team.logo}" alt="${team.shortName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : team.shortName}
+                  </div>
+                  <div class="result-team-info">
+                    <div class="result-team-kicker">Team dossier</div>
+                    <div class="result-team-name">${team.name}</div>
+                    <div class="result-team-subline">
+                      <span>Owner: ${team.owner || 'TBA'}</span>
+                      <span>Icon: ${team.iconPlayer || 'TBA'}</span>
+                    </div>
+                  </div>
+                </div>
+                <span class="result-team-status">${squadPercent}% ready</span>
+              </div>
+
+              <div class="result-team-people">
+                ${team.ownerImage ? `
+                  <div class="result-team-avatar-wrap">
+                    <img class="result-team-avatar" src="${team.ownerImage}" alt="${team.owner}" title="Owner: ${team.owner}">
+                    <span class="result-team-avatar-label">Owner</span>
+                  </div>
+                ` : ''}
+                ${team.iconPlayerImage ? `
+                  <div class="result-team-avatar-wrap">
+                    <img class="result-team-avatar icon" src="${team.iconPlayerImage}" alt="${team.iconPlayer}" title="Icon: ${team.iconPlayer}">
+                    <span class="result-team-avatar-label">Icon</span>
+                  </div>
+                ` : ''}
+              </div>
+
+              <div class="result-team-summary-grid">
+                <div class="result-team-summary-card">
+                  <span>Spent</span>
+                  <strong>${fmt(team.totalSpent)}</strong>
+                </div>
+                <div class="result-team-summary-card">
+                  <span>Remaining</span>
+                  <strong>${fmt(team.purse)}</strong>
+                </div>
+                <div class="result-team-summary-card">
+                  <span>Squad</span>
+                  <strong>${squadSize}/${squadLimit}</strong>
+                </div>
+              </div>
+
+              <div class="result-team-progress-block">
+                <div class="result-team-progress-row">
+                  <span>Auction spend</span>
+                  <strong>${spendPercent}%</strong>
+                </div>
+                <div class="result-team-progress-track">
+                  <span class="result-team-progress-fill" style="width:${spendPercent}%;"></span>
+                </div>
+
+                <div class="result-team-progress-row">
+                  <span>Squad filled</span>
+                  <strong>${squadSize}/${squadLimit}</strong>
+                </div>
+                <div class="result-team-progress-track secondary">
+                  <span class="result-team-progress-fill" style="width:${squadPercent}%;"></span>
+                </div>
+              </div>
+
+              <div class="result-team-role-split">
+                ${Object.entries(roleBreakdown).map(([role, count]) => {
+                  const roleConfig = ROLE_CONFIG[role] || {};
+                  return `
+                    <span class="result-team-role-pill" style="--role-color:${roleConfig.color || '#6366f1'};">
+                      ${role} <strong>${count}</strong>
+                    </span>
+                  `;
+                }).join('')}
+              </div>
+
+              <div class="result-team-highlights">
+                <div class="result-team-highlight">
+                  <span class="result-team-highlight-label">Top buy</span>
+                  ${marqueePlayer ? `
+                    <div class="result-team-highlight-body">
+                      <div class="result-team-highlight-avatar">
+                        ${marqueePlayer.image
+                          ? `<img src="${marqueePlayer.image}" alt="${marqueePlayer.name}">`
+                          : `<span>${getInitials(marqueePlayer.name)}</span>`}
+                      </div>
+                      <div>
+                        <strong>${marqueePlayer.name}</strong>
+                        <span>${fmt(marqueePlayer.soldPrice)}</span>
+                      </div>
+                    </div>
+                  ` : `
+                    <div class="result-team-highlight-empty">No signings yet</div>
+                  `}
+                </div>
+                <div class="result-team-highlight">
+                  <span class="result-team-highlight-label">Value pick</span>
+                  ${bargainPlayer ? `
+                    <div class="result-team-highlight-body">
+                      <div class="result-team-highlight-avatar">
+                        ${bargainPlayer.image
+                          ? `<img src="${bargainPlayer.image}" alt="${bargainPlayer.name}">`
+                          : `<span>${getInitials(bargainPlayer.name)}</span>`}
+                      </div>
+                      <div>
+                        <strong>${bargainPlayer.name}</strong>
+                        <span>${fmt(bargainPlayer.soldPrice)}</span>
+                      </div>
+                    </div>
+                  ` : `
+                    <div class="result-team-highlight-empty">Awaiting first bargain</div>
+                  `}
+                </div>
+              </div>
+
+              <div class="result-squad-list">
+                <div class="result-squad-list-heading">
+                  <span>Squad Sheet</span>
+                  <span>${squadSize} players</span>
+                </div>
+
+                ${sortedSquad.length > 0 ? sortedSquad.map((player, index) => {
+                  const roleConfig = ROLE_CONFIG[player.role] || {};
+                  return `
+                    <div class="result-squad-item">
+                      <div class="result-squad-player">
+                        <span class="result-squad-index">${String(index + 1).padStart(2, '0')}</span>
+                        <div class="result-squad-player-main">
+                          <span class="result-squad-player-name">${player.name}</span>
+                          <span class="result-squad-player-meta">${player.role}${player.isWK ? ' / WK' : ''}</span>
+                        </div>
+                      </div>
+                      <div class="result-squad-item-right">
+                        <span class="result-squad-role-tag" style="--role-color:${roleConfig.color || '#6366f1'};">
+                          ${roleConfig.icon || ''} ${player.role}
+                        </span>
+                        <span class="result-squad-price">${fmt(player.soldPrice)}</span>
+                      </div>
+                    </div>
+                  `;
+                }).join('') : `
+                  <div class="result-squad-empty">No players acquired</div>
+                `}
+              </div>
+
+              <div class="result-team-actions">
+                <button class="btn btn-ghost btn-sm poster-preview-btn" data-team-id="${team.id}">Preview Poster</button>
+                <button class="btn btn-primary btn-sm poster-download-btn" data-team-id="${team.id}">Download Poster</button>
+              </div>
+            </article>
+          `;
+        }).join('')}
       </div>
     `;
   }
@@ -2149,6 +3225,72 @@ export class UI {
   // TOAST NOTIFICATIONS
   // ═══════════════════════════════════════════
 
+  renderViewSkeleton(view = 'content') {
+    const labelMap = {
+      boot: 'Loading auction workspace',
+      awards: 'Preparing awards stage',
+      results: 'Loading analytics',
+      default: 'Loading view'
+    };
+    const label = labelMap[view] || labelMap.default;
+
+    this.mainEl.innerHTML = `
+      <div class="view-skeleton">
+        <div class="view-skeleton__hero shimmer"></div>
+        <div class="view-skeleton__grid">
+          <div class="view-skeleton__card shimmer"></div>
+          <div class="view-skeleton__card shimmer"></div>
+          <div class="view-skeleton__card shimmer"></div>
+        </div>
+        <div class="view-skeleton__footer">${label}</div>
+      </div>
+    `;
+  }
+
+  enhanceRenderedMedia(view = '') {
+    const imgNodes = document.querySelectorAll('#header img, #main img');
+    imgNodes.forEach((img) => {
+      if (!img.hasAttribute('decoding')) img.setAttribute('decoding', 'async');
+      if (!img.hasAttribute('loading')) {
+        const isPriorityImage = view === 'auction' && !!img.closest('#player-card');
+        img.setAttribute('loading', isPriorityImage ? 'eager' : 'lazy');
+      }
+
+      img.classList.add('smart-media');
+      if (img.complete) {
+        img.classList.add('is-ready');
+        return;
+      }
+
+      img.classList.remove('is-ready');
+      img.addEventListener('load', () => img.classList.add('is-ready'), { once: true });
+      img.addEventListener('error', () => img.classList.add('is-ready'), { once: true });
+    });
+  }
+
+  animateViewEntrance() {
+    this.mainEl.classList.remove('view-enter-active');
+    void this.mainEl.offsetWidth;
+    this.mainEl.classList.add('view-enter-active');
+  }
+
+  spawnInteractionRipple(event) {
+    const target = event.target.closest('.btn, .team-bid-btn, .score-btn, .filter-btn, .nav-link, .results-tab-btn, .awards-reveal-btn, .rules-download-btn');
+    if (!target || target.disabled) return;
+
+    target.classList.add('has-ripple');
+    const rect = target.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const ripple = document.createElement('span');
+    ripple.className = 'ui-ripple';
+    ripple.style.width = `${size}px`;
+    ripple.style.height = `${size}px`;
+    ripple.style.left = `${event.clientX - rect.left - size / 2}px`;
+    ripple.style.top = `${event.clientY - rect.top - size / 2}px`;
+    target.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+  }
+
   showToast(message, type = 'info', duration = 3000) {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
@@ -2166,13 +3308,15 @@ export class UI {
   // ═══════════════════════════════════════════
 
   /** Update just the bid amount display and SOLD button text */
-  updateBidDisplay(state) {
+  updateBidDisplay(state, { flash = true } = {}) {
     const amountEl = document.getElementById('bid-amount');
     if (amountEl) {
       amountEl.textContent = fmt(state.currentBid);
       amountEl.classList.remove('bid-flash');
-      void amountEl.offsetWidth; // trigger reflow
-      amountEl.classList.add('bid-flash');
+      if (flash) {
+        void amountEl.offsetWidth; // trigger reflow
+        amountEl.classList.add('bid-flash');
+      }
     }
 
     const soldBtn = document.getElementById('sold-btn');

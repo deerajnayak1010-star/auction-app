@@ -197,14 +197,41 @@ const server = http.createServer(async (req, res) => {
   const ext = path.extname(fullPath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
-  fs.readFile(fullPath, (err, data) => {
-    if (err) {
+  fs.stat(fullPath, (statErr, stat) => {
+    if (statErr || !stat?.isFile()) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       res.end('Not Found');
       return;
     }
-    res.writeHead(200, { 'Content-Type': contentType });
-    res.end(data);
+
+    const etag = `W/"${stat.size}-${Math.floor(stat.mtimeMs)}"`;
+    const cacheControl = ext === '.html' || ext === '.json'
+      ? 'no-cache'
+      : 'public, max-age=3600, must-revalidate';
+
+    if (req.headers['if-none-match'] === etag) {
+      res.writeHead(304, {
+        ETag: etag,
+        'Cache-Control': cacheControl,
+      });
+      res.end();
+      return;
+    }
+
+    fs.readFile(fullPath, (err, data) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not Found');
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        ETag: etag,
+        'Last-Modified': stat.mtime.toUTCString(),
+        'Cache-Control': cacheControl,
+      });
+      res.end(data);
+    });
   });
 });
 
@@ -258,6 +285,10 @@ function filterStateForMobile(state, teamId) {
     remainingPlayers: state.remainingPlayers,
     soldCount: state.soldCount,
     unsoldCount: state.unsoldCount,
+    timerRemaining: state.timerRemaining,
+    timerStartTime: state.timerStartTime || null,
+    timerDuration: state.timerDuration || 30,
+    timerEnabled: state.timerEnabled || false,
     myTeamId: teamId,
     bidHistory: (state.bidHistory || []).slice(-5),
     myTeam: state.teams ? state.teams.find(t => t.id === teamId) : null,

@@ -3,42 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>NPL Auction — Mobile Bidding</title>
+  <title>NPL Auction - Mobile Bidding</title>
   <meta name="description" content="Place your bids in the Nakre Premier League auction from your mobile device.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    /* ── Design Tokens ── */
     :root {
-      --bg-primary:    #070b1e;
-      --bg-secondary:  #0d1230;
-      --bg-card:       #131940;
-      --bg-surface:    #0f1535;
+      --bg-primary: #070b1e;
+      --bg-secondary: #0d1230;
+      --bg-card: #131940;
+      --bg-surface: #0f1535;
       --accent-indigo: #6366f1;
-      --accent-gold:   #f59e0b;
-      --accent-green:  #10b981;
-      --accent-red:    #ef4444;
-      --accent-blue:   #3b82f6;
+      --accent-gold: #f59e0b;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-blue: #3b82f6;
       --text-1: #f1f5f9;
       --text-2: #94a3b8;
       --text-3: #64748b;
       --text-4: #475569;
-      --border: rgba(255,255,255,0.06);
-      --border-light: rgba(255,255,255,0.1);
-      --glass: rgba(255,255,255,0.03);
-      --glass-heavy: rgba(255,255,255,0.06);
-      --radius-sm:  8px;
-      --radius-md:  12px;
-      --radius-lg:  16px;
-      --radius-xl:  24px;
+      --border: rgba(255, 255, 255, 0.06);
+      --border-light: rgba(255, 255, 255, 0.1);
+      --glass: rgba(255, 255, 255, 0.03);
+      --glass-heavy: rgba(255, 255, 255, 0.06);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
       --radius-full: 9999px;
-      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-fast: 220ms ease-in-out;
+      --transition-medium: 280ms ease-in-out;
+      --shadow-soft: 0 16px 40px rgba(0, 0, 0, 0.22);
+      --timer-progress: 100;
     }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+    html {
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
 
     body {
       font-family: 'Inter', system-ui, sans-serif;
@@ -54,8 +63,8 @@
       position: fixed;
       inset: 0;
       background:
-        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(99,102,241,0.08), transparent),
-        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(236,72,153,0.06), transparent);
+        radial-gradient(ellipse 78% 58% at 18% 10%, rgba(99, 102, 241, 0.12), transparent),
+        radial-gradient(ellipse 60% 48% at 82% 92%, rgba(59, 130, 246, 0.08), transparent);
       pointer-events: none;
       z-index: 0;
     }
@@ -69,9 +78,8 @@
       flex-direction: column;
     }
 
-    /* ── Header ── */
     .mobile-header {
-      background: rgba(7,11,30,0.9);
+      background: rgba(7, 11, 30, 0.9);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
@@ -88,21 +96,28 @@
       font-family: 'Outfit', sans-serif;
       font-size: 1rem;
       font-weight: 800;
+      letter-spacing: 0.03em;
       background: linear-gradient(135deg, var(--accent-gold), var(--accent-indigo));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
 
+    .mobile-connection,
     .mobile-team-badge {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 4px 12px;
+      gap: 8px;
+      padding: 6px 12px;
       border-radius: var(--radius-full);
       font-size: 0.75rem;
       font-weight: 700;
-      border: 1px solid rgba(255,255,255,0.15);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .mobile-connection {
+      color: var(--text-2);
     }
 
     .connection-dot {
@@ -110,15 +125,20 @@
       height: 8px;
       border-radius: 50%;
       background: var(--accent-green);
-      animation: pulse-dot 2s ease infinite;
+      box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.12);
+      animation: pulseDot 2s ease infinite;
+      flex: 0 0 auto;
     }
+
     .connection-dot.disconnected {
       background: var(--accent-red);
+      box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.12);
       animation: none;
     }
 
-    /* ── Login Screen ── */
-    .login-screen {
+    .login-screen,
+    .expired-screen,
+    .waiting-screen {
       flex: 1;
       display: flex;
       align-items: center;
@@ -126,36 +146,69 @@
       padding: 24px;
     }
 
-    .login-card {
+    .login-card,
+    .expired-card,
+    .state-card {
       width: 100%;
-      max-width: 380px;
-      padding: 40px 32px;
+      max-width: 420px;
+      padding: 28px 24px;
       border-radius: var(--radius-xl);
-      background: var(--bg-card);
+      background: linear-gradient(180deg, rgba(19, 25, 64, 0.96), rgba(13, 18, 48, 0.94));
       border: 1px solid var(--border);
-      text-align: center;
-      animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: var(--shadow-soft);
+      animation: slideInUp 420ms cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    .login-icon {
-      font-size: 3.5rem;
+    .login-card,
+    .expired-card {
+      text-align: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-2);
       margin-bottom: 16px;
     }
 
-    .login-title {
+    .login-title,
+    .expired-card h2,
+    .state-title,
+    .mobile-player-name {
       font-family: 'Outfit', sans-serif;
-      font-size: 1.6rem;
+    }
+
+    .login-title {
+      font-size: 1.65rem;
       font-weight: 800;
-      margin-bottom: 6px;
-      background: linear-gradient(135deg, #fff, var(--accent-gold));
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #ffffff, var(--accent-gold));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .login-subtitle,
+    .expired-card p,
+    .state-copy,
+    .helper-copy,
+    .login-hint {
+      color: var(--text-3);
+      line-height: 1.55;
     }
 
     .login-subtitle {
-      font-size: 0.85rem;
-      color: var(--text-3);
-      margin-bottom: 28px;
+      font-size: 0.92rem;
+      margin-bottom: 24px;
     }
 
     .login-input {
@@ -165,121 +218,331 @@
       border: 2px solid var(--border-light);
       background: var(--bg-surface);
       color: var(--text-1);
-      font-size: 1.2rem;
+      font-size: 1.15rem;
       font-family: 'Outfit', sans-serif;
       font-weight: 700;
       text-align: center;
-      letter-spacing: 4px;
+      letter-spacing: 0.28em;
       text-transform: uppercase;
       outline: none;
-      transition: var(--transition);
-      margin-bottom: 16px;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+      margin-bottom: 14px;
     }
+
     .login-input:focus {
       border-color: var(--accent-indigo);
-      box-shadow: 0 0 0 4px rgba(99,102,241,0.15);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.16);
+      transform: translateY(-1px);
     }
+
     .login-input::placeholder {
-      letter-spacing: 1px;
+      letter-spacing: 0.08em;
       text-transform: none;
       font-size: 0.9rem;
-      font-weight: 400;
+      font-weight: 500;
       color: var(--text-4);
     }
 
-    .login-btn {
+    .action-btn,
+    .login-btn,
+    .place-bid-btn,
+    .secondary-btn {
+      border: none;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition:
+        transform var(--transition-fast),
+        box-shadow var(--transition-fast),
+        opacity var(--transition-fast),
+        background-color var(--transition-fast),
+        color var(--transition-fast);
+    }
+
+    .login-btn,
+    .secondary-btn {
       width: 100%;
       padding: 14px 24px;
       border-radius: var(--radius-md);
-      border: none;
-      background: linear-gradient(135deg, var(--accent-indigo), #8b5cf6);
-      color: #fff;
-      font-family: 'Inter', sans-serif;
-      font-size: 1rem;
+      font-size: 0.98rem;
       font-weight: 700;
-      cursor: pointer;
-      transition: var(--transition);
-      box-shadow: 0 4px 16px rgba(99,102,241,0.3);
     }
-    .login-btn:hover { box-shadow: 0 6px 24px rgba(99,102,241,0.45); transform: translateY(-1px); }
-    .login-btn:active { transform: scale(0.97); }
-    .login-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .login-btn {
+      background: linear-gradient(135deg, var(--accent-indigo), #8b5cf6);
+      color: #ffffff;
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.28);
+    }
+
+    .login-btn:hover,
+    .secondary-btn:hover,
+    .place-bid-btn.can-bid:hover {
+      transform: translateY(-1px);
+    }
+
+    .login-btn:active,
+    .secondary-btn:active,
+    .place-bid-btn:active {
+      transform: scale(0.96);
+    }
+
+    .login-btn:disabled,
+    .place-bid-btn:disabled,
+    .secondary-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .login-error,
+    .status-bar,
+    .network-banner,
+    .helper-chip {
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
 
     .login-error {
       margin-top: 14px;
-      padding: 10px 16px;
-      border-radius: var(--radius-sm);
-      background: rgba(239,68,68,0.1);
-      border: 1px solid rgba(239,68,68,0.2);
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.25);
       color: var(--accent-red);
-      font-size: 0.82rem;
-      animation: shake 0.4s ease;
+      animation: shake 320ms ease;
     }
 
     .login-hint {
-      margin-top: 20px;
-      font-size: 0.72rem;
-      color: var(--text-4);
-      line-height: 1.5;
+      margin-top: 18px;
+      font-size: 0.76rem;
     }
 
-    /* ── Bidding Screen ── */
     .bid-screen {
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 16px;
       gap: 16px;
+      padding: 16px;
       overflow-y: auto;
     }
 
-    /* Team stats banner */
-    .team-stats-bar {
-      display: flex;
-      gap: 8px;
+    .status-bar {
+      animation: fadeIn 220ms ease;
     }
+
+    .status-bar.info {
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.24);
+      color: #c7d2fe;
+    }
+
+    .status-bar.warning {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.24);
+      color: #fcd34d;
+    }
+
+    .status-bar.sold {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.24);
+      color: #86efac;
+    }
+
+    .status-bar.unsold {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.24);
+      color: #fca5a5;
+    }
+
+    .network-banner {
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.26);
+      color: #bfdbfe;
+    }
+
+    .team-stats-bar {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
     .team-stat-item {
-      flex: 1;
-      padding: 10px 8px;
+      padding: 12px 10px;
       border-radius: var(--radius-md);
-      background: var(--bg-card);
+      background: linear-gradient(180deg, rgba(19, 25, 64, 0.96), rgba(15, 21, 53, 0.92));
       border: 1px solid var(--border);
       text-align: center;
     }
+
     .team-stat-label {
-      font-size: 0.6rem;
+      font-size: 0.66rem;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.08em;
       color: var(--text-4);
-      font-weight: 600;
+      font-weight: 700;
     }
+
     .team-stat-value {
       font-family: 'Outfit', sans-serif;
-      font-size: 1.1rem;
+      font-size: 1.08rem;
       font-weight: 800;
+      margin-top: 4px;
       color: var(--accent-gold);
-      margin-top: 2px;
     }
-    .team-stat-value.purse { color: var(--accent-green); }
-    .team-stat-value.squad { color: var(--accent-indigo); }
 
-    /* Player card */
+    .team-stat-value.purse {
+      color: #6ee7b7;
+    }
+
+    .team-stat-value.squad {
+      color: #a5b4fc;
+    }
+
+    .timer-card {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 14px;
+      align-items: center;
+      padding: 16px;
+      border-radius: var(--radius-xl);
+      background: linear-gradient(180deg, rgba(19, 25, 64, 0.96), rgba(15, 21, 53, 0.94));
+      border: 1px solid rgba(99, 102, 241, 0.14);
+      box-shadow: var(--shadow-soft);
+      transition: border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .timer-card.is-warning {
+      border-color: rgba(245, 158, 11, 0.38);
+      box-shadow: 0 14px 36px rgba(245, 158, 11, 0.14);
+    }
+
+    .timer-card.is-critical {
+      border-color: rgba(239, 68, 68, 0.44);
+      box-shadow: 0 14px 36px rgba(239, 68, 68, 0.16);
+      animation: timerUrgent 1.4s ease-in-out infinite;
+    }
+
+    .timer-ring {
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
+      position: relative;
+      background: conic-gradient(
+        var(--accent-indigo) calc(var(--timer-progress, 100) * 1%),
+        rgba(255, 255, 255, 0.08) 0
+      );
+      flex: 0 0 auto;
+    }
+
+    .timer-card.is-warning .timer-ring {
+      background: conic-gradient(
+        var(--accent-gold) calc(var(--timer-progress, 100) * 1%),
+        rgba(255, 255, 255, 0.08) 0
+      );
+    }
+
+    .timer-card.is-critical .timer-ring {
+      background: conic-gradient(
+        var(--accent-red) calc(var(--timer-progress, 100) * 1%),
+        rgba(255, 255, 255, 0.08) 0
+      );
+    }
+
+    .timer-ring::before {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      background: var(--bg-surface);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .timer-ring__text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.18rem;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+    }
+
+    .timer-copy {
+      min-width: 0;
+    }
+
+    .timer-eyebrow {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-4);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .timer-label {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.16rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 4px;
+    }
+
+    .timer-note {
+      color: var(--text-2);
+      font-size: 0.82rem;
+      line-height: 1.45;
+      margin-bottom: 10px;
+    }
+
+    .timer-progress {
+      height: 8px;
+      border-radius: var(--radius-full);
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+
+    .timer-progress__fill {
+      height: 100%;
+      width: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent-indigo), #8b5cf6);
+      transition: width 160ms linear, background var(--transition-fast);
+    }
+
+    .timer-card.is-warning .timer-progress__fill {
+      background: linear-gradient(90deg, #f59e0b, #f97316);
+    }
+
+    .timer-card.is-critical .timer-progress__fill {
+      background: linear-gradient(90deg, #ef4444, #fb7185);
+    }
+
+    .mobile-player-card,
+    .bid-display,
+    .helper-panel {
+      border-radius: var(--radius-xl);
+      background: linear-gradient(180deg, rgba(19, 25, 64, 0.96), rgba(15, 21, 53, 0.92));
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
+    }
+
     .mobile-player-card {
       padding: 24px;
-      border-radius: var(--radius-xl);
-      background: var(--bg-card);
-      border: 1px solid var(--border);
       text-align: center;
-      animation: slideInUp 0.4s ease;
     }
+
     .mobile-player-card.active {
-      border-color: var(--accent-indigo);
-      box-shadow: 0 0 30px rgba(99,102,241,0.15);
+      border-color: rgba(99, 102, 241, 0.24);
+      box-shadow: 0 18px 42px rgba(99, 102, 241, 0.15);
     }
 
     .mobile-player-avatar {
-      width: 90px;
-      height: 90px;
+      width: 92px;
+      height: 92px;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -288,10 +551,12 @@
       font-family: 'Outfit', sans-serif;
       font-size: 1.8rem;
       font-weight: 800;
-      color: #fff;
+      color: #ffffff;
       overflow: hidden;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      background: linear-gradient(135deg, var(--accent-indigo), #8b5cf6);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
     }
+
     .mobile-player-avatar img {
       width: 100%;
       height: 100%;
@@ -300,10 +565,9 @@
     }
 
     .mobile-player-name {
-      font-family: 'Outfit', sans-serif;
-      font-size: 1.4rem;
-      font-weight: 700;
-      margin-bottom: 6px;
+      font-size: 1.42rem;
+      font-weight: 800;
+      margin-bottom: 8px;
     }
 
     .mobile-player-meta {
@@ -312,43 +576,55 @@
       justify-content: center;
       gap: 8px;
       flex-wrap: wrap;
-      margin-bottom: 6px;
-      font-size: 0.78rem;
+      margin-bottom: 8px;
       color: var(--text-2);
+      font-size: 0.78rem;
     }
 
-    .mobile-badge {
-      padding: 3px 10px;
+    .mobile-badge,
+    .helper-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 4px 10px;
       border-radius: var(--radius-full);
-      font-size: 0.7rem;
-      font-weight: 600;
-    }
-
-    .mobile-player-base {
-      font-size: 0.8rem;
-      color: var(--text-3);
-      margin-top: 4px;
-    }
-    .mobile-player-base span {
-      color: var(--accent-gold);
+      font-size: 0.72rem;
       font-weight: 700;
     }
 
-    /* Bid display */
-    .bid-display {
-      padding: 20px;
-      border-radius: var(--radius-lg);
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      text-align: center;
+    .mobile-badge.role {
+      color: #c7d2fe;
+      background: rgba(99, 102, 241, 0.16);
     }
 
-    .bid-amount-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
+    .mobile-badge.wk {
+      color: #a7f3d0;
+      background: rgba(16, 185, 129, 0.14);
+    }
+
+    .mobile-player-base {
+      font-size: 0.84rem;
       color: var(--text-3);
-      font-weight: 600;
+    }
+
+    .mobile-player-base span {
+      color: var(--accent-gold);
+      font-weight: 800;
+    }
+
+    .bid-display {
+      padding: 20px;
+    }
+
+    .bid-amount-label,
+    .bid-next-info,
+    .bid-meta-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-4);
+      font-weight: 700;
     }
 
     .bid-amount-value {
@@ -356,293 +632,367 @@
       font-size: 2.5rem;
       font-weight: 900;
       color: var(--accent-gold);
-      margin: 4px 0;
-      transition: var(--transition);
+      margin: 4px 0 8px;
+      transition: transform var(--transition-fast), color var(--transition-fast);
     }
 
     .bid-amount-team {
-      font-size: 0.85rem;
-      color: var(--text-2);
-      margin-bottom: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .bid-amount-team.leader-live {
+      animation: leaderGlow 1.8s ease-in-out infinite;
+    }
+
+    .leader-pulse {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.06);
     }
 
     .bid-next-info {
-      font-size: 0.72rem;
-      color: var(--text-4);
+      color: var(--text-3);
+      margin-bottom: 12px;
     }
 
-    /* Bid history mini */
     .bid-history-mini {
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      margin-top: 12px;
+      gap: 6px;
+      margin-top: 10px;
     }
+
     .bid-mini-entry {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 6px 10px;
+      gap: 10px;
+      padding: 8px 10px;
       border-radius: var(--radius-sm);
       background: var(--glass-heavy);
-      font-size: 0.72rem;
-    }
-    .bid-mini-team {
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .bid-mini-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-    }
-    .bid-mini-amount {
-      color: var(--accent-gold);
-      font-weight: 700;
+      font-size: 0.75rem;
     }
 
-    /* Place bid button */
+    .bid-mini-team {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      font-weight: 700;
+      color: var(--text-1);
+    }
+
+    .bid-mini-team span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bid-mini-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+
+    .bid-mini-amount {
+      color: var(--accent-gold);
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+
+    .helper-panel {
+      padding: 16px;
+    }
+
+    .helper-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .helper-heading {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .helper-chip {
+      background: rgba(99, 102, 241, 0.14);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      color: #c7d2fe;
+      flex: 0 0 auto;
+    }
+
+    .helper-chip.warning {
+      color: #fcd34d;
+      background: rgba(245, 158, 11, 0.14);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+
+    .helper-chip.danger {
+      color: #fca5a5;
+      background: rgba(239, 68, 68, 0.14);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    .helper-copy {
+      font-size: 0.84rem;
+    }
+
     .bid-action-area {
       margin-top: auto;
-      padding: 8px 0 env(safe-area-inset-bottom, 8px);
+      padding-bottom: env(safe-area-inset-bottom, 8px);
     }
 
     .place-bid-btn {
       width: 100%;
       padding: 18px 24px;
       border-radius: var(--radius-lg);
-      border: none;
       font-family: 'Outfit', sans-serif;
-      font-size: 1.3rem;
+      font-size: 1.24rem;
       font-weight: 800;
-      cursor: pointer;
-      transition: var(--transition);
+      letter-spacing: 0.02em;
       position: relative;
       overflow: hidden;
-      letter-spacing: 0.5px;
     }
+
     .place-bid-btn.can-bid {
       background: linear-gradient(135deg, var(--accent-green), #059669);
-      color: #fff;
-      box-shadow: 0 6px 24px rgba(16,185,129,0.35);
-      animation: gentle-pulse 2s ease-in-out infinite;
+      color: #ffffff;
+      box-shadow: 0 12px 30px rgba(16, 185, 129, 0.28);
+      animation: gentlePulse 2s ease-in-out infinite;
     }
-    .place-bid-btn.can-bid:hover {
-      box-shadow: 0 8px 32px rgba(16,185,129,0.5);
-      transform: translateY(-2px);
-    }
-    .place-bid-btn.can-bid:active { transform: scale(0.97); animation: none; }
 
     .place-bid-btn.is-highest {
       background: linear-gradient(135deg, var(--accent-gold), #d97706);
-      color: #fff;
-      cursor: default;
-      animation: none;
+      color: #ffffff;
     }
 
-    .place-bid-btn:disabled {
-      background: var(--glass-heavy);
-      color: var(--text-4);
-      cursor: not-allowed;
-      box-shadow: none;
-      animation: none;
+    .place-bid-btn.is-pending {
+      background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+      color: #ffffff;
+      box-shadow: 0 12px 30px rgba(59, 130, 246, 0.24);
+    }
+
+    .place-bid-btn.is-muted {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-3);
     }
 
     .bid-btn-subtitle {
       display: block;
-      font-size: 0.75rem;
-      font-weight: 500;
-      opacity: 0.8;
-      margin-top: 2px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      opacity: 0.86;
+      margin-top: 4px;
       font-family: 'Inter', sans-serif;
+      letter-spacing: 0;
     }
 
-    /* Waiting screen */
-    .waiting-screen {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 24px;
+    .secondary-btn {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-top: 16px;
     }
 
-    .waiting-content h2 {
-      font-family: 'Outfit', sans-serif;
-      font-size: 1.5rem;
-      color: var(--text-2);
+    .state-title {
+      font-size: 1.42rem;
+      font-weight: 800;
       margin-bottom: 8px;
     }
-    .waiting-content p {
-      color: var(--text-3);
+
+    .state-copy {
       font-size: 0.9rem;
     }
-    .waiting-icon {
-      font-size: 3rem;
-      margin-bottom: 16px;
-      animation: bounce 1.5s ease infinite;
-    }
 
-    /* Status messages */
-    .status-bar {
-      padding: 10px 16px;
-      border-radius: var(--radius-md);
-      text-align: center;
-      font-size: 0.82rem;
-      font-weight: 600;
-      animation: fadeIn 0.3s ease;
-    }
-    .status-bar.sold {
-      background: rgba(16,185,129,0.1);
-      border: 1px solid rgba(16,185,129,0.2);
-      color: var(--accent-green);
-    }
-    .status-bar.unsold {
-      background: rgba(239,68,68,0.1);
-      border: 1px solid rgba(239,68,68,0.2);
-      color: var(--accent-red);
-    }
-    .status-bar.info {
-      background: rgba(99,102,241,0.1);
-      border: 1px solid rgba(99,102,241,0.2);
-      color: var(--accent-indigo);
-    }
-    .status-bar.warning {
-      background: rgba(245,158,11,0.1);
-      border: 1px solid rgba(245,158,11,0.2);
-      color: var(--accent-gold);
-    }
-
-    /* Confirm overlay */
-    .confirm-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 200;
-      animation: fadeIn 0.2s ease;
-      padding: 24px;
-    }
-    .confirm-card {
-      width: 100%;
-      max-width: 340px;
-      padding: 32px 24px;
-      border-radius: var(--radius-xl);
-      background: var(--bg-card);
-      border: 1px solid var(--border-light);
-      text-align: center;
-      animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .confirm-card h3 {
-      font-family: 'Outfit', sans-serif;
-      font-size: 1.2rem;
-      margin-bottom: 6px;
-    }
-    .confirm-card p {
-      font-size: 0.85rem;
-      color: var(--text-3);
-      margin-bottom: 20px;
-    }
-    .confirm-amount {
-      font-family: 'Outfit', sans-serif;
-      font-size: 2rem;
-      font-weight: 900;
-      color: var(--accent-gold);
-      margin: 8px 0 16px;
-    }
-    .confirm-actions {
-      display: flex;
+    .state-metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
-    }
-    .confirm-btn {
-      flex: 1;
-      padding: 12px;
-      border-radius: var(--radius-md);
-      border: none;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.9rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-    .confirm-btn.yes {
-      background: linear-gradient(135deg, var(--accent-green), #059669);
-      color: #fff;
-    }
-    .confirm-btn.no {
-      background: var(--glass-heavy);
-      color: var(--text-2);
-      border: 1px solid var(--border);
+      margin-top: 18px;
     }
 
-    /* ── Animations ── */
-    @keyframes slideInUp {
-      from { opacity: 0; transform: translateY(30px); }
-      to   { opacity: 1; transform: translateY(0); }
+    .state-metric {
+      padding: 14px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
+
+    .state-metric .metric-label {
+      display: block;
+      color: var(--text-4);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .state-metric .metric-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text-1);
+    }
+
+    .skeleton-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .skeleton-line,
+    .skeleton-box {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .skeleton-line::after,
+    .skeleton-box::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+      animation: shimmer 1.3s ease-in-out infinite;
+    }
+
+    .skeleton-line {
+      height: 12px;
+    }
+
+    .skeleton-line.short {
+      width: 48%;
+    }
+
+    .skeleton-line.medium {
+      width: 76%;
+    }
+
+    .skeleton-box {
+      height: 98px;
+    }
+
+    .expired-card h2 {
+      font-size: 1.42rem;
+      color: #fca5a5;
+      margin-bottom: 8px;
+    }
+
+    .expired-card p {
+      font-size: 0.92rem;
+    }
+
+    .expired-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+    }
+
+    @keyframes slideInUp {
+      from {
+        opacity: 0;
+        transform: translateY(22px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; }
-      to   { opacity: 1; }
+      to { opacity: 1; }
     }
+
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
-      25%  { transform: translateX(-6px); }
-      75%  { transform: translateX(6px); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
     }
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50%      { transform: translateY(-10px); }
-    }
-    @keyframes pulse-dot {
+
+    @keyframes pulseDot {
       0%, 100% { opacity: 1; }
-      50%      { opacity: 0.4; }
-    }
-    @keyframes gentle-pulse {
-      0%, 100% { box-shadow: 0 6px 24px rgba(16,185,129,0.35); }
-      50%      { box-shadow: 0 6px 32px rgba(16,185,129,0.5); }
-    }
-    @keyframes bid-flash {
-      0%   { background: rgba(245,158,11,0.2); }
-      100% { background: transparent; }
+      50% { opacity: 0.45; }
     }
 
-    ::-webkit-scrollbar { width: 3px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    @keyframes leaderGlow {
+      0%, 100% { transform: translateY(0); filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)); }
+      50% { transform: translateY(-1px); filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.3)); }
+    }
 
-    /* Expired / Error screen */
-    .expired-screen {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
+    @keyframes gentlePulse {
+      0%, 100% { box-shadow: 0 12px 30px rgba(16, 185, 129, 0.28); }
+      50% { box-shadow: 0 14px 36px rgba(16, 185, 129, 0.4); }
     }
-    .expired-card {
-      max-width: 380px;
-      padding: 40px 32px;
-      border-radius: var(--radius-xl);
-      background: var(--bg-card);
-      border: 1px solid rgba(239,68,68,0.15);
-      text-align: center;
-      animation: slideInUp 0.6s ease;
+
+    @keyframes timerUrgent {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-1px); }
     }
-    .expired-card .expired-icon { font-size: 3rem; margin-bottom: 16px; }
-    .expired-card h2 {
-      font-family: 'Outfit', sans-serif;
-      font-size: 1.4rem;
-      color: var(--accent-red);
-      margin-bottom: 8px;
+
+    @keyframes shimmer {
+      100% {
+        transform: translateX(100%);
+      }
     }
-    .expired-card p {
-      font-size: 0.9rem;
-      color: var(--text-3);
-      line-height: 1.5;
+
+    @media (max-width: 360px) {
+      .mobile-header {
+        padding-inline: 16px;
+      }
+
+      .bid-screen {
+        padding-inline: 12px;
+      }
+
+      .team-stats-bar {
+        gap: 8px;
+      }
+
+      .timer-card {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
     }
   </style>
 </head>
@@ -650,397 +1000,699 @@
   <div id="mobile-app"></div>
 
   <script>
-    // ─────────────────────────────────────────────
-    // Mobile Bidding Client
-    // ─────────────────────────────────────────────
-
+    const TEAM_CODE_STORAGE_KEY = 'npl-mobile-team-code';
     const app = document.getElementById('mobile-app');
-
-    // Parse session token from URL
     const params = new URLSearchParams(window.location.search);
     const sessionToken = params.get('session');
 
-    // State
     let ws = null;
     let connected = false;
     let authenticated = false;
     let myTeam = null;
     let auctionState = null;
-    let showConfirm = false;
     let statusMessage = null;
     let statusTimeout = null;
+    let bidPending = false;
+    let renderFrame = 0;
+    let timerFrame = 0;
+    let lastTimerSecond = null;
+    let reconnectTeamCode = null;
+    let pendingTeamCode = loadSavedTeamCode();
+    let connectTimeout = null;
+    let wsRetries = 0;
 
-    // ── Format pts ──
-    function fmt(pts) {
-      return pts.toLocaleString('en-IN') + ' pts';
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[char]);
+    }
+
+    function fmt(points) {
+      return `${Number(points || 0).toLocaleString('en-IN')} pts`;
     }
 
     function getInitials(name) {
-      const parts = name.split(' ');
-      if (parts.length === 1) return parts[0][0].toUpperCase();
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 0) return '?';
+      if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
     }
 
-    // ── Render ──
-    function render() {
-      if (!sessionToken) {
-        renderExpired('Invalid Link', 'This link is not valid. Please scan the QR code again or contact the organizer.');
-        return;
+    function loadSavedTeamCode() {
+      try {
+        return (localStorage.getItem(TEAM_CODE_STORAGE_KEY) || '').trim().toUpperCase();
+      } catch (error) {
+        return '';
       }
+    }
 
-      if (!authenticated) {
-        renderLogin();
-        return;
+    function saveTeamCode(code) {
+      try {
+        localStorage.setItem(TEAM_CODE_STORAGE_KEY, code);
+      } catch (error) {
+        // Ignore storage errors on restrictive mobile browsers.
       }
+    }
 
-      renderBidding();
+    function pulseHaptic(pattern) {
+      if (!('vibrate' in navigator)) return;
+      try {
+        navigator.vibrate(pattern);
+      } catch (error) {
+        // Ignore haptic failures on unsupported devices.
+      }
+    }
+
+    function scheduleRender() {
+      if (renderFrame) return;
+      renderFrame = requestAnimationFrame(() => {
+        renderFrame = 0;
+        render();
+      });
+    }
+
+    function setStatus(text, type = 'info', duration = 3000) {
+      statusMessage = { text, type };
+      clearTimeout(statusTimeout);
+      scheduleRender();
+      if (duration > 0) {
+        statusTimeout = setTimeout(() => {
+          statusMessage = null;
+          scheduleRender();
+        }, duration);
+      }
+    }
+
+    function renderHeader() {
+      const badge = myTeam
+        ? `
+          <div class="mobile-team-badge" style="background:${escapeHtml(myTeam.teamColor)};color:${escapeHtml(myTeam.teamTextColor)};">
+            <span class="connection-dot ${connected ? '' : 'disconnected'}"></span>
+            <span>${escapeHtml(myTeam.teamShortName)}</span>
+          </div>
+        `
+        : `
+          <div class="mobile-connection">
+            <span class="connection-dot ${connected ? '' : 'disconnected'}"></span>
+            <span>${connected ? 'Connected' : 'Connecting...'}</span>
+          </div>
+        `;
+
+      return `
+        <header class="mobile-header">
+          <div class="mobile-brand">NPL AUCTION</div>
+          ${badge}
+        </header>
+      `;
     }
 
     function renderExpired(title, message) {
       app.innerHTML = `
-        <header class="mobile-header">
-          <div class="mobile-brand">NPL AUCTION</div>
-        </header>
+        ${renderHeader()}
         <div class="expired-screen">
           <div class="expired-card">
-            <div class="expired-icon">⚠️</div>
-            <h2>${title}</h2>
+            <div class="eyebrow">Session status</div>
+            <h2>${escapeHtml(title)}</h2>
             <p>${message}</p>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderLogin() {
-      // If login form already exists, just update the button state
-      const existingInput = document.getElementById('team-code-input');
-      if (existingInput) {
-        const btn = document.getElementById('login-btn');
-        if (btn && !btn.textContent.includes('Connecting')) {
-          btn.disabled = !connected;
-        }
-        // Update connection dot
-        const dot = document.querySelector('.connection-dot');
-        if (dot) {
-          dot.className = 'connection-dot' + (connected ? '' : ' disconnected');
-        }
-        const statusText = document.querySelector('.mobile-header span[style]');
-        if (statusText) {
-          statusText.textContent = connected ? 'Connected' : 'Connecting...';
-        }
-        return;
-      }
-
-      app.innerHTML = `
-        <header class="mobile-header">
-          <div class="mobile-brand">NPL AUCTION</div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <div class="connection-dot ${connected ? '' : 'disconnected'}"></div>
-            <span style="font-size:0.7rem;color:var(--text-4)">${connected ? 'Connected' : 'Connecting...'}</span>
-          </div>
-        </header>
-        <div class="login-screen">
-          <div class="login-card">
-            <div class="login-icon">🏏</div>
-            <div class="login-title">Team Login</div>
-            <div class="login-subtitle">Enter your team code to start bidding</div>
-            <input type="text" id="team-code-input" class="login-input"
-                   placeholder="e.g. BFC" maxlength="10" autocomplete="off" autofocus>
-            <button id="login-btn" class="login-btn" ${!connected ? 'disabled' : ''}>
-              🔑 Join Auction
-            </button>
-            <div id="login-error-area"></div>
-            <div class="login-hint">
-              Your team code is the short name assigned during setup.<br>
-              Ask the organizer if you don't know your code.
+            <div class="expired-actions">
+              <button id="expired-reload" class="secondary-btn">Reload page</button>
             </div>
           </div>
         </div>
       `;
 
-      // Bind events
-      const input = document.getElementById('team-code-input');
-      const btn = document.getElementById('login-btn');
-
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') doLogin();
+      document.getElementById('expired-reload')?.addEventListener('click', () => {
+        window.location.reload();
       });
-      btn.addEventListener('click', doLogin);
+    }
+
+    function renderLogin() {
+      app.innerHTML = `
+        ${renderHeader()}
+        <div class="login-screen">
+          <div class="login-card">
+            <div class="eyebrow">Mobile entry</div>
+            <div class="login-title">Team Login</div>
+            <div class="login-subtitle">Enter your team code once. Reconnects will resume automatically.</div>
+            <input
+              type="text"
+              id="team-code-input"
+              class="login-input"
+              placeholder="e.g. BFC"
+              maxlength="10"
+              autocomplete="one-time-code"
+              autocapitalize="characters"
+              spellcheck="false"
+              value="${escapeHtml(pendingTeamCode)}"
+            >
+            <button id="login-btn" class="login-btn" ${!connected ? 'disabled' : ''}>
+              ${connected ? 'Join Auction' : 'Connecting...'}
+            </button>
+            <div id="login-error-area"></div>
+            ${statusMessage ? `<div class="status-bar ${statusMessage.type}" style="margin-top:14px;">${escapeHtml(statusMessage.text)}</div>` : ''}
+            <div class="login-hint">
+              Use the short team code assigned during setup. The code is saved locally to speed up reconnects.
+            </div>
+          </div>
+        </div>
+      `;
+
+      const input = document.getElementById('team-code-input');
+      const button = document.getElementById('login-btn');
+      if (input) {
+        input.focus();
+        const length = input.value.length;
+        input.setSelectionRange(length, length);
+        input.addEventListener('input', () => {
+          input.value = input.value.toUpperCase();
+          pendingTeamCode = input.value.trim();
+        });
+        input.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            doLogin();
+          }
+        });
+      }
+      button?.addEventListener('click', doLogin);
+    }
+
+    function showLoginError(message) {
+      const area = document.getElementById('login-error-area');
+      if (area) {
+        area.innerHTML = `<div class="login-error">${escapeHtml(message)}</div>`;
+      }
+      const button = document.getElementById('login-btn');
+      if (button) {
+        button.disabled = !connected;
+        button.textContent = connected ? 'Join Auction' : 'Connecting...';
+      }
     }
 
     function doLogin() {
       const input = document.getElementById('team-code-input');
-      const code = input.value.trim();
-      if (!code) return;
+      const code = input?.value.trim().toUpperCase();
+      if (!code) {
+        showLoginError('Enter your team code to continue.');
+        return;
+      }
 
-      const btn = document.getElementById('login-btn');
-      btn.disabled = true;
-      btn.textContent = 'Connecting...';
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        showLoginError('Still connecting to the auction host. Try again in a moment.');
+        return;
+      }
+
+      pendingTeamCode = code;
+      const button = document.getElementById('login-btn');
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Joining...';
+      }
 
       ws.send(JSON.stringify({
         type: 'mobile-auth',
         teamCode: code,
-        sessionToken: sessionToken,
+        sessionToken
       }));
     }
 
-    function showLoginError(msg) {
-      const area = document.getElementById('login-error-area');
-      if (area) {
-        area.innerHTML = `<div class="login-error">${msg}</div>`;
+    function getTimerRemaining(state) {
+      if (!state || state.phase !== 'bidding' || !state.timerEnabled) return null;
+
+      if (state.timerStartTime) {
+        const startTime = Number(state.timerStartTime);
+        if (Number.isFinite(startTime)) {
+          const elapsed = (Date.now() - startTime) / 1000;
+          return Math.max(0, (state.timerDuration || 30) - elapsed);
+        }
       }
-      const btn = document.getElementById('login-btn');
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = '🔑 Join Auction';
+
+      if (typeof state.timerRemaining === 'number') {
+        return Math.max(0, state.timerRemaining);
       }
+
+      return null;
+    }
+
+    function getTimerViewModel(state, isMyBid) {
+      const remaining = getTimerRemaining(state);
+      if (remaining === null) return null;
+
+      const duration = Math.max(1, Number(state.timerDuration) || 30);
+      const progress = Math.max(0, Math.min(100, (remaining / duration) * 100));
+      const critical = remaining <= 5;
+      const warning = remaining <= 10;
+
+      let label = 'Bid window open';
+      if (critical) label = 'Final call';
+      else if (warning) label = 'Closing soon';
+
+      let note = 'First tap sends your next bid instantly.';
+      if (isMyBid) {
+        note = 'You are leading this round. Stay ready for a response.';
+      } else if (state.nextBidAmount) {
+        note = `Next tap submits ${fmt(state.nextBidAmount)}.`;
+      }
+
+      return {
+        seconds: remaining,
+        display: String(Math.ceil(remaining)),
+        progress,
+        label,
+        note,
+        critical,
+        warning
+      };
+    }
+
+    function getBidState(state, myTeamData, isMyBid) {
+      const squadCount = myTeamData?.squad?.length || 0;
+      const squadFull = squadCount >= 14;
+      const nextBid = isMyBid ? state.currentBid : state.nextBidAmount;
+      const slotsAfterBid = Math.max(0, 12 - squadCount - 1);
+      const reserve = slotsAfterBid * 1000;
+      const canAffordBid = Boolean(
+        state.phase === 'bidding' &&
+        myTeamData &&
+        !isMyBid &&
+        !squadFull &&
+        myTeamData.purse >= (nextBid || 0) + reserve
+      );
+
+      return {
+        canAffordBid,
+        nextBid,
+        reserve,
+        squadFull
+      };
+    }
+
+    function getBidHelper(state, myTeamData, isMyBid, bidState) {
+      if (!connected) {
+        return {
+          chip: 'Reconnect',
+          chipClass: 'warning',
+          message: 'The connection dropped. Your screen will rejoin automatically when the host is reachable again.'
+        };
+      }
+
+      if (bidPending) {
+        return {
+          chip: 'Sending',
+          chipClass: '',
+          message: 'Your bid is on the way to the host. The button stays locked until the response comes back.'
+        };
+      }
+
+      if (isMyBid) {
+        return {
+          chip: 'Leading',
+          chipClass: '',
+          message: 'You are already the highest bidder. Watch the timer and be ready if another team jumps in.'
+        };
+      }
+
+      if (!myTeamData) {
+        return {
+          chip: 'Syncing',
+          chipClass: '',
+          message: 'Team budget and squad data are still loading.'
+        };
+      }
+
+      if (bidState.squadFull) {
+        return {
+          chip: 'Squad full',
+          chipClass: 'danger',
+          message: 'Your squad limit is reached, so bidding is locked for the rest of this auction.'
+        };
+      }
+
+      if (!bidState.canAffordBid) {
+        return {
+          chip: 'Budget check',
+          chipClass: 'warning',
+          message: `You need ${fmt((bidState.nextBid || 0) + bidState.reserve)} available including reserve points for minimum remaining slots.`
+        };
+      }
+
+      return {
+        chip: 'One tap',
+        chipClass: '',
+        message: 'No confirmation screen. One tap submits the next legal bid instantly.'
+      };
+    }
+
+    function renderTimerCard(state, isMyBid) {
+      const timer = getTimerViewModel(state, isMyBid);
+      if (!timer) return '';
+
+      return `
+        <section id="timer-card" class="timer-card ${timer.critical ? 'is-critical' : timer.warning ? 'is-warning' : ''}">
+          <div id="timer-ring" class="timer-ring" style="--timer-progress:${timer.progress.toFixed(2)};">
+            <div id="timer-countdown" class="timer-ring__text">${timer.display}</div>
+          </div>
+          <div class="timer-copy">
+            <div class="timer-eyebrow">Round timer</div>
+            <div id="timer-label" class="timer-label">${timer.label}</div>
+            <div id="timer-note" class="timer-note">${timer.note}</div>
+            <div class="timer-progress">
+              <div id="timer-progress-fill" class="timer-progress__fill" style="width:${timer.progress.toFixed(2)}%;"></div>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderBidHistory(history) {
+      if (!history || history.length === 0) return '';
+      return `
+        <div class="bid-history-mini">
+          ${[...history].reverse().map((entry) => `
+            <div class="bid-mini-entry">
+              <div class="bid-mini-team">
+                <span class="bid-mini-dot" style="background:${escapeHtml(entry.teamColor)};"></span>
+                <span>${escapeHtml(entry.teamName)}</span>
+              </div>
+              <span class="bid-mini-amount">${fmt(entry.amount)}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function renderLoadingState() {
+      app.innerHTML = `
+        ${renderHeader()}
+        <div class="bid-screen">
+          ${statusMessage ? `<div class="status-bar ${statusMessage.type}">${escapeHtml(statusMessage.text)}</div>` : ''}
+          ${authenticated && !connected ? '<div class="network-banner">Reconnecting to the auction host. Your session and last team code are kept locally.</div>' : ''}
+          <div class="team-stats-bar">
+            <div class="team-stat-item"><div class="team-stat-label">Purse</div><div class="team-stat-value purse">--</div></div>
+            <div class="team-stat-item"><div class="team-stat-label">Squad</div><div class="team-stat-value squad">--</div></div>
+            <div class="team-stat-item"><div class="team-stat-label">Progress</div><div class="team-stat-value">--</div></div>
+          </div>
+          <section class="state-card">
+            <div class="eyebrow">Auction sync</div>
+            <div class="state-title">Loading current lot</div>
+            <div class="state-copy">This screen stays responsive while the latest auction state arrives.</div>
+            <div class="skeleton-stack">
+              <div class="skeleton-line medium"></div>
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-box"></div>
+              <div class="skeleton-line medium"></div>
+              <div class="skeleton-box"></div>
+            </div>
+          </section>
+        </div>
+      `;
     }
 
     function renderBidding() {
       if (!auctionState) {
-        app.innerHTML = `
-          <header class="mobile-header">
-            <div class="mobile-brand">NPL AUCTION</div>
-            <div class="mobile-team-badge" style="background:${myTeam.teamColor};color:${myTeam.teamTextColor}">
-              <div class="connection-dot" style="background:${connected ? 'lime':'red'}"></div>
-              ${myTeam.teamShortName}
-            </div>
-          </header>
-          <div class="waiting-screen">
-            <div class="waiting-content">
-              <div class="waiting-icon">⏳</div>
-              <h2>Waiting for Auction</h2>
-              <p>The auction hasn't started yet. Please wait for the organizer.</p>
-            </div>
-          </div>
-        `;
+        renderLoadingState();
         return;
       }
 
       const state = auctionState;
       const myTeamData = state.myTeam;
-      const isMyBid = state.currentBidder === myTeam.teamId;
+      const isMyBid = myTeam && state.currentBidder === myTeam.teamId;
+      const bidState = getBidState(state, myTeamData, isMyBid);
+      const helper = getBidHelper(state, myTeamData, isMyBid, bidState);
       const isBidding = state.phase === 'bidding';
       const isWaiting = state.phase === 'waiting';
       const isComplete = state.phase === 'complete';
 
-      // Check if team can afford bid
-      let canAffordBid = false;
-      if (myTeamData && isBidding) {
-        const nextBid = isMyBid ? state.currentBid : state.nextBidAmount;
-        const slotsAfter = Math.max(0, 12 - (myTeamData.squad?.length || 0) - 1);
-        const reserve = slotsAfter * 1000;
-        const squadFull = (myTeamData.squad?.length || 0) >= 14;
-        canAffordBid = !isMyBid && !squadFull && myTeamData.purse >= nextBid + reserve;
+      let phaseContent = '';
+      if (isComplete) {
+        phaseContent = `
+          <section class="state-card">
+            <div class="eyebrow">Auction complete</div>
+            <div class="state-title">All players processed</div>
+            <div class="state-copy">The auction has ended. Final squads are now locked in.</div>
+            <div class="state-metric-grid">
+              <div class="state-metric">
+                <span class="metric-label">Sold</span>
+                <span class="metric-value">${state.soldCount}</span>
+              </div>
+              <div class="state-metric">
+                <span class="metric-label">Unsold</span>
+                <span class="metric-value">${state.unsoldCount}</span>
+              </div>
+            </div>
+          </section>
+        `;
+      } else if (isWaiting) {
+        phaseContent = `
+          <section class="state-card">
+            <div class="eyebrow">Stand by</div>
+            <div class="state-title">Next player coming up</div>
+            <div class="state-copy">Stay on this screen. The next live lot will appear automatically.</div>
+            <div class="state-metric-grid">
+              <div class="state-metric">
+                <span class="metric-label">Current lot</span>
+                <span class="metric-value">${state.playerIndex + 1} / ${state.totalPlayers}</span>
+              </div>
+              <div class="state-metric">
+                <span class="metric-label">Remaining</span>
+                <span class="metric-value">${state.remainingPlayers}</span>
+              </div>
+            </div>
+          </section>
+        `;
+      } else if (isBidding) {
+        const currentBidder = state.currentBidderTeam
+          ? `
+            <div class="bid-amount-team ${state.currentBidder ? 'leader-live' : ''}" style="color:${escapeHtml(state.currentBidderTeam.color)};">
+              <span class="leader-pulse"></span>
+              <span>${escapeHtml(state.currentBidderTeam.shortName || state.currentBidderTeam.name)}${isMyBid ? ' (You)' : ''}</span>
+            </div>
+          `
+          : '<div class="bid-amount-team" style="color:var(--text-3);">No bids yet</div>';
+
+        const buttonClass = isMyBid
+          ? 'is-highest'
+          : bidPending
+            ? 'is-pending'
+            : bidState.canAffordBid && connected
+              ? 'can-bid'
+              : 'is-muted';
+
+        const buttonDisabled = !bidState.canAffordBid || isMyBid || bidPending || !connected;
+
+        let buttonLabel = 'Bid unavailable';
+        let buttonSubtitle = 'Budget or connection check failed.';
+        if (isMyBid) {
+          buttonLabel = 'You are highest bidder';
+          buttonSubtitle = 'Stay ready in case another team responds.';
+        } else if (bidPending) {
+          buttonLabel = 'Sending bid';
+          buttonSubtitle = 'Waiting for confirmation from the host.';
+        } else if (bidState.canAffordBid) {
+          buttonLabel = `Place bid - ${fmt(state.nextBidAmount)}`;
+          buttonSubtitle = 'One tap submits instantly.';
+        }
+
+        phaseContent = `
+          ${renderTimerCard(state, isMyBid)}
+          <section class="mobile-player-card active">
+            <div class="mobile-player-avatar">
+              ${state.currentPlayer?.image
+                ? `<img src="${escapeHtml(state.currentPlayer.image)}" alt="${escapeHtml(state.currentPlayer.name)}" decoding="async" loading="eager" fetchpriority="high">`
+                : escapeHtml(getInitials(state.currentPlayer?.name))}
+            </div>
+            <div class="mobile-player-name">${escapeHtml(state.currentPlayer?.name || 'Unknown player')}</div>
+            <div class="mobile-player-meta">
+              <span class="mobile-badge role">${escapeHtml(state.currentPlayer?.role || 'Player')}</span>
+              ${state.currentPlayer?.isWK ? '<span class="mobile-badge wk">WK</span>' : ''}
+              ${state.currentPlayer?.location ? `<span>${escapeHtml(state.currentPlayer.location)}</span>` : ''}
+            </div>
+            <div class="mobile-player-base">Base price: <span>${fmt(state.currentPlayer?.basePrice || 0)}</span></div>
+          </section>
+
+          <section class="bid-display">
+            <div class="bid-amount-label">Current bid</div>
+            <div class="bid-amount-value">${fmt(state.currentBid)}</div>
+            ${currentBidder}
+            <div class="bid-next-info">
+              ${!isMyBid && state.nextBidAmount ? `Next legal bid: ${fmt(state.nextBidAmount)} (+${fmt(state.increment)})` : 'Holding current highest bid.'}
+            </div>
+            ${renderBidHistory(state.bidHistory)}
+          </section>
+
+          <section class="helper-panel">
+            <div class="helper-row">
+              <div>
+                <div class="helper-heading">Fast lane bidding</div>
+                <div class="helper-copy">${escapeHtml(helper.message)}</div>
+              </div>
+              <div class="helper-chip ${helper.chipClass}">${escapeHtml(helper.chip)}</div>
+            </div>
+          </section>
+
+          <div class="bid-action-area">
+            <button id="place-bid-btn" class="place-bid-btn ${buttonClass}" ${buttonDisabled ? 'disabled' : ''}>
+              ${buttonLabel}
+              <span class="bid-btn-subtitle">${buttonSubtitle}</span>
+            </button>
+          </div>
+        `;
+      } else {
+        phaseContent = `
+          <section class="state-card">
+            <div class="eyebrow">Awaiting update</div>
+            <div class="state-title">Auction status is syncing</div>
+            <div class="state-copy">Stay on this page. The next state will be shown automatically.</div>
+          </section>
+        `;
       }
 
       app.innerHTML = `
-        <header class="mobile-header">
-          <div class="mobile-brand">NPL AUCTION</div>
-          <div class="mobile-team-badge" style="background:${myTeam.teamColor};color:${myTeam.teamTextColor}">
-            <div class="connection-dot" style="background:${connected ? 'lime':'red'}"></div>
-            ${myTeam.teamShortName}
-          </div>
-        </header>
-
+        ${renderHeader()}
         <div class="bid-screen">
-          ${statusMessage ? `<div class="status-bar ${statusMessage.type}">${statusMessage.text}</div>` : ''}
-
-          <!-- Team Stats -->
+          ${statusMessage ? `<div class="status-bar ${statusMessage.type}">${escapeHtml(statusMessage.text)}</div>` : ''}
+          ${authenticated && !connected ? '<div class="network-banner">Trying to reconnect. Your last team code will rejoin automatically.</div>' : ''}
           <div class="team-stats-bar">
             <div class="team-stat-item">
               <div class="team-stat-label">Purse</div>
-              <div class="team-stat-value purse">${myTeamData ? fmt(myTeamData.purse) : '—'}</div>
+              <div class="team-stat-value purse">${myTeamData ? fmt(myTeamData.purse) : '--'}</div>
             </div>
             <div class="team-stat-item">
               <div class="team-stat-label">Squad</div>
-              <div class="team-stat-value squad">${myTeamData ? myTeamData.squad?.length || 0 : 0}/14</div>
+              <div class="team-stat-value squad">${myTeamData ? `${myTeamData.squad?.length || 0}/14` : '--'}</div>
             </div>
             <div class="team-stat-item">
               <div class="team-stat-label">Progress</div>
               <div class="team-stat-value">${state.soldCount + state.unsoldCount}/${state.totalPlayers}</div>
             </div>
           </div>
-
-          ${isComplete ? `
-            <div class="waiting-screen" style="flex:1;">
-              <div class="waiting-content">
-                <div class="waiting-icon">🏆</div>
-                <h2>Auction Complete!</h2>
-                <p>${state.soldCount} sold • ${state.unsoldCount} unsold</p>
-              </div>
-            </div>
-          ` : isWaiting ? `
-            <div class="waiting-screen" style="flex:1;">
-              <div class="waiting-content">
-                <div class="waiting-icon">⏳</div>
-                <h2>Next Player Coming Up</h2>
-                <p>Player ${state.playerIndex + 1} of ${state.totalPlayers} • ${state.remainingPlayers} remaining</p>
-              </div>
-            </div>
-          ` : `
-            <!-- Player Card -->
-            <div class="mobile-player-card active">
-              <div class="mobile-player-avatar" style="background: linear-gradient(135deg, var(--accent-indigo), #8b5cf6);">
-                ${state.currentPlayer?.image
-                  ? `<img src="${state.currentPlayer.image}" alt="${state.currentPlayer.name}">`
-                  : getInitials(state.currentPlayer?.name || '?')}
-              </div>
-              <div class="mobile-player-name">${state.currentPlayer?.name || 'Unknown'}</div>
-              <div class="mobile-player-meta">
-                <span class="mobile-badge" style="background:rgba(99,102,241,0.15);color:var(--accent-indigo);">
-                  ${state.currentPlayer?.role || ''}
-                </span>
-                ${state.currentPlayer?.isWK ? '<span class="mobile-badge" style="background:rgba(16,185,129,0.15);color:var(--accent-green);">🧤 WK</span>' : ''}
-                <span>📍 ${state.currentPlayer?.location || ''}</span>
-              </div>
-              <div class="mobile-player-base">Base: <span>${fmt(state.currentPlayer?.basePrice || 0)}</span></div>
-            </div>
-
-            <!-- Bid Display -->
-            <div class="bid-display">
-              <div class="bid-amount-label">Current Bid</div>
-              <div class="bid-amount-value">${fmt(state.currentBid)}</div>
-              ${state.currentBidderTeam ? `
-                <div class="bid-amount-team" style="color:${state.currentBidderTeam.color}">
-                  🏆 ${state.currentBidderTeam.shortName || state.currentBidderTeam.name}
-                  ${isMyBid ? '<span style="color:var(--accent-gold);"> (You)</span>' : ''}
-                </div>
-              ` : '<div class="bid-amount-team">No bids yet</div>'}
-              <div class="bid-next-info">
-                ${!isMyBid && state.nextBidAmount ? `Next bid: ${fmt(state.nextBidAmount)} (+${fmt(state.increment)})` : ''}
-              </div>
-
-              ${state.bidHistory && state.bidHistory.length > 0 ? `
-                <div class="bid-history-mini">
-                  ${[...state.bidHistory].reverse().map(b => `
-                    <div class="bid-mini-entry">
-                      <span class="bid-mini-team">
-                        <span class="bid-mini-dot" style="background:${b.teamColor}"></span>
-                        ${b.teamName}
-                      </span>
-                      <span class="bid-mini-amount">${fmt(b.amount)}</span>
-                    </div>
-                  `).join('')}
-                </div>
-              ` : ''}
-            </div>
-          `}
-
-          ${isBidding ? `
-            <!-- Bid Button -->
-            <div class="bid-action-area">
-              <button id="place-bid-btn"
-                class="place-bid-btn ${isMyBid ? 'is-highest' : canAffordBid ? 'can-bid' : ''}"
-                ${!canAffordBid || isMyBid ? 'disabled' : ''}>
-                ${isMyBid
-                  ? '🏆 You are the highest bidder'
-                  : canAffordBid
-                    ? `💰 Place Bid — ${fmt(state.nextBidAmount)}<span class="bid-btn-subtitle">Tap to bid</span>`
-                    : '❌ Cannot bid'}
-              </button>
-            </div>
-          ` : ''}
+          ${phaseContent}
         </div>
-
-        ${showConfirm ? `
-          <div class="confirm-overlay" id="confirm-overlay">
-            <div class="confirm-card">
-              <h3>Confirm Bid</h3>
-              <p>You are about to place a bid of</p>
-              <div class="confirm-amount">${fmt(state.nextBidAmount)}</div>
-              <p style="font-size:0.75rem;">for <strong>${state.currentPlayer?.name}</strong></p>
-              <div class="confirm-actions">
-                <button class="confirm-btn no" id="confirm-no">Cancel</button>
-                <button class="confirm-btn yes" id="confirm-yes">✅ Confirm Bid</button>
-              </div>
-            </div>
-          </div>
-        ` : ''}
       `;
 
-      // Bind bid button
-      const bidBtn = document.getElementById('place-bid-btn');
-      if (bidBtn && canAffordBid && !isMyBid) {
-        bidBtn.addEventListener('click', () => {
-          showConfirm = true;
-          render();
-        });
+      document.getElementById('place-bid-btn')?.addEventListener('click', placeBid);
+      updateTimerDom();
+    }
+
+    function render() {
+      if (!sessionToken) {
+        stopTimerLoop();
+        renderExpired('Invalid link', 'This session link is not valid. Scan the latest QR code or ask the organizer for a fresh link.');
+        return;
       }
 
-      // Bind confirm overlay
-      if (showConfirm) {
-        document.getElementById('confirm-no')?.addEventListener('click', () => {
-          showConfirm = false;
-          render();
-        });
-        document.getElementById('confirm-yes')?.addEventListener('click', () => {
-          showConfirm = false;
-          placeBid();
-          render();
-        });
-        document.getElementById('confirm-overlay')?.addEventListener('click', (e) => {
-          if (e.target.id === 'confirm-overlay') {
-            showConfirm = false;
-            render();
-          }
-        });
+      if (!authenticated) {
+        stopTimerLoop();
+        renderLogin();
+        return;
       }
+
+      renderBidding();
+
+      if (auctionState?.phase === 'bidding' && auctionState?.timerEnabled) {
+        startTimerLoop();
+      } else {
+        stopTimerLoop();
+      }
+    }
+
+    function startTimerLoop() {
+      if (timerFrame) return;
+
+      const tick = () => {
+        if (!authenticated || !auctionState || auctionState.phase !== 'bidding' || !auctionState.timerEnabled) {
+          stopTimerLoop();
+          return;
+        }
+
+        updateTimerDom();
+        timerFrame = requestAnimationFrame(tick);
+      };
+
+      timerFrame = requestAnimationFrame(tick);
+    }
+
+    function stopTimerLoop() {
+      if (timerFrame) {
+        cancelAnimationFrame(timerFrame);
+        timerFrame = 0;
+      }
+      lastTimerSecond = null;
+    }
+
+    function updateTimerDom() {
+      const isMyBid = Boolean(myTeam && auctionState && auctionState.currentBidder === myTeam.teamId);
+      const timer = getTimerViewModel(auctionState, isMyBid);
+      if (!timer) return;
+
+      const card = document.getElementById('timer-card');
+      const ring = document.getElementById('timer-ring');
+      const countdown = document.getElementById('timer-countdown');
+      const label = document.getElementById('timer-label');
+      const note = document.getElementById('timer-note');
+      const fill = document.getElementById('timer-progress-fill');
+      if (!card || !ring || !countdown || !label || !note || !fill) return;
+
+      const second = Math.ceil(timer.seconds);
+      if (second !== lastTimerSecond) {
+        countdown.textContent = timer.display;
+        label.textContent = timer.label;
+        note.textContent = timer.note;
+        card.classList.toggle('is-warning', timer.warning && !timer.critical);
+        card.classList.toggle('is-critical', timer.critical);
+        lastTimerSecond = second;
+      }
+
+      ring.style.setProperty('--timer-progress', timer.progress.toFixed(2));
+      fill.style.width = `${timer.progress.toFixed(2)}%`;
     }
 
     function placeBid() {
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      if (bidPending) return;
+
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        setStatus('Connection lost. Reconnecting before the next bid.', 'warning', 3200);
+        return;
+      }
+
+      bidPending = true;
+      pulseHaptic(14);
       ws.send(JSON.stringify({ type: 'mobile-bid' }));
-      setStatus('Bid submitted...', 'info', 2000);
+      setStatus('Bid sent. Waiting for host confirmation.', 'info', 1800);
     }
-
-    function setStatus(text, type, duration = 3000) {
-      statusMessage = { text, type };
-      clearTimeout(statusTimeout);
-      statusTimeout = setTimeout(() => {
-        statusMessage = null;
-        render();
-      }, duration);
-    }
-
-    // ── WebSocket Connection ──
-    let wsRetries = 0;
-    let connectTimeout = null;
 
     function connectWS() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const url = `${protocol}//${window.location.host}`;
 
-      console.log('[Mobile] Connecting to:', url);
-
       try {
         ws = new WebSocket(url);
-      } catch (e) {
-        console.warn('WS connect failed:', e);
-        wsRetries++;
+      } catch (error) {
+        wsRetries += 1;
         if (wsRetries > 5) {
-          renderExpired('Connection Failed',
-            'Unable to connect to the auction server. Please make sure:<br><br>' +
-            '• Your device is on the <strong>same Wi-Fi</strong> as the host<br>' +
-            '• The URL includes port <strong>:3000</strong><br>' +
-            '• The auction server is running');
+          renderExpired(
+            'Connection failed',
+            'Unable to reach the auction server. Check that your phone is on the same Wi-Fi network and that the host is still running this session.'
+          );
         } else {
           setTimeout(connectWS, 3000);
         }
         return;
       }
 
-      // Timeout: if WS doesn't open within 8 seconds, show error
       clearTimeout(connectTimeout);
       connectTimeout = setTimeout(() => {
         if (!connected) {
-          wsRetries++;
+          wsRetries += 1;
           if (wsRetries > 3) {
-            renderExpired('Connection Timeout',
-              'Cannot reach the auction server. Please verify:<br><br>' +
-              '• You are on the <strong>same Wi-Fi network</strong><br>' +
-              '• Use the exact URL from the QR code<br>' +
-              '• URL should be like: <strong>http://192.168.x.x:3000/mobile.html?session=...</strong>');
+            renderExpired(
+              'Connection timeout',
+              'The server did not answer in time. Confirm that this device is on the same network as the auction host and reload this page if needed.'
+            );
           }
         }
       }, 8000);
@@ -1049,86 +1701,136 @@
         connected = true;
         wsRetries = 0;
         clearTimeout(connectTimeout);
-        console.log('[Mobile] WS connected');
-        render();
+
+        if (reconnectTeamCode) {
+          ws.send(JSON.stringify({
+            type: 'mobile-auth',
+            teamCode: reconnectTeamCode,
+            sessionToken
+          }));
+        }
+
+        scheduleRender();
       };
 
       ws.onmessage = (event) => {
-        let msg;
-        try { msg = JSON.parse(event.data); }
-        catch (e) { return; }
+        let message;
+        try {
+          message = JSON.parse(event.data);
+        } catch (error) {
+          return;
+        }
 
-        switch (msg.type) {
-          case 'auth-result':
-            if (msg.success) {
+        switch (message.type) {
+          case 'auth-result': {
+            const wasAuthenticated = authenticated;
+            if (message.success) {
               authenticated = true;
               myTeam = {
-                teamId: msg.teamId,
-                teamName: msg.teamName,
-                teamShortName: msg.teamShortName,
-                teamColor: msg.teamColor,
-                teamTextColor: msg.teamTextColor,
+                teamId: message.teamId,
+                teamName: message.teamName,
+                teamShortName: message.teamShortName,
+                teamColor: message.teamColor,
+                teamTextColor: message.teamTextColor
               };
-              console.log('[Mobile] Authenticated as', msg.teamShortName);
-              setStatus(`Welcome, ${msg.teamName}! 🏏`, 'info', 3000);
-              render();
+              reconnectTeamCode = pendingTeamCode || message.teamShortName;
+              saveTeamCode(reconnectTeamCode);
+              if (!wasAuthenticated) {
+                pulseHaptic([18, 40, 18]);
+                setStatus(`Welcome, ${message.teamName}.`, 'sold', 2200);
+              } else {
+                setStatus('Connection restored.', 'sold', 1500);
+              }
             } else {
-              showLoginError(msg.error);
+              authenticated = false;
+              myTeam = null;
+              auctionState = null;
+              bidPending = false;
+              reconnectTeamCode = null;
+              if (wasAuthenticated) {
+                stopTimerLoop();
+                renderExpired('Session ended', escapeHtml(message.error || 'Could not restore your session. Please scan the latest QR code.'));
+                return;
+              }
+              showLoginError(message.error);
             }
+            scheduleRender();
             break;
+          }
 
-          case 'state-update':
-            const prevBidder = auctionState?.currentBidder;
-            auctionState = msg.state;
+          case 'state-update': {
+            const previousState = auctionState;
+            const previousBidder = previousState?.currentBidder;
+            const previousPlayerKey = previousState?.currentPlayer?.id || previousState?.currentPlayer?.name || '';
 
-            // Show feedback when another team bids
-            if (myTeam && prevBidder === myTeam.teamId && msg.state.currentBidder !== myTeam.teamId) {
-              setStatus('⚡ Another team has outbid you!', 'warning', 3000);
+            auctionState = message.state;
+
+            const nextPlayerKey = auctionState?.currentPlayer?.id || auctionState?.currentPlayer?.name || '';
+            if (previousPlayerKey && nextPlayerKey !== previousPlayerKey) {
+              bidPending = false;
             }
 
-            showConfirm = false; // close confirm on state change
-            render();
+            if (myTeam && bidPending && auctionState.currentBidder === myTeam.teamId) {
+              bidPending = false;
+              setStatus('Bid locked in.', 'sold', 1500);
+            } else if (myTeam && previousBidder === myTeam.teamId && auctionState.currentBidder && auctionState.currentBidder !== myTeam.teamId) {
+              bidPending = false;
+              pulseHaptic([28, 60, 28]);
+              setStatus('Another team moved ahead. Tap once to answer back.', 'warning', 2600);
+            }
+
+            scheduleRender();
             break;
+          }
 
           case 'bid-result':
-            if (msg.success) {
-              setStatus('✅ Bid placed successfully!', 'sold', 2000);
+            if (message.success) {
+              pulseHaptic([18, 40, 18]);
+              setStatus('Bid accepted by the host.', 'sold', 1600);
             } else {
-              setStatus(`❌ ${msg.error}`, 'unsold', 3000);
+              bidPending = false;
+              pulseHaptic([35, 50, 35]);
+              setStatus(message.error || 'Bid could not be placed.', 'unsold', 2600);
             }
-            render();
+            scheduleRender();
             break;
 
           case 'kicked':
             authenticated = false;
             myTeam = null;
             auctionState = null;
-            renderExpired('Session Ended', msg.error || 'You have been disconnected.');
+            bidPending = false;
+            reconnectTeamCode = null;
+            stopTimerLoop();
+            renderExpired('Session ended', escapeHtml(message.error || 'You have been disconnected from this auction session.'));
             break;
 
           case 'host-disconnected':
-            setStatus('⚠️ Auction host disconnected', 'warning', 5000);
-            render();
+            setStatus('Auction host disconnected. Reconnect is in progress.', 'warning', 5000);
+            scheduleRender();
             break;
         }
       };
 
       ws.onclose = () => {
         connected = false;
-        console.log('[Mobile] WS disconnected');
-        render(); // Always update UI to show disconnected state
+        bidPending = false;
+        clearTimeout(connectTimeout);
         if (authenticated) {
-          setStatus('🔄 Reconnecting...', 'warning', 10000);
+          setStatus('Reconnecting to the host...', 'warning', 5000);
+        } else {
+          scheduleRender();
         }
-        setTimeout(connectWS, 3000);
+        setTimeout(connectWS, 2500);
       };
 
       ws.onerror = () => {
-        console.warn('[Mobile] WS error');
+        connected = false;
       };
     }
 
-    // ── Init ──
+    window.addEventListener('pagehide', stopTimerLoop);
+
     render();
     connectWS();
   </script>

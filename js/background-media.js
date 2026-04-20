@@ -1,6 +1,9 @@
 const DEFAULT_BACKGROUND_CONFIG = {
   poster: 'images/cricket-bg-poster.svg',
   defaultScene: 'stadium-drone',
+  loopWindowSeconds: 6.5,
+  loopRestartSeconds: 0.15,
+  readyTimeoutMs: 3200,
   fallbackPolicy: {
     disableOnReducedMotion: true,
     disableOnSaveData: true,
@@ -78,6 +81,8 @@ export class BackgroundMediaManager {
     this._prefersReducedMotion = window.matchMedia
       ? window.matchMedia('(prefers-reduced-motion: reduce)')
       : null;
+    this._readyTimeout = null;
+    this._loopWindowHandler = null;
   }
 
   async init() {
@@ -129,7 +134,7 @@ export class BackgroundMediaManager {
 
   async _loadConfig() {
     try {
-      const response = await fetch(this.configUrl, { cache: 'no-store' });
+      const response = await fetch(this.configUrl, { cache: 'force-cache' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const remoteConfig = await response.json();
       return this._normalizeConfig(remoteConfig);
@@ -192,6 +197,8 @@ export class BackgroundMediaManager {
     this.videoEl.setAttribute('playsinline', '');
     this.videoEl.setAttribute('muted', '');
     this.videoEl.setAttribute('preload', 'metadata');
+    this.videoEl.setAttribute('fetchpriority', 'low');
+    this._clearVideoTimers();
 
     sources.forEach((sourceDef) => {
       const source = document.createElement('source');
@@ -200,9 +207,27 @@ export class BackgroundMediaManager {
       this.videoEl.appendChild(source);
     });
 
+    const readyTimeoutMs = this.scene?.readyTimeoutMs || this.config.readyTimeoutMs || DEFAULT_BACKGROUND_CONFIG.readyTimeoutMs;
+    this._readyTimeout = window.setTimeout(() => {
+      if (!this.videoEl || this.stageEl?.dataset.mode === 'video') return;
+      this._setPosterMode('network-timeout');
+    }, readyTimeoutMs);
+
+    const loopWindowSeconds = this.scene?.loopWindowSeconds || this.config.loopWindowSeconds || DEFAULT_BACKGROUND_CONFIG.loopWindowSeconds;
+    const loopRestartSeconds = this.scene?.loopRestartSeconds || this.config.loopRestartSeconds || DEFAULT_BACKGROUND_CONFIG.loopRestartSeconds;
+    if (loopWindowSeconds > 0) {
+      this._loopWindowHandler = () => {
+        if (this.videoEl.currentTime >= loopWindowSeconds) {
+          this.videoEl.currentTime = loopRestartSeconds;
+        }
+      };
+      this.videoEl.addEventListener('timeupdate', this._loopWindowHandler);
+    }
+
     try {
       this.videoEl.load();
       await this.videoEl.play();
+      this._clearVideoTimers();
       this.stageEl.classList.add('is-video-ready');
       this.uiState = {
         active: true,
@@ -220,6 +245,7 @@ export class BackgroundMediaManager {
 
   _setPosterMode(reason) {
     if (this.videoEl) {
+      this._clearVideoTimers();
       this.videoEl.pause();
       this.videoEl.removeAttribute('src');
       this.videoEl.innerHTML = '';
@@ -259,6 +285,18 @@ export class BackgroundMediaManager {
     }
 
     return '';
+  }
+
+  _clearVideoTimers() {
+    if (this._readyTimeout) {
+      clearTimeout(this._readyTimeout);
+      this._readyTimeout = null;
+    }
+
+    if (this.videoEl && this._loopWindowHandler) {
+      this.videoEl.removeEventListener('timeupdate', this._loopWindowHandler);
+      this._loopWindowHandler = null;
+    }
   }
 
   _resolveUrl(value) {

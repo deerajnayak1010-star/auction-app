@@ -4,17 +4,14 @@
 
 import { TEAMS_DATA, PLAYERS_DATA } from './data.js';
 import { AuctionEngine } from './auction.js';
-import { UI } from './ui.js';
-import { generateTeamPoster, downloadCanvas, downloadAllPosters, showPosterPreview } from './poster.js';
+import { UI } from './ui.js?v=4';
 import { WSClient } from './ws-client.js';
 import { AuctionSounds } from './sounds.js';
 import { CommentaryEngine } from './commentary.js';
 import { ScorecardManager } from './scorecard.js';
 import { StandingsEngine } from './standings.js';
 import { PlayerCardsEngine } from './player-cards.js';
-import { LiveMatchEngine } from './live-match.js';
 import { GalleryManager } from './gallery.js';
-import { AwardsEngine } from './awards.js';
 import { BackgroundMediaManager } from './background-media.js';
 
 class App {
@@ -63,20 +60,36 @@ class App {
     this.awardsRevealedCount = 0;
     this.fixturesLocked = localStorage.getItem('npl_fixtures_locked') === '1';
     this.backgroundMedia = new BackgroundMediaManager();
+    this._syncViewportMetrics = () => this.syncViewportMetrics();
+    this._featurePromises = Object.create(null);
+    this._stateSyncTimer = null;
+    this._stateSyncInFlight = null;
+    this._stateSyncQueued = false;
+    this._pendingStateStr = null;
+    this._lastSyncedStateStr = null;
   }
 
   async init() {
+    this.ui.renderViewSkeleton('boot');
+
     // Listen to hash changes for routing
     window.addEventListener('hashchange', () => this.onHashChange());
 
     // Delegate all click events from #app
     document.getElementById('app').addEventListener('click', (e) => this.onClick(e));
+    document.getElementById('app').addEventListener('pointerdown', (e) => this.ui.spawnInteractionRipple(e));
 
     // Close header menus when the pointer/click leaves their trigger areas
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.hamburger-menu') && !e.target.closest('.nav-more-menu')) {
         this._closeHeaderMenus();
       }
+    });
+
+    window.addEventListener('resize', this._syncViewportMetrics);
+    window.visualViewport?.addEventListener('resize', this._syncViewportMetrics);
+    window.addEventListener('pagehide', () => {
+      this.flushStateSync({ keepalive: true }).catch(() => {});
     });
 
     // Fullscreen change listener
@@ -111,6 +124,17 @@ class App {
     this.render();
   }
 
+  syncViewportMetrics() {
+    document.documentElement.style.setProperty('--viewport-height', `${window.innerHeight}px`);
+    document.body.classList.toggle('app-fullscreen', !!document.fullscreenElement);
+
+    const header = document.getElementById('header');
+    if (header) {
+      const headerHeight = Math.ceil(header.getBoundingClientRect().height);
+      document.documentElement.style.setProperty('--header-safe-height', `${headerHeight}px`);
+    }
+  }
+
   // ═══════════════════════════════════════════
   // WEBSOCKET
   // ═══════════════════════════════════════════
@@ -131,12 +155,20 @@ class App {
 
     this.wsClient.on('mobile-connected', (msg) => {
       this.ui.showToast(`📱 ${msg.teamShortName} connected via mobile`, 'info');
-      this.render();
+      if (this.currentView === 'auction' && this.engine) {
+        this.refreshAuctionRealtime();
+      } else {
+        this.render();
+      }
     });
 
     this.wsClient.on('mobile-disconnected', (msg) => {
       this.ui.showToast(`📱 ${msg.teamShortName} disconnected`, 'warning');
-      this.render();
+      if (this.currentView === 'auction' && this.engine) {
+        this.refreshAuctionRealtime();
+      } else {
+        this.render();
+      }
     });
 
     this.wsClient.on('mobile-bid', (msg) => {
@@ -226,12 +258,7 @@ class App {
       this.wsClient.sendBidResult(msg.teamId, true);
       this.lastTickSecond = null;
       const state = this.engine.getState();
-      this.ui.renderAuction(state, this.wsClient.getConnectedTeams());
-      this.updateBidButtonStates();
-      if (state.timerEnabled && state.timerRemaining !== null) {
-        this.ui.updateTimerDisplay(state.timerRemaining, state.timerDuration);
-      }
-      this.ui.updateBidDisplay(state);
+      this.refreshAuctionRealtime(state, { flashBid: true });
       this.ui.showToast(`📱 ${msg.teamShortName} bid ${AuctionEngine.formatPoints(result.bid)}`, 'info');
       this.broadcastState();
     } else {
@@ -255,7 +282,10 @@ class App {
 
   navigate(view) {
     this.currentView = view;
-    window.location.hash = view;
+    if (window.location.hash.slice(1) !== view) {
+      window.location.hash = view;
+      return;
+    }
     this.render();
   }
 
@@ -283,32 +313,71 @@ class App {
   // ═══════════════════════════════════════════
 
   /** Save current auction state to localStorage */
-  saveState() {
+  saveState({ immediate = false } = {}) {
     try {
-      const state = {
-        isLoggedIn: this.isLoggedIn,
-        selectedTeamIds: [...this.selectedTeamIds],
-        selectedPlayerIds: [...this.selectedPlayerIds],
-        currentView: this.currentView,
-        engine: this.engine ? this.engine.serialize() : null,
-        scorecards: this.scorecardMgr.serialize(),
-      };
-      const stateStr = JSON.stringify(state);
+      const stateStr = JSON.stringify(this._buildPersistentState());
       localStorage.setItem('npl_auction_state', stateStr);
-      
+      this._pendingStateStr = stateStr;
+
       if (this.isLoggedIn) {
-        fetch('/api/state', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + (localStorage.getItem('npl_token') || '')
-          },
-          body: stateStr
-        }).catch(e => console.warn('Server sync failed', e));
+        clearTimeout(this._stateSyncTimer);
+        if (immediate) {
+          this.flushStateSync().catch((e) => console.warn('Server sync failed', e));
+        } else {
+          this._stateSyncTimer = setTimeout(() => {
+            this.flushStateSync().catch((e) => console.warn('Server sync failed', e));
+          }, 450);
+        }
       }
     } catch (e) {
       console.warn('Failed to save state:', e);
     }
+  }
+
+  _buildPersistentState() {
+    return {
+      isLoggedIn: this.isLoggedIn,
+      selectedTeamIds: [...this.selectedTeamIds],
+      selectedPlayerIds: [...this.selectedPlayerIds],
+      currentView: this.currentView,
+      engine: this.engine ? this.engine.serialize() : null,
+      scorecards: this.scorecardMgr.serialize(),
+    };
+  }
+
+  async flushStateSync({ keepalive = false } = {}) {
+    clearTimeout(this._stateSyncTimer);
+    if (!this.isLoggedIn || !this._pendingStateStr) return;
+    if (this._pendingStateStr === this._lastSyncedStateStr) return;
+
+    if (this._stateSyncInFlight) {
+      this._stateSyncQueued = true;
+      return this._stateSyncInFlight;
+    }
+
+    const stateStr = this._pendingStateStr;
+    this._stateSyncQueued = false;
+    this._stateSyncInFlight = fetch('/api/state', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (localStorage.getItem('npl_token') || '')
+      },
+      body: stateStr,
+      keepalive
+    }).then(() => {
+      this._lastSyncedStateStr = stateStr;
+    }).catch((e) => {
+      console.warn('Server sync failed', e);
+      throw e;
+    }).finally(() => {
+      this._stateSyncInFlight = null;
+      if (this._stateSyncQueued || this._pendingStateStr !== this._lastSyncedStateStr) {
+        this.flushStateSync({ keepalive }).catch(() => {});
+      }
+    });
+
+    return this._stateSyncInFlight;
   }
 
   /** Load saved auction state from server/localStorage */
@@ -410,7 +479,7 @@ class App {
         this.bindPlayerSelectEvents();
         break;
       case 'rules':
-        this.ui.renderRules();
+        this.ui.renderRulesPremium();
         break;
       case 'players':
         this.ui.renderPlayerPool(PLAYERS_DATA, this.poolFilter, this.poolSearch);
@@ -422,7 +491,7 @@ class App {
           this.navigate('setup');
           return;
         }
-        this.ui.renderAuction(this.engine.getState());
+        this.ui.renderAuction(this.engine.getState(), this.wsClient.getConnectedTeams());
         this.updateBidButtonStates();
         this.startTimerTick();
         // Show commentary panel
@@ -447,6 +516,7 @@ class App {
         this.ui.removeCommentaryPanel();
         break;
       case 'awards':
+        this.ui.renderViewSkeleton('awards');
         this._renderAwardsView();
         this.stopIdleCommentary();
         this.ui.removeCommentaryPanel();
@@ -466,6 +536,46 @@ class App {
         this.ui.removeCommentaryPanel();
         break;
     }
+
+    this.syncViewportMetrics();
+    this.ui.enhanceRenderedMedia(this.currentView);
+    this.ui.animateViewEntrance();
+  }
+
+  refreshAuctionRealtime(state = this.engine?.getState(), options = {}) {
+    if (!state || this.currentView !== 'auction') return;
+
+    const didPatch = this.ui.syncAuctionRealtime(state, this.wsClient.getConnectedTeams(), options);
+    if (!didPatch) {
+      this.ui.renderAuction(state, this.wsClient.getConnectedTeams());
+    }
+
+    this.updateBidButtonStates();
+    if (state.timerEnabled && state.timerRemaining !== null) {
+      this.ui.updateTimerDisplay(state.timerRemaining, state.timerDuration);
+    }
+    this.ui.enhanceRenderedMedia('auction');
+  }
+
+  async _loadFeatureModule(key, importer) {
+    if (!this._featurePromises[key]) {
+      this._featurePromises[key] = importer();
+    }
+    return this._featurePromises[key];
+  }
+
+  async _ensurePosterTools() {
+    return this._loadFeatureModule('poster', () => import('./poster.js'));
+  }
+
+  async _ensureLiveMatchEngineClass() {
+    const module = await this._loadFeatureModule('liveMatch', () => import('./live-match.js'));
+    return module.LiveMatchEngine;
+  }
+
+  async _ensureAwardsEngine() {
+    const module = await this._loadFeatureModule('awards', () => import('./awards.js'));
+    return module.AwardsEngine;
   }
 
   // ═══════════════════════════════════════════
@@ -577,7 +687,7 @@ class App {
     if (!target) return;
 
     // ── Premium Features Click Routing ──
-    if (this.currentView === 'live-match' && this._handleLiveMatchClick(target)) return;
+    if (this.currentView === 'live-match' && await this._handleLiveMatchClick(target)) return;
     if (this.currentView === 'gallery' && this._handleGalleryClick(target)) return;
     if (this.currentView === 'awards' && this._handleAwardsClick(target)) return;
 
@@ -1259,12 +1369,7 @@ class App {
     if (result.success) {
       this.lastTickSecond = null;
       const state = this.engine.getState();
-      this.ui.renderAuction(state, this.wsClient.getConnectedTeams());
-      this.updateBidButtonStates();
-      if (state.timerEnabled && state.timerRemaining !== null) {
-        this.ui.updateTimerDisplay(state.timerRemaining, state.timerDuration);
-      }
-      this.ui.updateBidDisplay(state);
+      this.refreshAuctionRealtime(state, { flashBid: true });
       this.ui.showToast(`Quick bid: ${AuctionEngine.formatPoints(amount)}`, 'success');
       this.broadcastState();
       this.saveState();
@@ -1278,12 +1383,7 @@ class App {
     if (this.engine.undoBid()) {
       this.lastTickSecond = null;
       const state = this.engine.getState();
-      this.ui.renderAuction(state, this.wsClient.getConnectedTeams());
-      this.updateBidButtonStates();
-      if (state.timerEnabled && state.timerRemaining !== null) {
-        this.ui.updateTimerDisplay(state.timerRemaining, state.timerDuration);
-      }
-      this.ui.updateBidDisplay(state);
+      this.refreshAuctionRealtime(state, { flashBid: true });
       this.ui.showToast('Bid undone', 'info');
       this.broadcastState();
       this.saveState();
@@ -1295,12 +1395,7 @@ class App {
     if (this.engine.redoBid()) {
       this.lastTickSecond = null;
       const state = this.engine.getState();
-      this.ui.renderAuction(state, this.wsClient.getConnectedTeams());
-      this.updateBidButtonStates();
-      if (state.timerEnabled && state.timerRemaining !== null) {
-        this.ui.updateTimerDisplay(state.timerRemaining, state.timerDuration);
-      }
-      this.ui.updateBidDisplay(state);
+      this.refreshAuctionRealtime(state, { flashBid: true });
       this.ui.showToast('Bid redone', 'info');
       this.broadcastState();
       this.saveState();
@@ -1309,9 +1404,18 @@ class App {
 
   toggleFullscreen() {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {
+      const requestFullscreen = document.documentElement.requestFullscreen?.bind(document.documentElement);
+      if (!requestFullscreen) {
         this.ui.showToast('Fullscreen not supported', 'warning');
-      });
+        return;
+      }
+
+      Promise.resolve()
+        .then(() => requestFullscreen({ navigationUI: 'hide' }))
+        .catch(() => requestFullscreen())
+        .catch(() => {
+          this.ui.showToast('Fullscreen not supported', 'warning');
+        });
     } else {
       document.exitFullscreen();
     }
@@ -1383,11 +1487,7 @@ class App {
         team
       );
 
-      // Full re-render to update sidebar, info panel, and buttons
-      this.ui.renderAuction(state, this.wsClient.getConnectedTeams());
-      this.updateBidButtonStates();
-      // Flash the bid amount
-      this.ui.updateBidDisplay(state);
+      this.refreshAuctionRealtime(state, { flashBid: true });
       this.broadcastState();
       this.saveState();
     }
@@ -2050,6 +2150,7 @@ class App {
     if (!team) return;
 
     this.ui.showToast('Generating poster...', 'info', 2000);
+    const { generateTeamPoster, showPosterPreview } = await this._ensurePosterTools();
     const canvas = await generateTeamPoster(team);
     showPosterPreview(canvas);
   }
@@ -2061,6 +2162,7 @@ class App {
     if (!team) return;
 
     this.ui.showToast(`Generating ${team.shortName} poster...`, 'info', 2000);
+    const { generateTeamPoster, downloadCanvas } = await this._ensurePosterTools();
     const canvas = await generateTeamPoster(team);
     downloadCanvas(canvas, `NPL3_2026_${team.shortName}_Squad.png`);
     this.ui.showToast(`${team.shortName} poster downloaded!`, 'success');
@@ -2070,6 +2172,7 @@ class App {
     if (!this.engine) return;
     const state = this.engine.getState();
     this.ui.showToast('Generating all team posters...', 'info', 5000);
+    const { downloadAllPosters } = await this._ensurePosterTools();
     await downloadAllPosters(state.teams, (i, total) => {
       if (i < total) {
         this.ui.showToast(`Generating poster ${i + 1} of ${total}...`, 'info', 1000);
@@ -2185,7 +2288,7 @@ class App {
     });
   }
 
-  _handleLiveMatchClick(target) {
+  async _handleLiveMatchClick(target) {
     // Create Knockout Matches from standings
     if (target.id === 'create-knockout-btn' || target.closest('#create-knockout-btn')) {
       if (!this.engine) return true;
@@ -2237,12 +2340,13 @@ class App {
       const matchId = matchCard.dataset.liveMatch;
       const match = this.scorecardMgr.getMatch(matchId);
       if (match) {
+        const LiveMatchEngine = await this._ensureLiveMatchEngineClass();
         const saved = localStorage.getItem('npl_live_match_' + matchId);
         if (saved) {
           try { this.liveMatchEngine = LiveMatchEngine.restore(JSON.parse(saved)); }
-          catch(e) { this._createLiveEngine(match); }
+          catch(e) { await this._createLiveEngine(match); }
         } else {
-          this._createLiveEngine(match);
+          await this._createLiveEngine(match);
         }
         this._renderLiveMatchView();
       }
@@ -2469,10 +2573,11 @@ class App {
     return false;
   }
 
-  _createLiveEngine(match) {
+  async _createLiveEngine(match) {
     // Build squad arrays from auction state
     const teamASquad = this._getTeamSquad(match.teamAId);
     const teamBSquad = this._getTeamSquad(match.teamBId);
+    const LiveMatchEngine = await this._ensureLiveMatchEngineClass();
     this.liveMatchEngine = new LiveMatchEngine({
       ...match,
       teamASquad, teamBSquad,
@@ -2885,7 +2990,7 @@ Built entirely with vanilla HTML/CSS/JS — no frameworks needed! 💪
 
   _renderGalleryView() {
     const matches = this.scorecardMgr.getAllMatches();
-    this.ui.renderGallery(this.galleryMgr.photos, matches, this.galleryFilter);
+    this.ui.renderGalleryPremium(this.galleryMgr.photos, matches, this.galleryFilter);
     this._bindGalleryEvents();
   }
 
@@ -2994,14 +3099,20 @@ Built entirely with vanilla HTML/CSS/JS — no frameworks needed! 💪
   // PREMIUM: Awards Ceremony
   // ═══════════════════════════════════════════
 
-  _renderAwardsView() {
+  async _renderAwardsView() {
+    const requestedView = this.currentView;
     if (this.awardsData.length === 0) {
       const matches = this.scorecardMgr.getAllMatches();
       const teams = this.engine ? this.engine.getState().teams : [];
       const soldPlayers = this.engine ? this.engine.getState().soldPlayers : [];
+      const AwardsEngine = await this._ensureAwardsEngine();
+      if (requestedView !== this.currentView) return;
       this.awardsData = AwardsEngine.computeAwards(matches, teams, soldPlayers);
     }
-    this.ui.renderAwards(this.awardsData, this.awardsRevealedCount);
+    if (requestedView !== this.currentView) return;
+    this.ui.renderAwardsPremium(this.awardsData, this.awardsRevealedCount);
+    this.ui.enhanceRenderedMedia('awards');
+    this.ui.animateViewEntrance();
   }
 
   _handleAwardsClick(target) {
