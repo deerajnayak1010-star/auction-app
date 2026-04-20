@@ -2183,6 +2183,7 @@ class App {
     if (newBat && this.liveMatchEngine) {
       this.liveMatchEngine.selectNewBatsman(newBat.dataset.lmNewBatsman);
       this._saveLiveMatch();
+      this._closeModal();
       this._renderLiveMatchView();
       return true;
     }
@@ -2192,6 +2193,7 @@ class App {
     if (nextBowl && this.liveMatchEngine) {
       this.liveMatchEngine.selectNextBowler(nextBowl.dataset.lmNextBowler);
       this._saveLiveMatch();
+      this._closeModal();
       this._renderLiveMatchView();
       return true;
     }
