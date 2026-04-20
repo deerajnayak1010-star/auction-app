@@ -10,6 +10,11 @@ import { WSClient } from './ws-client.js';
 import { AuctionSounds } from './sounds.js';
 import { CommentaryEngine } from './commentary.js';
 import { ScorecardManager } from './scorecard.js';
+import { StandingsEngine } from './standings.js';
+import { PlayerCardsEngine } from './player-cards.js';
+import { LiveMatchEngine } from './live-match.js';
+import { GalleryManager } from './gallery.js';
+import { AwardsEngine } from './awards.js';
 
 class App {
   constructor() {
@@ -48,6 +53,14 @@ class App {
     this.scorecardMgr = new ScorecardManager();
     this.scorecardView = 'list'; // 'list' | 'edit'
     this.activeScorecardId = null;
+
+    // Premium Features State
+    this.liveMatchEngine = null;
+    this.galleryMgr = new GalleryManager();
+    this.galleryFilter = 'all';
+    this.awardsData = [];
+    this.awardsRevealedCount = 0;
+    this.fixturesLocked = localStorage.getItem('npl_fixtures_locked') === '1';
   }
 
   async init() {
@@ -56,6 +69,20 @@ class App {
 
     // Delegate all click events from #app
     document.getElementById('app').addEventListener('click', (e) => this.onClick(e));
+
+    // Close hamburger menu and More dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const dd = document.getElementById('hamburger-dropdown');
+      if (dd && dd.style.display !== 'none') {
+        const menu = e.target.closest('.hamburger-menu');
+        if (!menu) dd.style.display = 'none';
+      }
+      const moreDd = document.getElementById('nav-more-dropdown');
+      if (moreDd && moreDd.style.display !== 'none') {
+        const moreMenu = e.target.closest('.nav-more-menu');
+        if (!moreMenu) moreDd.style.display = 'none';
+      }
+    });
 
     // Fullscreen change listener
     document.addEventListener('fullscreenchange', () => this.render());
@@ -245,7 +272,7 @@ class App {
       return;
     }
 
-    if (['login', 'setup', 'player-select', 'rules', 'players', 'auction', 'results', 'about', 'history'].includes(hash)) {
+    if (['login', 'setup', 'player-select', 'rules', 'players', 'auction', 'results', 'about', 'history', 'live-match', 'gallery', 'awards'].includes(hash)) {
       this.currentView = hash;
       this.render();
     }
@@ -325,6 +352,13 @@ class App {
         this.scorecardMgr = ScorecardManager.restore(state.scorecards);
         console.log('[App] Scorecards restored');
       }
+
+      // Restore gallery
+      const galleryRaw = localStorage.getItem('npl_gallery');
+      if (galleryRaw) {
+        try { this.galleryMgr = GalleryManager.restore(JSON.parse(galleryRaw)); }
+        catch(e) { console.warn('Gallery restore failed:', e); }
+      }
     } catch (e) {
       console.warn('Failed to load state:', e);
       localStorage.removeItem('npl_auction_state');
@@ -392,7 +426,22 @@ class App {
         this.startIdleCommentary();
         break;
       case 'results':
-        this.ui.renderResults(this.engine ? this.engine.getState() : null, this.resultsTab);
+        this._renderResultsWithPremium();
+        this.stopIdleCommentary();
+        this.ui.removeCommentaryPanel();
+        break;
+      case 'live-match':
+        this._renderLiveMatchView();
+        this.stopIdleCommentary();
+        this.ui.removeCommentaryPanel();
+        break;
+      case 'gallery':
+        this._renderGalleryView();
+        this.stopIdleCommentary();
+        this.ui.removeCommentaryPanel();
+        break;
+      case 'awards':
+        this._renderAwardsView();
         this.stopIdleCommentary();
         this.ui.removeCommentaryPanel();
         break;
@@ -419,6 +468,9 @@ class App {
 
   bindNavEvents() {
     document.querySelectorAll('.nav-link[data-view]').forEach(btn => {
+      btn.addEventListener('click', () => this.navigate(btn.dataset.view));
+    });
+    document.querySelectorAll('.nav-more-item[data-view]').forEach(btn => {
       btn.addEventListener('click', () => this.navigate(btn.dataset.view));
     });
   }
@@ -458,8 +510,13 @@ class App {
   }
 
   async onClick(e) {
-    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], #login-btn, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #recall-bid-btn, #recall-confirm-yes, #recall-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #results-tab-squads, #results-tab-analytics, #results-tab-scorecard, #results-tab-fixtures, #draw-tokens-btn, #clear-tokens-btn, #clear-tokens-yes, #clear-tokens-no, #download-fixtures-btn, #sc-back-btn, #sc-back-btn2, #sc-save-btn, .sc-open-btn, #commentary-toggle-btn, #commentary-header, #open-projector-btn, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn');
+    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], [data-ball], [data-live-match], [data-lm-new-batsman], [data-lm-next-bowler], [data-lm-coin-flip], [data-lm-dismissal], [data-lm-runout], [data-ro-runs], [data-gallery-filter], [data-delete-photo], [data-generate-card], #login-btn, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #recall-bid-btn, #recall-confirm-yes, #recall-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #results-tab-squads, #results-tab-analytics, #results-tab-standings, #results-tab-stats, #results-tab-scorecard, #results-tab-fixtures, #draw-tokens-btn, #clear-tokens-btn, #clear-tokens-yes, #clear-tokens-no, #download-fixtures-btn, #lock-fixtures-btn, #create-knockout-btn, #sc-back-btn, #sc-back-btn2, #sc-save-btn, .sc-open-btn, #commentary-toggle-btn, #commentary-header, #open-projector-btn, #hamburger-toggle, #nav-more-toggle, .nav-more-item, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn, #live-undo-btn, #live-back-btn, #live-save-scorecard-btn, #lm-start-toss-btn, #lm-confirm-openers-btn, #lm-wd-toggle, #lm-nb-toggle, #lm-bye-toggle, #lm-lb-toggle, #lm-wicket-btn, #lm-modal-close-btn, #lm-save-yes-btn, #lm-save-no-btn, #lm-save-dismiss-btn, #lm-edit-score-btn, #live-edit-score-btn, #ro-swap-strike-btn, #lm-swap-strike-btn, #share-app-btn, #share-copy-wa-btn, #share-copy-ig-btn, #share-tab-wa, #share-tab-ig, #share-modal-close, #awards-reveal-next-btn, #awards-reset-btn, #awards-back-btn, .score-btn, .lm-sub-btn, .lm-modal-option, .lm-modal-close');
     if (!target) return;
+
+    // ── Premium Features Click Routing ──
+    if (this.currentView === 'live-match' && this._handleLiveMatchClick(target)) return;
+    if (this.currentView === 'gallery' && this._handleGalleryClick(target)) return;
+    if (this.currentView === 'awards' && this._handleAwardsClick(target)) return;
 
     // ── Login: submit ──
     if (target.id === 'login-btn') {
@@ -751,6 +808,41 @@ class App {
       return;
     }
 
+    // ── Hamburger menu toggle ──
+    if (target.id === 'hamburger-toggle' || target.closest('#hamburger-toggle')) {
+      const dd = document.getElementById('hamburger-dropdown');
+      if (dd) dd.style.display = dd.style.display === 'none' ? 'flex' : 'none';
+      // Close More dropdown if open
+      const moreDd = document.getElementById('nav-more-dropdown');
+      if (moreDd) moreDd.style.display = 'none';
+      return;
+    }
+
+    // ── Nav More dropdown toggle ──
+    if (target.id === 'nav-more-toggle' || target.closest('#nav-more-toggle')) {
+      const dd = document.getElementById('nav-more-dropdown');
+      if (dd) dd.style.display = dd.style.display === 'none' ? 'flex' : 'none';
+      // Close hamburger if open
+      const hdd = document.getElementById('hamburger-dropdown');
+      if (hdd) hdd.style.display = 'none';
+      return;
+    }
+
+    // ── Modal close button (live match modals) ──
+    if (target.id === 'lm-modal-close-btn' || target.classList.contains('lm-modal-close')) {
+      this._closeModal();
+      // If we're in new-batsman or bowler-select phase, undo to go back to scoring
+      if (this.liveMatchEngine) {
+        const phase = this.liveMatchEngine.phase;
+        if (phase === 'new-batsman' || phase === 'bowler-select') {
+          this.liveMatchEngine.undoLastBall();
+          this._saveLiveMatch();
+          this._renderLiveMatchView();
+        }
+      }
+      return;
+    }
+
     // ── Generate QR / Mobile link ──
     if (target.id === 'generate-qr-btn' || target.closest('#generate-qr-btn')) {
       this.generateMobileSession();
@@ -780,21 +872,76 @@ class App {
     if (target.id === 'sound-toggle-btn' || target.closest('#sound-toggle-btn')) {
       const muted = this.sounds.toggleMute();
       this.ui.showToast(muted ? '🔇 Sound muted' : '🔊 Sound enabled', 'info', 1500);
+      const dd = document.getElementById('hamburger-dropdown');
+      if (dd) dd.style.display = 'none';
       this.render();
+      return;
+    }
+
+    // ── Share App ──
+    if (target.id === 'share-app-btn' || target.closest('#share-app-btn')) {
+      const dd = document.getElementById('hamburger-dropdown');
+      if (dd) dd.style.display = 'none';
+      this._showShareModal();
+      return;
+    }
+
+    // ── Share modal controls ──
+    if (target.id === 'share-modal-close') {
+      const m = document.getElementById('share-app-modal');
+      if (m) m.remove();
+      return;
+    }
+    if (target.id === 'share-tab-wa') {
+      document.getElementById('share-wa-content')?.classList.add('active');
+      document.getElementById('share-ig-content')?.classList.remove('active');
+      target.classList.add('active');
+      document.getElementById('share-tab-ig')?.classList.remove('active');
+      return;
+    }
+    if (target.id === 'share-tab-ig') {
+      document.getElementById('share-ig-content')?.classList.add('active');
+      document.getElementById('share-wa-content')?.classList.remove('active');
+      target.classList.add('active');
+      document.getElementById('share-tab-wa')?.classList.remove('active');
+      return;
+    }
+    if (target.id === 'share-copy-wa-btn') {
+      const txt = document.getElementById('share-wa-text')?.value;
+      if (txt) navigator.clipboard.writeText(txt).then(() => this.ui.showToast('📋 WhatsApp message copied!', 'success'));
+      return;
+    }
+    if (target.id === 'share-copy-ig-btn') {
+      const txt = document.getElementById('share-ig-text')?.value;
+      if (txt) navigator.clipboard.writeText(txt).then(() => this.ui.showToast('📋 Instagram caption copied!', 'success'));
       return;
     }
 
     // ── Results tab: squads ──
     if (target.id === 'results-tab-squads' || target.closest('#results-tab-squads')) {
       this.resultsTab = 'squads';
-      this.ui.renderResults(this.engine ? this.engine.getState() : null, this.resultsTab);
+      this._renderResultsWithPremium();
       return;
     }
 
     // ── Results tab: analytics ──
     if (target.id === 'results-tab-analytics' || target.closest('#results-tab-analytics')) {
       this.resultsTab = 'analytics';
-      this.ui.renderResults(this.engine ? this.engine.getState() : null, this.resultsTab);
+      this._renderResultsWithPremium();
+      return;
+    }
+
+    // ── Results tab: standings ──
+    if (target.id === 'results-tab-standings' || target.closest('#results-tab-standings')) {
+      this.resultsTab = 'standings';
+      this._renderResultsWithPremium();
+      return;
+    }
+
+    // ── Results tab: stats ──
+    if (target.id === 'results-tab-stats' || target.closest('#results-tab-stats')) {
+      this.resultsTab = 'stats';
+      this._renderResultsWithPremium();
       return;
     }
 
@@ -836,19 +983,37 @@ class App {
     // ── Results tab: fixtures ──
     if (target.id === 'results-tab-fixtures' || target.closest('#results-tab-fixtures')) {
       this.resultsTab = 'fixtures';
-      this.ui.renderResults(this.engine ? this.engine.getState() : null, this.resultsTab);
-      setTimeout(() => this.initFixtureDragDrop(), 100);
+      this._renderResultsWithPremium();
       return;
     }
 
     // ── Draw tokens for fixtures ──
     if (target.id === 'draw-tokens-btn' || target.closest('#draw-tokens-btn')) {
+      if (this.fixturesLocked) {
+        this.ui.showToast('🔒 Fixtures are locked. Unlock first.', 'warning');
+        return;
+      }
       this.handleTokenDraw();
+      return;
+    }
+
+    // ── Lock/Unlock fixtures ──
+    if (target.id === 'lock-fixtures-btn' || target.closest('#lock-fixtures-btn')) {
+      this.fixturesLocked = !this.fixturesLocked;
+      localStorage.setItem('npl_fixtures_locked', this.fixturesLocked ? '1' : '0');
+      this.ui.showToast(this.fixturesLocked ? '🔒 Fixtures locked!' : '🔓 Fixtures unlocked!', 'info');
+      const st = this.engine.getState(); st.fixturesLocked = this.fixturesLocked;
+      this.ui.renderResults(st, 'fixtures');
+      setTimeout(() => this.initFixtureDragDrop(), 100);
       return;
     }
 
     // ── Clear tokens (show confirmation) ──
     if (target.id === 'clear-tokens-btn' || target.closest('#clear-tokens-btn')) {
+      if (this.fixturesLocked) {
+        this.ui.showToast('🔒 Fixtures are locked. Unlock first.', 'warning');
+        return;
+      }
       this.ui.showClearTokensModal();
       return;
     }
@@ -856,10 +1021,12 @@ class App {
       this.ui.closeClearTokensModal();
       if (this.engine) {
         this.engine.groupDivision = null;
+        this._resetAllMatchData();
         this.saveState();
         this.broadcastState();
-        this.ui.showToast('🗑️ Token draw cleared.', 'info');
-        this.ui.renderResults(this.engine.getState(), 'fixtures');
+        this.ui.showToast('🗑️ Token draw cleared. All match data reset.', 'info');
+        const st2 = this.engine.getState(); st2.fixturesLocked = this.fixturesLocked;
+        this.ui.renderResults(st2, 'fixtures');
       }
       return;
     }
@@ -1158,12 +1325,8 @@ class App {
       });
     }
 
-    const matches = this.scorecardMgr.getAllMatches();
-    const honours = this.scorecardMgr.computeHonours();
-    const activeMatch = this.activeScorecardId ? this.scorecardMgr.getMatch(this.activeScorecardId) : null;
-    this.ui.renderResults(state, 'scorecard', {
-      matches, honours, scorecardView: this.scorecardView, activeMatch,
-    });
+    this.resultsTab = 'scorecard';
+    this._renderResultsWithPremium();
   }
 
   _ensureScorecardMatch(matchId) {
@@ -1190,46 +1353,57 @@ class App {
 
   _getFixtureMatchList(gd, teams) {
     if (!gd) return [];
-    const matchTimes = ['9:00 AM','10:00 AM','11:15 AM','12:30 PM','2:00 PM','3:15 PM'];
 
-    const getRR = (group) => {
-      const pairs = [];
-      for (let i = 0; i < group.length; i++)
-        for (let j = i + 1; j < group.length; j++)
-          pairs.push([group[i], group[j]]);
-      return pairs;
-    };
+    // Time slots: each match = 1 hour, starting 8:30 AM
+    const day1Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30'];
+    const day2Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30'];
 
-    const pairsA = getRR(gd.groupA).map(p => ({ pair: p, group: 'A' }));
-    const pairsB = getRR(gd.groupB).map(p => ({ pair: p, group: 'B' }));
+    // Round-robin pairs for 4 teams [0,1,2,3]
+    // Round 1: 0v1, 2v3  |  Round 2: 0v2, 1v3  |  Round 3: 0v3, 1v2
+    const rrPairs = (g) => [
+      [g[0],g[1]], [g[2],g[3]],  // Round 1
+      [g[0],g[2]], [g[1],g[3]],  // Round 2
+      [g[0],g[3]], [g[1],g[2]]   // Round 3
+    ];
 
-    // Day1: [0,3,5]=[AvB,BvC,CvD]; Day2: [1,2,4]=[AvC,AvD,BvD] → 1-2 matches per team per day
-    const day1raw = [pairsA[0], pairsB[0], pairsA[3], pairsB[3], pairsA[5], pairsB[5]];
-    const day2raw = [pairsA[1], pairsB[1], pairsA[2], pairsB[2], pairsA[4], pairsB[4]];
+    const pA = rrPairs(gd.groupA);
+    const pB = rrPairs(gd.groupB);
 
-    const reorderDay = (arr) => {
-      const result = [], rem = [...arr];
-      while (rem.length > 0) {
-        const last = result.length > 0 ? result[result.length - 1].pair : [];
-        const idx = rem.findIndex(m => !m.pair.some(t => last.includes(t)));
-        result.push(idx >= 0 ? rem.splice(idx, 1)[0] : rem.shift());
-      }
-      return result;
-    };
+    // Day 1 (6 matches): Interleave A,B from Round 1 & 2
+    // Day 2 (6 matches): Interleave A,B from Round 2 & 3
+    // Ordering ensures no team plays back-to-back (groups alternate)
+    const day1 = [
+      { pair: pA[0], group: 'A' }, // R1-M1
+      { pair: pB[0], group: 'B' }, // R1-M1
+      { pair: pA[1], group: 'A' }, // R1-M2
+      { pair: pB[1], group: 'B' }, // R1-M2
+      { pair: pA[2], group: 'A' }, // R2-M1
+      { pair: pB[2], group: 'B' }, // R2-M1
+    ];
+    const day2 = [
+      { pair: pA[3], group: 'A' }, // R2-M2
+      { pair: pB[3], group: 'B' }, // R2-M2
+      { pair: pA[4], group: 'A' }, // R3-M1
+      { pair: pB[4], group: 'B' }, // R3-M1
+      { pair: pA[5], group: 'A' }, // R3-M2
+      { pair: pB[5], group: 'B' }, // R3-M2
+    ];
 
-    const scheduled = [...reorderDay(day1raw), ...reorderDay(day2raw)];
+    const scheduled = [...day1, ...day2];
 
     return scheduled.map((s, i) => {
       const dayIdx = i < 6 ? 0 : 1;
       const slotIdx = dayIdx === 0 ? i : i - 6;
+      const times = dayIdx === 0 ? day1Times : day2Times;
       return {
         matchId: `match-${i + 1}`,
         matchNum: i + 1,
         teamAId: s.pair[0],
         teamBId: s.pair[1],
         group: s.group,
+        day: dayIdx + 1,
         date: dayIdx === 0 ? '25 April 2026' : '26 April 2026',
-        time: matchTimes[slotIdx] || '',
+        time: times[slotIdx] || '',
       };
     });
   }
@@ -1318,12 +1492,31 @@ class App {
 
     this.engine.groupDivision = { groupA, groupB, tokenMap };
 
+    // Reset all dependent match data on re-draw
+    this._resetAllMatchData();
+
     this.saveState();
     this.broadcastState();
-    this.ui.showToast('🎲 Tokens drawn! Groups assigned.', 'success');
-    this.ui.renderResults(this.engine.getState(), 'fixtures');
+    this.ui.showToast('🎲 Tokens drawn! Groups assigned. Match data reset.', 'success');
+    const stDraw = this.engine.getState(); stDraw.fixturesLocked = this.fixturesLocked;
+    this.ui.renderResults(stDraw, 'fixtures');
     // Init drag-drop after render
     setTimeout(() => this.initFixtureDragDrop(), 100);
+  }
+
+  _resetAllMatchData() {
+    // Clear all scorecard matches
+    this.scorecardMgr.matches.clear();
+    // Clear all live match localStorage entries
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('npl_live_match_')) {
+        localStorage.removeItem(key);
+        i--; // adjust index after removal
+      }
+    }
+    // Clear active live engine
+    this.liveMatchEngine = null;
   }
 
   // ── Download HD Fixtures as PNG ──
@@ -1455,7 +1648,7 @@ class App {
   }
 
   _updateFixtureTimes() {
-    const matchTimes = ['9:00 AM', '10:00 AM', '11:15 AM', '12:30 PM', '2:00 PM', '3:15 PM'];
+    const matchTimes = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30'];
     let globalMatchNum = 1;
 
     ['fixtures-day1-grid', 'fixtures-day2-grid'].forEach((gridId, dayIdx) => {
@@ -1787,6 +1980,759 @@ class App {
         this.ui.showToast('All posters downloaded!', 'success', 3000);
       }
     });
+  }
+
+  // ═══════════════════════════════════════════
+  // PREMIUM: Results with Standings & Stats
+  // ═══════════════════════════════════════════
+
+  _renderResultsWithPremium() {
+    const state = this.engine ? this.engine.getState() : null;
+    const opts = {};
+
+    // Compute standings if on standings tab
+    if (this.resultsTab === 'standings') {
+      const matches = this.scorecardMgr.getAllMatches();
+      const groupDivision = state ? state.groupDivision : null;
+      const teams = state ? state.teams : [];
+      if (groupDivision && teams.length > 0) {
+        opts.standings = StandingsEngine.compute(matches, groupDivision, teams);
+      }
+    }
+
+    // Compute player stats if on stats tab
+    if (this.resultsTab === 'stats') {
+      const matches = this.scorecardMgr.getAllMatches();
+      const teams = state ? state.teams : [];
+      const soldPlayers = state ? state.soldPlayers : [];
+      opts.playerStats = PlayerCardsEngine.aggregate(matches, teams, soldPlayers);
+    }
+
+    // Scorecard opts
+    if (this.resultsTab === 'scorecard') {
+      opts.matches = this.scorecardMgr.getAllMatches();
+      opts.honours = this.scorecardMgr.computeHonours();
+      opts.scorecardView = this.scorecardView;
+      if (this.scorecardView === 'edit' && this.activeScorecardId) {
+        opts.activeMatch = this.scorecardMgr.getMatch(this.activeScorecardId);
+      }
+    }
+
+    // Inject fixtures lock state
+    if (state) state.fixturesLocked = this.fixturesLocked;
+
+    this.ui.renderResults(state, this.resultsTab, opts);
+
+    // Rebind fixtures drag-drop if needed
+    if (this.resultsTab === 'fixtures') {
+      setTimeout(() => this.initFixtureDragDrop(), 100);
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // PREMIUM: Live Match
+  // ═══════════════════════════════════════════
+
+  _renderLiveMatchView() {
+    if (this.liveMatchEngine) {
+      this.ui.renderLiveMatch(this.liveMatchEngine.getState());
+    } else {
+      // Ensure all fixture matches exist in scorecard
+      this._ensureAllFixtureMatches();
+      const matches = this.scorecardMgr.getAllMatches();
+      this.ui.renderLiveMatch(null, matches);
+    }
+  }
+
+  _ensureAllFixtureMatches() {
+    if (!this.engine) return;
+    const state = this.engine.getState();
+    const gd = state.groupDivision;
+    if (!gd) return;
+    const fixtures = this._getFixtureMatchList(gd, state.teams);
+    const getTeam = (id) => state.teams.find(t => t.id === id) || { id, name: id, shortName: id, color: '#666', textColor: '#fff', logo: '', squad: [] };
+    fixtures.forEach(f => {
+      if (!this.scorecardMgr.getMatch(f.matchId)) {
+        this.scorecardMgr.createMatch(f.matchId, getTeam(f.teamAId), getTeam(f.teamBId), { venue: 'Nakre Ground', date: f.date, time: f.time });
+      }
+    });
+
+    // Also add knockout matches (match-13 through match-16) — always TBD until league is done
+    const knockoutSlots = [
+      { id: 'match-13', label: 'Qualifier 1', desc: 'A1 vs B1', time: '2:30 – 3:30' },
+      { id: 'match-14', label: 'Eliminator', desc: 'A2 vs B2', time: '3:30 – 4:30' },
+      { id: 'match-15', label: 'Qualifier 2', desc: 'Loser Q1 vs Winner Elim', time: '4:30 – 5:30' },
+      { id: 'match-16', label: 'Final', desc: 'Winner Q1 vs Winner Q2', time: '5:30 – 6:30' },
+    ];
+
+    // TBD placeholder team
+    const tbdTeam = { id: 'tbd', name: 'TBD', shortName: 'TBD', color: '#666', textColor: '#fff', logo: '', squad: [] };
+
+    // Only create TBD knockout entries — teams are resolved via "Create Knockout" button
+    knockoutSlots.forEach(ko => {
+      if (!this.scorecardMgr.getMatch(ko.id)) {
+        this.scorecardMgr.createMatch(ko.id, tbdTeam, tbdTeam, {
+          venue: 'Nakre Ground', date: '26 April 2026', time: ko.time
+        });
+      }
+    });
+  }
+
+  _handleLiveMatchClick(target) {
+    // Create Knockout Matches from standings
+    if (target.id === 'create-knockout-btn' || target.closest('#create-knockout-btn')) {
+      if (!this.engine) return true;
+      const state = this.engine.getState();
+      const gd = state.groupDivision;
+      if (!gd) { this.ui.showToast('⚠️ Draw tokens first!', 'warning'); return true; }
+
+      try {
+        const allMatches = this.scorecardMgr.getAllMatches();
+        // Check how many league matches (match-1 to match-12) are completed
+        const leagueCompleted = allMatches.filter(m => {
+          const num = parseInt(m.matchId.replace('match-',''));
+          return num <= 12 && m.status === 'completed';
+        }).length;
+        if (leagueCompleted < 12) {
+          this.ui.showToast(`⚠️ Complete all league matches first! (${leagueCompleted}/12 done)`, 'warning');
+          return true;
+        }
+
+        const standings = StandingsEngine.compute(allMatches, gd, state.teams);
+        if (!standings || !standings.groupA || !standings.groupB || standings.groupA.length < 2 || standings.groupB.length < 2) {
+          this.ui.showToast('⚠️ Unable to compute standings.', 'warning');
+          return true;
+        }
+
+        const gA = standings.groupA, gB = standings.groupB;
+        const getTeam = (t) => state.teams.find(tt => tt.id === (t.id || t)) || t;
+        const koMatches = [
+          { id: 'match-13', a: getTeam(gA[0].team), b: getTeam(gB[0].team), time: '2:30 – 3:30' },
+          { id: 'match-14', a: getTeam(gA[1].team), b: getTeam(gB[1].team), time: '3:30 – 4:30' },
+          { id: 'match-15', time: '4:30 – 5:30' },  // Loser Q1 vs Winner Elim - TBD
+          { id: 'match-16', time: '5:30 – 6:30' },  // Final - TBD
+        ];
+
+        const tbdTeam = { id: 'tbd', name: 'TBD', shortName: 'TBD', color: '#666', textColor: '#fff', logo: '', squad: [] };
+
+        koMatches.forEach(km => {
+          // Remove old TBD entry if exists
+          if (this.scorecardMgr.getMatch(km.id)) {
+            this.scorecardMgr.matches.delete(km.id);
+          }
+          const teamA = km.a || tbdTeam;
+          const teamB = km.b || tbdTeam;
+          this.scorecardMgr.createMatch(km.id, teamA, teamB, {
+            venue: 'Nakre Ground', date: '26 April 2026', time: km.time
+          });
+        });
+
+        this.ui.showToast(`🏆 Knockout matches created! Q1: ${gA[0].team.shortName || gA[0].team.name} vs ${gB[0].team.shortName || gB[0].team.name}`, 'success');
+        this._renderLiveMatchView();
+      } catch(e) {
+        this.ui.showToast('⚠️ Error computing standings: ' + e.message, 'error');
+      }
+      return true;
+    }
+
+    // Select a match to score
+    const matchCard = target.closest('[data-live-match]');
+    if (matchCard) {
+      const matchId = matchCard.dataset.liveMatch;
+      const match = this.scorecardMgr.getMatch(matchId);
+      if (match) {
+        const saved = localStorage.getItem('npl_live_match_' + matchId);
+        if (saved) {
+          try { this.liveMatchEngine = LiveMatchEngine.restore(JSON.parse(saved)); }
+          catch(e) { this._createLiveEngine(match); }
+        } else {
+          this._createLiveEngine(match);
+        }
+        this._renderLiveMatchView();
+      }
+      return true;
+    }
+
+    // Setup: Start Match (toss)
+    if (target.id === 'lm-start-toss-btn') {
+      const winner = document.getElementById('lm-toss-winner')?.value;
+      const decision = document.getElementById('lm-toss-decision')?.value;
+      const overs = parseInt(document.getElementById('lm-overs-select')?.value) || 5;
+      if (!winner || !decision) { this.ui.showToast('Select toss winner and decision', 'warning'); return true; }
+      this.liveMatchEngine.setOversLimit(overs);
+      this.liveMatchEngine.setToss(winner, decision);
+      this._saveLiveMatch();
+      this._renderLiveMatchView();
+      return true;
+    }
+
+    // Batting select: Confirm openers
+    if (target.id === 'lm-confirm-openers-btn') {
+      const striker = document.getElementById('lm-striker')?.value;
+      const nonStriker = document.getElementById('lm-non-striker')?.value;
+      const bowler = document.getElementById('lm-bowler')?.value;
+      if (!striker || !nonStriker || !bowler) { this.ui.showToast('Select all three players', 'warning'); return true; }
+      if (striker === nonStriker) { this.ui.showToast('Striker and non-striker must be different', 'warning'); return true; }
+      this.liveMatchEngine.setOpeners(striker, nonStriker, bowler);
+      this._saveLiveMatch();
+      this._renderLiveMatchView();
+      return true;
+    }
+
+    // New batsman selection
+    const newBat = target.closest('[data-lm-new-batsman]');
+    if (newBat && this.liveMatchEngine) {
+      this.liveMatchEngine.selectNewBatsman(newBat.dataset.lmNewBatsman);
+      this._saveLiveMatch();
+      this._renderLiveMatchView();
+      return true;
+    }
+
+    // Next bowler selection
+    const nextBowl = target.closest('[data-lm-next-bowler]');
+    if (nextBowl && this.liveMatchEngine) {
+      this.liveMatchEngine.selectNextBowler(nextBowl.dataset.lmNextBowler);
+      this._saveLiveMatch();
+      this._renderLiveMatchView();
+      return true;
+    }
+
+    // Coin flip winner
+    const coinFlip = target.closest('[data-lm-coin-flip]');
+    if (coinFlip && this.liveMatchEngine) {
+      this.liveMatchEngine.setCoinFlipWinner(coinFlip.dataset.lmCoinFlip);
+      this._saveLiveMatch();
+      this._syncLiveToScorecard();
+      this._renderLiveMatchView();
+      return true;
+    }
+
+    // Sub-menu toggles
+    if (target.id === 'lm-wd-toggle') { this._toggleSubmenu('lm-wd-menu'); return true; }
+    if (target.id === 'lm-nb-toggle') { this._toggleSubmenu('lm-nb-menu'); return true; }
+    if (target.id === 'lm-bye-toggle') { this._toggleSubmenu('lm-bye-menu'); return true; }
+    if (target.id === 'lm-lb-toggle') { this._toggleSubmenu('lm-lb-menu'); return true; }
+
+    // Sub-menu ball buttons
+    const subBtn = target.closest('.lm-sub-btn');
+    if (subBtn && this.liveMatchEngine) {
+      const type = subBtn.dataset.ball;
+      if (type === 'WD+RO' || type === 'NB+RO') {
+        this._showRunOutModal(type);
+      } else {
+        this.liveMatchEngine.recordBall(type);
+        this._afterBallRecorded();
+      }
+      return true;
+    }
+
+    // Ball scoring (main buttons)
+    const ballBtn = target.closest('[data-ball]');
+    if (ballBtn && this.liveMatchEngine && !ballBtn.classList.contains('lm-sub-btn')) {
+      const type = ballBtn.dataset.ball;
+      if (type === 'W') {
+        this._showDismissalModal();
+      } else {
+        this.liveMatchEngine.recordBall(type);
+        this._afterBallRecorded();
+      }
+      return true;
+    }
+
+    // Undo
+    if (target.id === 'live-undo-btn' && this.liveMatchEngine) {
+      this.liveMatchEngine.undoLastBall();
+      this._saveLiveMatch();
+      this._syncLiveToScorecard();
+      this._renderLiveMatchView();
+      return true;
+    }
+
+    // Manual swap strike in live scoring
+    if (target.id === 'lm-swap-strike-btn' && this.liveMatchEngine) {
+      // Push snapshot for undo support
+      this.liveMatchEngine.undoStack.push(this.liveMatchEngine._snapshot());
+      if (this.liveMatchEngine.undoStack.length > 50) this.liveMatchEngine.undoStack.shift();
+      this.liveMatchEngine._swapStrike();
+      this._saveLiveMatch();
+      this._renderLiveMatchView();
+      return true;
+    }
+
+    // Save to scorecard
+    if (target.id === 'live-save-scorecard-btn' && this.liveMatchEngine) {
+      this._showSaveConfirmModal('Save to Scorecard');
+      return true;
+    }
+
+    // Back to match list
+    if (target.id === 'live-back-btn' || target.closest('#live-back-btn')) {
+      this.liveMatchEngine = null;
+      this._renderLiveMatchView();
+      return true;
+    }
+
+    // Dismissal modal clicks
+    const dismissBtn = target.closest('[data-lm-dismissal]');
+    if (dismissBtn && this.liveMatchEngine) {
+      const dtype = dismissBtn.dataset.lmDismissal;
+      if (dtype === 'run out') {
+        this._closeModal();
+        this._showRunOutModal('W');
+      } else {
+        this.liveMatchEngine.recordBall('W', { dismissalType: dtype, whoOut: 'striker' });
+        this._closeModal();
+        this._afterBallRecorded();
+      }
+      return true;
+    }
+
+    // Run out: swap strike button
+    if (target.id === 'ro-swap-strike-btn') {
+      this._handleRunOutSwap();
+      return true;
+    }
+
+    // Run out: runs completed chip selection
+    const roChip = target.closest('[data-ro-runs]');
+    if (roChip) {
+      this._pendingRunOutRuns = parseInt(roChip.dataset.roRuns) || 0;
+      // Update active state on chips
+      roChip.closest('.ro-runs-chips')?.querySelectorAll('.ro-chip').forEach(c => c.classList.remove('active'));
+      roChip.classList.add('active');
+      return true;
+    }
+
+    // Run out: who was out
+    const roBtn = target.closest('[data-lm-runout]');
+    if (roBtn && this.liveMatchEngine) {
+      const whoOut = roBtn.dataset.lmRunout;
+      const pendingType = this._pendingRunOutType || 'W';
+      const runsCompleted = this._pendingRunOutRuns || 0;
+      const manualStrikeSwap = this._runOutSwapped || false;
+      if (pendingType === 'W') {
+        this.liveMatchEngine.recordBall('W', { dismissalType: 'run out', whoOut, runsCompleted, manualStrikeSwap });
+      } else {
+        this.liveMatchEngine.recordBall(pendingType, { whoOut, runsCompleted, manualStrikeSwap });
+      }
+      this._pendingRunOutType = null;
+      this._pendingRunOutRuns = 0;
+      this._runOutSwapped = false;
+      this._closeModal();
+      this._afterBallRecorded();
+      return true;
+    }
+
+    // ── Save confirmation modal buttons ──
+    if (target.id === 'lm-save-yes-btn') {
+      this._closeModal();
+      this._syncLiveToScorecard();
+      this.ui.showToast('✅ Saved to scorecard!', 'success');
+      return true;
+    }
+    if (target.id === 'lm-save-no-btn' || target.id === 'lm-save-dismiss-btn') {
+      this._closeModal();
+      return true;
+    }
+    if (target.id === 'lm-edit-score-btn') {
+      this._closeModal();
+      if (this.liveMatchEngine) {
+        this.liveMatchEngine.undoLastBall();
+        this._saveLiveMatch();
+        this._renderLiveMatchView();
+        this.ui.showToast('↩ Undone — edit your score', 'info');
+      }
+      return true;
+    }
+
+    // ── Edit Score button on result/innings-break screen ──
+    if (target.id === 'live-edit-score-btn') {
+      if (this.liveMatchEngine) {
+        this.liveMatchEngine.undoLastBall();
+        this._saveLiveMatch();
+        this._renderLiveMatchView();
+        this.ui.showToast('↩ Undone — you can now correct the score', 'info');
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  _createLiveEngine(match) {
+    // Build squad arrays from auction state
+    const teamASquad = this._getTeamSquad(match.teamAId);
+    const teamBSquad = this._getTeamSquad(match.teamBId);
+    this.liveMatchEngine = new LiveMatchEngine({
+      ...match,
+      teamASquad, teamBSquad,
+      matchType: 'group'
+    });
+  }
+
+  _getTeamSquad(teamId) {
+    if (!this.engine) return [];
+    const team = this.engine.getTeamState(teamId);
+    if (!team) return [];
+    const squad = [];
+    // Owner + icon + auctioned players
+    if (team.owner) squad.push({ name: team.owner, role: 'All-Rounder' });
+    if (team.iconPlayer) squad.push({ name: team.iconPlayer, role: 'All-Rounder' });
+    (team.squad || []).forEach(s => squad.push({ name: s.player?.name || s.name, role: s.player?.role || 'All-Rounder' }));
+    return squad;
+  }
+
+  _afterBallRecorded() {
+    this._saveLiveMatch();
+    this._syncLiveToScorecard();
+    // Check if match just ended or innings just ended — show save prompt
+    const st = this.liveMatchEngine.getState();
+    if (st.phase === 'result' || st.phase === 'innings-break') {
+      this._renderLiveMatchView();
+      this._showSaveConfirmModal(st.phase === 'result' ? 'Match Complete!' : 'Innings Complete!');
+    } else {
+      this._renderLiveMatchView();
+    }
+  }
+
+  _saveLiveMatch() {
+    if (this.liveMatchEngine) {
+      localStorage.setItem('npl_live_match_' + this.liveMatchEngine.matchId, JSON.stringify(this.liveMatchEngine.serialize()));
+    }
+  }
+
+  _syncLiveToScorecard() {
+    if (this.liveMatchEngine) {
+      this.liveMatchEngine.syncToScorecard(this.scorecardMgr);
+      this.saveState();
+    }
+  }
+
+  _toggleSubmenu(menuId) {
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+    // Close all other submenus first
+    document.querySelectorAll('.lm-submenu').forEach(m => { if (m.id !== menuId) m.style.display = 'none'; });
+    menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+  }
+
+  _showDismissalModal() {
+    const isFH = this.liveMatchEngine?.isFreeHit;
+    const dismissals = isFH
+      ? [{ type: 'run out', label: 'Run Out' }]
+      : [
+          { type: 'bowled', label: 'Bowled' },
+          { type: 'caught', label: 'Caught' },
+          { type: 'lbw', label: 'LBW' },
+          { type: 'stumped', label: 'Stumped' },
+          { type: 'hit wicket', label: 'Hit Wicket' },
+          { type: 'run out', label: 'Run Out' },
+        ];
+    const modal = document.createElement('div');
+    modal.className = 'lm-modal-overlay';
+    modal.id = 'lm-dismissal-modal';
+    modal.innerHTML = `<div class="lm-modal"><h3>🏏 Dismissal Type${isFH?' (Free Hit)':''}</h3><button class="lm-modal-close" id="lm-modal-close-btn">&times;</button><div class="lm-modal-list">${dismissals.map(d => `<button class="lm-modal-option" data-lm-dismissal="${d.type}">${d.label}</button>`).join('')}</div><button class="btn btn-ghost btn-sm lm-modal-cancel" id="lm-modal-close-btn" style="margin-top:12px;width:100%;">Cancel</button></div>`;
+    document.getElementById('app').appendChild(modal);
+  }
+
+  _showRunOutModal(pendingType) {
+    this._pendingRunOutType = pendingType;
+    this._pendingRunOutRuns = 0;
+    this._runOutSwapped = false;
+    // Get actual player names from live engine
+    let strikerName = 'Striker';
+    let nonStrikerName = 'Non-Striker';
+    if (this.liveMatchEngine) {
+      const lms = this.liveMatchEngine.getState();
+      strikerName = lms.striker?.name || 'Striker';
+      nonStrikerName = lms.nonStriker?.name || 'Non-Striker';
+    }
+    this._roStrikerName = strikerName;
+    this._roNonStrikerName = nonStrikerName;
+    const modal = document.createElement('div');
+    modal.className = 'lm-modal-overlay';
+    modal.id = 'lm-dismissal-modal';
+    modal.innerHTML = `<div class="lm-modal">
+      <h3>🏃 Run Out</h3>
+      <button class="lm-modal-close" id="lm-modal-close-btn">&times;</button>
+      <div class="ro-section">
+        <div class="ro-section-label">Runs Completed Before Run Out</div>
+        <div class="ro-runs-chips">
+          <button class="ro-chip active" data-ro-runs="0">0</button>
+          <button class="ro-chip" data-ro-runs="1">1</button>
+          <button class="ro-chip" data-ro-runs="2">2</button>
+          <button class="ro-chip" data-ro-runs="3">3</button>
+          <button class="ro-chip" data-ro-runs="4">4</button>
+          <button class="ro-chip" data-ro-runs="5">5</button>
+          <button class="ro-chip" data-ro-runs="6">6</button>
+        </div>
+      </div>
+      <div class="ro-section">
+        <button class="btn btn-ghost btn-sm ro-swap-btn" id="ro-swap-strike-btn" style="width:100%;margin-bottom:12px;border-color:rgba(99,102,241,0.3);color:var(--accent-indigo);">🔄 Swap Strike</button>
+        <div class="ro-section-label">Who was Run Out?</div>
+        <div class="lm-modal-list" id="ro-player-list">
+          <button class="lm-modal-option" data-lm-runout="striker">
+            <span style="font-size:0.7rem;color:var(--text-4);display:block;margin-bottom:2px;">STRIKER</span>${strikerName}
+          </button>
+          <button class="lm-modal-option" data-lm-runout="nonStriker">
+            <span style="font-size:0.7rem;color:var(--text-4);display:block;margin-bottom:2px;">NON-STRIKER</span>${nonStrikerName}
+          </button>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm lm-modal-cancel" id="lm-modal-close-btn" style="margin-top:12px;width:100%;">Cancel</button>
+    </div>`;
+    document.getElementById('app').appendChild(modal);
+  }
+
+  _handleRunOutSwap() {
+    this._runOutSwapped = !this._runOutSwapped;
+    const list = document.getElementById('ro-player-list');
+    if (!list) return;
+    // Determine displayed names based on swap state
+    const topName = this._runOutSwapped ? this._roNonStrikerName : this._roStrikerName;
+    const bottomName = this._runOutSwapped ? this._roStrikerName : this._roNonStrikerName;
+    // Always use 'striker' for top and 'nonStriker' for bottom since engine also applies swap
+    list.innerHTML = `
+      <button class="lm-modal-option" data-lm-runout="striker">
+        <span style="font-size:0.7rem;color:var(--text-4);display:block;margin-bottom:2px;">STRIKER</span>${topName}
+      </button>
+      <button class="lm-modal-option" data-lm-runout="nonStriker">
+        <span style="font-size:0.7rem;color:var(--text-4);display:block;margin-bottom:2px;">NON-STRIKER</span>${bottomName}
+      </button>`;
+    // Update swap button style
+    const btn = document.getElementById('ro-swap-strike-btn');
+    if (btn) {
+      btn.style.borderColor = this._runOutSwapped ? 'rgba(245,158,11,0.4)' : 'rgba(99,102,241,0.3)';
+      btn.style.color = this._runOutSwapped ? 'var(--accent-gold)' : 'var(--accent-indigo)';
+      btn.textContent = this._runOutSwapped ? '🔄 Strike Swapped' : '🔄 Swap Strike';
+    }
+  }
+
+  _closeModal() {
+    const modal = document.getElementById('lm-dismissal-modal');
+    if (modal) modal.remove();
+    const saveModal = document.getElementById('lm-save-confirm-modal');
+    if (saveModal) saveModal.remove();
+    const shareModal = document.getElementById('share-app-modal');
+    if (shareModal) shareModal.remove();
+  }
+
+  _showShareModal() {
+    const existing = document.getElementById('share-app-modal');
+    if (existing) existing.remove();
+
+    const appUrl = 'https://deerajnayak1010-star.github.io/auction-app/';
+
+    const waMsg = `🏏 *NAKRE PREMIER LEAGUE 3.0* 🏏
+━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 *The Ultimate Village Cricket Tournament Platform*
+
+⚡ *Features:*
+🏷️ Live IPL-Style Player Auction
+📊 Ball-by-Ball Live Scoring
+🏆 Auto Points Table & Standings
+📅 Smart Fixture Scheduling
+🎖️ Awards Ceremony
+📸 Photo Gallery
+🎙️ Live Commentary Engine
+📽️ Audience Projector Mode
+
+👥 *8 Teams | 90+ Players | 1 Epic Tournament*
+
+🔧 Built with: HTML, CSS, JavaScript
+💻 Fully offline — runs on any browser!
+
+🔗 Try it now: ${appUrl}
+
+#NPL3 #CricketApp #VillageCricket`;
+
+    const igMsg = `🏏 Just built something epic! 🚀
+
+Introducing NPL 3.0 — a full-stack cricket tournament management suite for our village league!
+
+✨ What it does:
+• Live IPL-style auction with bid timer & commentary
+• Ball-by-ball live match scoring with run-out handling
+• Auto-generated standings, stats & player cards
+• Smart fixture scheduling with drag-and-drop
+• Awards ceremony with cinematic reveal animations
+• Audience projector mode for live event broadcasting
+• HD team poster generation for social media
+
+Built entirely with vanilla HTML/CSS/JS — no frameworks needed! 💪
+
+8 teams. 90+ players. 1 complete platform.
+
+🔗 Link in bio: ${appUrl}
+
+#NPL #CricketApp #WebDevelopment #JavaScript #VillageCricket #SportsApp #BuildInPublic #WebDev #CodingProject #IndianCricket #Cricket #TournamentApp #FullStack #FrontendDev #OpenSource`;
+
+    const modal = document.createElement('div');
+    modal.className = 'lm-modal-overlay';
+    modal.id = 'share-app-modal';
+    modal.innerHTML = `<div class="lm-modal" style="max-width:520px;max-height:85vh;overflow-y:auto;">
+      <h3 style="text-align:center;margin-bottom:4px;">📱 Share NPL 3.0</h3>
+      <p style="text-align:center;font-size:0.75rem;color:var(--text-3);margin-bottom:16px;">Copy a ready-made message for social media</p>
+      <button class="lm-modal-close" id="share-modal-close">&times;</button>
+      <div class="share-tabs">
+        <button class="share-tab active" id="share-tab-wa">💬 WhatsApp</button>
+        <button class="share-tab" id="share-tab-ig">📷 Instagram</button>
+      </div>
+      <div class="share-content active" id="share-wa-content">
+        <textarea class="share-textarea" id="share-wa-text" readonly>${waMsg}</textarea>
+        <button class="btn btn-primary btn-sm" id="share-copy-wa-btn" style="width:100%;margin-top:10px;">📋 Copy WhatsApp Message</button>
+      </div>
+      <div class="share-content" id="share-ig-content">
+        <textarea class="share-textarea" id="share-ig-text" readonly>${igMsg}</textarea>
+        <button class="btn btn-primary btn-sm" id="share-copy-ig-btn" style="width:100%;margin-top:10px;">📋 Copy Instagram Caption</button>
+      </div>
+    </div>`;
+    document.getElementById('app').appendChild(modal);
+  }
+
+  _showSaveConfirmModal(title) {
+    // Remove existing if any
+    const existing = document.getElementById('lm-save-confirm-modal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.className = 'lm-modal-overlay';
+    modal.id = 'lm-save-confirm-modal';
+    modal.innerHTML = `<div class="lm-modal">
+      <h3>💾 ${title}</h3>
+      <button class="lm-modal-close" id="lm-save-dismiss-btn">&times;</button>
+      <p style="color:var(--text-3);margin:12px 0 20px;">Do you want to save to the scorecard?</p>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button class="btn btn-primary" id="lm-save-yes-btn">✅ Save Now</button>
+        <button class="btn btn-ghost" id="lm-save-no-btn">⏭ Skip</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="lm-edit-score-btn" style="width:100%;margin-top:16px;color:var(--accent-gold);">↩ Undo Last Ball & Edit Score</button>
+    </div>`;
+    document.getElementById('app').appendChild(modal);
+  }
+
+  // ═══════════════════════════════════════════
+  // PREMIUM: Gallery
+  // ═══════════════════════════════════════════
+
+  _renderGalleryView() {
+    const matches = this.scorecardMgr.getAllMatches();
+    this.ui.renderGallery(this.galleryMgr.photos, matches, this.galleryFilter);
+    this._bindGalleryEvents();
+  }
+
+  _bindGalleryEvents() {
+    const zone = document.getElementById('gallery-upload-zone');
+    const input = document.getElementById('gallery-file-input');
+    if (zone && input) {
+      zone.addEventListener('click', () => input.click());
+      zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.style.borderColor = 'var(--accent-indigo)'; });
+      zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.style.borderColor = '';
+        this._processGalleryFiles(e.dataTransfer.files);
+      });
+      input.addEventListener('change', (e) => {
+        this._processGalleryFiles(e.target.files);
+      });
+    }
+  }
+
+  _processGalleryFiles(files) {
+    Array.from(files).forEach(file => {
+      if (!file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.galleryMgr.addPhoto('', e.target.result, file.name, 'Day 1');
+        this._saveGallery();
+        this._renderGalleryView();
+        this.ui.showToast('📷 Photo uploaded!', 'success');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  _saveGallery() {
+    try { localStorage.setItem('npl_gallery', JSON.stringify(this.galleryMgr.serialize())); }
+    catch(e) { console.warn('Gallery save failed (storage full?):', e); }
+  }
+
+  _handleGalleryClick(target) {
+    // Filter
+    const filterBtn = target.closest('[data-gallery-filter]');
+    if (filterBtn) {
+      this.galleryFilter = filterBtn.dataset.galleryFilter;
+      this._renderGalleryView();
+      return true;
+    }
+
+    // Delete photo
+    const delBtn = target.closest('[data-delete-photo]');
+    if (delBtn) {
+      this.galleryMgr.removePhoto(parseInt(delBtn.dataset.deletePhoto));
+      this._saveGallery();
+      this._renderGalleryView();
+      this.ui.showToast('Photo removed', 'info');
+      return true;
+    }
+
+    // Generate social card
+    const genBtn = target.closest('[data-generate-card]');
+    if (genBtn) {
+      const matchId = genBtn.dataset.generateCard;
+      const match = this.scorecardMgr.getMatch(matchId);
+      if (match) {
+        GalleryManager.generateResultCard(match).then(canvas => {
+          const link = document.createElement('a');
+          link.download = `NPL3_Match_${matchId.replace('match-','')}_Result.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          this.ui.showToast('📥 Match result card downloaded!', 'success');
+        });
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  // ═══════════════════════════════════════════
+  // PREMIUM: Awards Ceremony
+  // ═══════════════════════════════════════════
+
+  _renderAwardsView() {
+    if (this.awardsData.length === 0) {
+      const matches = this.scorecardMgr.getAllMatches();
+      const teams = this.engine ? this.engine.getState().teams : [];
+      const soldPlayers = this.engine ? this.engine.getState().soldPlayers : [];
+      this.awardsData = AwardsEngine.computeAwards(matches, teams, soldPlayers);
+    }
+    this.ui.renderAwards(this.awardsData, this.awardsRevealedCount);
+  }
+
+  _handleAwardsClick(target) {
+    if (target.id === 'awards-reveal-next-btn' || target.closest('#awards-reveal-next-btn')) {
+      if (this.awardsRevealedCount < this.awardsData.length) {
+        this.awardsRevealedCount++;
+        this._renderAwardsView();
+        this.sounds.play('sold');
+      }
+      return true;
+    }
+
+    if (target.id === 'awards-reset-btn' || target.closest('#awards-reset-btn')) {
+      this.awardsRevealedCount = 0;
+      this._renderAwardsView();
+      return true;
+    }
+
+    if (target.id === 'awards-back-btn' || target.closest('#awards-back-btn')) {
+      this.navigate('results');
+      return true;
+    }
+
+    return false;
   }
 }
 

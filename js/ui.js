@@ -35,17 +35,25 @@ export class UI {
   // ═══════════════════════════════════════════
 
   renderHeader(currentView, stats = {}, soundMuted = false, commentaryVisible = false) {
-    const views = [
-      { id: 'setup',   label: 'Setup' },
-      { id: 'players', label: 'Players' },
-      { id: 'rules',   label: 'Rules' },
-      { id: 'auction', label: 'Auction' },
-      { id: 'results', label: 'Results' },
-      { id: 'about',   label: 'About' },
-      { id: 'history', label: 'NPL History' },
+    const primaryViews = [
+      { id: 'live-match', label: '🏏 Live' },
+      { id: 'auction',    label: '🏷️ Auction' },
+      { id: 'results',    label: '📊 Results' },
+      { id: 'gallery',    label: '📸 Gallery' },
+      { id: 'awards',     label: '🏆 Awards' },
+    ];
+    const moreViews = [
+      { id: 'setup',   label: '⚙️ Setup' },
+      { id: 'players', label: '👥 Players' },
+      { id: 'rules',   label: '📋 Rules' },
+      { id: 'about',   label: 'ℹ️ About' },
+      { id: 'history', label: '📜 NPL History' },
     ];
 
     const isFs = !!document.fullscreenElement;
+    const moreIds = moreViews.map(v => v.id);
+    const isMoreActive = moreIds.includes(currentView);
+    const moreLabel = isMoreActive ? (moreViews.find(v => v.id === currentView)?.label || '⚙️ More') : '⚙️ More';
 
     if (currentView === 'login') {
       this.headerEl.innerHTML = `
@@ -57,9 +65,17 @@ export class UI {
     this.headerEl.innerHTML = `
       <div class="nav-brand">NAKRE PREMIER LEAGUE 3.0</div>
       <nav class="nav-links">
-        ${views.map(v => `
+        ${primaryViews.map(v => `
           <button class="nav-link ${currentView === v.id ? 'active' : ''}" data-view="${v.id}">${v.label}</button>
         `).join('')}
+        <div class="nav-more-menu">
+          <button class="nav-link ${isMoreActive ? 'active' : ''}" id="nav-more-toggle">${moreLabel} ▾</button>
+          <div class="nav-more-dropdown" id="nav-more-dropdown" style="display:none;">
+            ${moreViews.map(v => `
+              <button class="nav-more-item ${currentView === v.id ? 'active' : ''}" data-view="${v.id}">${v.label}</button>
+            `).join('')}
+          </div>
+        </div>
       </nav>
       <div class="nav-right">
         <div class="nav-stats">
@@ -69,24 +85,20 @@ export class UI {
             <span>Unsold:<span class="nav-stat-value">${stats.unsold || 0}</span></span>
           ` : ''}
         </div>
-        <button class="header-icon-btn ${commentaryVisible ? 'icon-on' : 'icon-off'}" id="commentary-toggle-btn" title="${commentaryVisible ? 'Disable Commentary' : 'Enable Commentary'}">
-          <span class="header-icon-emoji">🎙️</span>
-          <span class="header-icon-indicator ${commentaryVisible ? 'on' : 'off'}"></span>
-        </button>
-        <button class="header-icon-btn ${!soundMuted ? 'icon-on' : 'icon-off'}" id="sound-toggle-btn" title="${soundMuted ? 'Enable Sound' : 'Disable Sound'}">
-          <span class="header-icon-emoji">${soundMuted ? '🔇' : '🔊'}</span>
-          <span class="header-icon-indicator ${!soundMuted ? 'on' : 'off'}"></span>
-        </button>
-        <button class="header-icon-btn" id="open-projector-btn" title="Open Projector Screen">
-          <span class="header-icon-emoji">📺</span>
-        </button>
-        <button class="btn-reset-auction" id="reset-auction-btn" title="Reset Auction">🔄</button>
         <button class="btn-fullscreen" id="fullscreen-btn" title="${isFs ? 'Exit Fullscreen' : 'Enter Fullscreen'}">
           ${isFs ? '⊗' : '⛶'}
         </button>
-        <button class="btn btn-ghost btn-sm" id="logout-btn" title="Logout" style="margin-left: 12px;">
-          Logout
-        </button>
+        <div class="hamburger-menu">
+          <button class="hamburger-btn" id="hamburger-toggle" title="Menu">☰</button>
+          <div class="hamburger-dropdown" id="hamburger-dropdown" style="display:none;">
+            <button class="hamburger-item ${commentaryVisible ? 'icon-on' : ''}" id="commentary-toggle-btn">🎙️ Commentary ${commentaryVisible ? 'ON' : 'OFF'}</button>
+            <button class="hamburger-item ${!soundMuted ? 'icon-on' : ''}" id="sound-toggle-btn">${soundMuted ? '🔇' : '🔊'} Sound ${soundMuted ? 'OFF' : 'ON'}</button>
+            <button class="hamburger-item" id="open-projector-btn">📺 Projector</button>
+            <button class="hamburger-item" id="share-app-btn">📱 Share App</button>
+            <button class="hamburger-item" id="reset-auction-btn">🔄 Reset Auction</button>
+            <button class="hamburger-item" id="logout-btn">🚪 Logout</button>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -1258,6 +1270,12 @@ export class UI {
           <button class="results-tab-btn ${activeTab === 'analytics' ? 'active' : ''}" id="results-tab-analytics">
             📊 Analytics
           </button>
+          <button class="results-tab-btn ${activeTab === 'standings' ? 'active' : ''}" id="results-tab-standings">
+            📋 Standings
+          </button>
+          <button class="results-tab-btn ${activeTab === 'stats' ? 'active' : ''}" id="results-tab-stats">
+            🃏 Player Stats
+          </button>
           <button class="results-tab-btn ${activeTab === 'scorecard' ? 'active' : ''}" id="results-tab-scorecard">
             🏆 Scorecard
           </button>
@@ -1268,6 +1286,8 @@ export class UI {
 
         ${activeTab === 'squads' ? this._renderSquadsTab(state) : ''}
         ${activeTab === 'analytics' ? this._renderAnalyticsTab(state) : ''}
+        ${activeTab === 'standings' ? this._renderStandingsTab(state, opts) : ''}
+        ${activeTab === 'stats' ? this._renderPlayerStatsTab(state, opts) : ''}
         ${activeTab === 'scorecard' ? this._renderScorecardTab(state, opts) : ''}
         ${activeTab === 'fixtures' ? this._renderFixturesTab(state) : ''}
 
@@ -1540,7 +1560,7 @@ export class UI {
                   ${teamLogo(m.teamBLogo, m.teamBShort, m.teamBColor, m.teamBTextColor)}
                 </div>
                 <div class="sc-match-item-info">${m.date} • ${m.time} • ${m.venue}</div>
-                ${m.status === 'completed' && m.result.winner ? `<div class="sc-match-result-line">🏆 ${m.result.margin}</div>` : ''}
+                ${m.status === 'completed' ? (m.result.winner ? `<div class="sc-match-result-line">🏆 ${m.result.margin}</div>` : `<div class="sc-match-result-line" style="color:var(--accent-gold);">🤝 Match Tied — Points Shared</div>`) : ''}
                 <button class="btn btn-primary btn-sm sc-open-btn" data-sc-match="${m.matchId}">${m.status === 'completed' ? '📊 View Scorecard' : '✏️ Edit Scorecard'}</button>
               </div>
             `).join('')}
@@ -1552,32 +1572,6 @@ export class UI {
           </div>
         `}
 
-        <!-- Team Squad Analysis -->
-        <div class="team-scorecards-section" style="margin-top:40px;">
-          <h2 style="text-align:center; margin-bottom:24px; font-size:1.4rem;">📋 Team Squad Analysis</h2>
-          <div class="team-scorecards-grid">
-            ${state.teams.map(team => {
-              const bat = team.squad.filter(p => p.role === 'Batsman').length;
-              const bowl = team.squad.filter(p => p.role === 'Bowler').length;
-              const ar = team.squad.filter(p => p.role === 'All-Rounder').length;
-              const wk = team.squad.filter(p => p.isWK).length;
-              const mx = Math.max(bat, bowl, ar, 1);
-              return `
-                <div class="team-scorecard-card" style="--team-color: ${team.color}">
-                  <div class="team-sc-header" style="background: ${team.color}; color: ${team.textColor}">
-                    <div class="team-sc-logo">${team.logo ? `<img src="${team.logo}" alt="${team.shortName}">` : team.shortName}</div>
-                    <div><div class="team-sc-name">${team.name}</div><div class="team-sc-meta">${team.squad.length}/12 • ${fmt(team.purse)} left</div></div>
-                  </div>
-                  <div class="team-sc-body">
-                    <div class="team-sc-role-row"><span class="team-sc-role-label">🏏 Batsmen</span><div class="team-sc-bar-track"><div class="team-sc-bar-fill" style="width:${(bat/mx)*100}%;background:#3b82f6;"></div></div><span class="team-sc-role-count">${bat}</span></div>
-                    <div class="team-sc-role-row"><span class="team-sc-role-label">🎯 Bowlers</span><div class="team-sc-bar-track"><div class="team-sc-bar-fill" style="width:${(bowl/mx)*100}%;background:#ef4444;"></div></div><span class="team-sc-role-count">${bowl}</span></div>
-                    <div class="team-sc-role-row"><span class="team-sc-role-label">⭐ All-Rounders</span><div class="team-sc-bar-track"><div class="team-sc-bar-fill" style="width:${(ar/mx)*100}%;background:#f59e0b;"></div></div><span class="team-sc-role-count">${ar}</span></div>
-                    <div class="team-sc-extras"><span>🧤 WK: ${wk}</span><span>💰 Spent: ${fmt(team.totalSpent)}</span></div>
-                  </div>
-                </div>`;
-            }).join('')}
-          </div>
-        </div>
       </div>
     `;
   }
@@ -1608,7 +1602,7 @@ export class UI {
         <div class="honours-header">
           <span class="honours-icon">🏆</span>
           <h2>Individual Honours</h2>
-          <p class="honours-subtitle">PLAYER AWARDS ${honours?.completedCount ? `(${honours.completedCount} matches)` : '(Auction-Based)'}</p>
+          <p class="honours-subtitle">PLAYER AWARDS ${honours?.completedCount ? `(${honours.completedCount} MATCHES — RUNS & WICKETS)` : '(PRE-TOURNAMENT — AUCTION PICKS)'}</p>
         </div>
         <div class="honours-grid">
           ${awards.map((a, i) => `
@@ -1768,56 +1762,55 @@ export class UI {
     let knockouts = [];
 
     if (gd) {
-      // Generate all 6 round-robin pairs per group, ordered by round
-      const getRoundRobinPairs = (group) => {
-        const pairs = [];
-        for (let i = 0; i < group.length; i++)
-          for (let j = i + 1; j < group.length; j++)
-            pairs.push([group[i], group[j]]);
-        return pairs; // 6 pairs for 4 teams
-      };
+      // Round-robin pairs for 4 teams [0,1,2,3]
+      const rrPairs = (g) => [
+        [g[0],g[1]], [g[2],g[3]],  // Round 1
+        [g[0],g[2]], [g[1],g[3]],  // Round 2
+        [g[0],g[3]], [g[1],g[2]]   // Round 3
+      ];
 
-      const pairsA = getRoundRobinPairs(gd.groupA).map(p => ({ pair: p, group: 'A' }));
-      const pairsB = getRoundRobinPairs(gd.groupB).map(p => ({ pair: p, group: 'B' }));
+      const pA = rrPairs(gd.groupA);
+      const pB = rrPairs(gd.groupB);
 
-      // Split pairs per group: Day1 picks [0,3,5]=[AvB,BvC,CvD], Day2 picks [1,2,4]=[AvC,AvD,BvD]
-      // Day1: each team plays 1-2 matches; Day2: each team plays 1-2 matches
-      const day1raw = [pairsA[0], pairsB[0], pairsA[3], pairsB[3], pairsA[5], pairsB[5]];
-      const day2raw = [pairsA[1], pairsB[1], pairsA[2], pairsB[2], pairsA[4], pairsB[4]];
+      // Day 1: Interleave A,B (Round 1 + Round 2 first half)
+      const day1 = [
+        { pair: pA[0], group: 'A' }, { pair: pB[0], group: 'B' },
+        { pair: pA[1], group: 'A' }, { pair: pB[1], group: 'B' },
+        { pair: pA[2], group: 'A' }, { pair: pB[2], group: 'B' },
+      ];
+      // Day 2: Interleave A,B (Round 2 second half + Round 3)
+      const day2 = [
+        { pair: pA[3], group: 'A' }, { pair: pB[3], group: 'B' },
+        { pair: pA[4], group: 'A' }, { pair: pB[4], group: 'B' },
+        { pair: pA[5], group: 'A' }, { pair: pB[5], group: 'B' },
+      ];
 
-      // Reorder within each day to avoid back-to-back same-team
-      const reorderDay = (arr) => {
-        const result = [], rem = [...arr];
-        while (rem.length > 0) {
-          const last = result.length > 0 ? result[result.length - 1].pair : [];
-          const idx = rem.findIndex(m => !m.pair.some(t => last.includes(t)));
-          result.push(idx >= 0 ? rem.splice(idx, 1)[0] : rem.shift());
-        }
-        return result;
-      };
+      const scheduled = [...day1, ...day2];
 
-      const scheduled = [...reorderDay(day1raw), ...reorderDay(day2raw)];
+      // Time slots: 1 hour per match starting 8:30 AM
+      const day1Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30'];
+      const day2Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30'];
 
-      // Assign match numbers, dates, times
-      const matchTimes = ['9:00 AM', '10:00 AM', '11:15 AM', '12:30 PM', '2:00 PM', '3:15 PM'];
       allFixtures = scheduled.map((s, i) => {
         const dayIdx = i < 6 ? 0 : 1;
         const slotIdx = dayIdx === 0 ? i : i - 6;
+        const times = dayIdx === 0 ? day1Times : day2Times;
         return {
           matchNum: i + 1,
           teamA: getTeam(s.pair[0]),
           teamB: getTeam(s.pair[1]),
           group: s.group,
+          day: dayIdx + 1,
           date: dayIdx === 0 ? '25 April 2026' : '26 April 2026',
-          time: matchTimes[slotIdx] || '',
+          time: times[slotIdx] || '',
         };
       });
 
-
       knockouts = [
-        { label: 'Semi-Final 1', desc: 'Group A Winner vs Group B Runner-up', date: '26 April', time: '4:30 PM' },
-        { label: 'Semi-Final 2', desc: 'Group B Winner vs Group A Runner-up', date: '26 April', time: '5:30 PM' },
-        { label: '🏆 FINAL', desc: 'SF1 Winner vs SF2 Winner', date: '26 April', time: '6:30 PM' },
+        { label: 'Qualifier 1', desc: 'A1 vs B1 — Winner → Final', detail: 'Winner → Final', date: '26 April', time: '2:30 – 3:30', accent: '#f59e0b' },
+        { label: 'Eliminator', desc: 'A2 vs B2 — Loser eliminated', detail: 'Loser eliminated', date: '26 April', time: '3:30 – 4:30', accent: '#ef4444' },
+        { label: 'Qualifier 2', desc: 'Loser Q1 vs Winner Eliminator', detail: 'Winner → Final', date: '26 April', time: '4:30 – 5:30', accent: '#6366f1' },
+        { label: '🏆 FINAL', desc: 'Winner Q1 vs Winner Q2', detail: '', date: '26 April', time: '5:30 – 6:30', accent: '#f59e0b' },
       ];
     }
 
@@ -1886,15 +1879,18 @@ export class UI {
           <h2>NPL 3.0 GROUP DIVISION</h2>
           <p>25 & 26th April 2026</p>
           <div style="margin-top:16px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-            <button class="btn btn-primary btn-lg" id="draw-tokens-btn">
+            <button class="btn btn-primary btn-lg" id="draw-tokens-btn" ${state.fixturesLocked ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
               🎲 ${gd ? 'Re-Draw Tokens' : 'Draw Tokens'}
             </button>
             ${gd ? `
-              <button class="btn btn-ghost btn-lg" id="clear-tokens-btn" style="border-color: rgba(239,68,68,0.3); color: #ef4444;">
+              <button class="btn btn-ghost btn-lg" id="clear-tokens-btn" ${state.fixturesLocked ? 'disabled style="opacity:0.4;cursor:not-allowed;border-color:rgba(239,68,68,0.15);color:#ef444480;"' : 'style="border-color: rgba(239,68,68,0.3); color: #ef4444;"'}>
                 🗑️ Clear Draw
               </button>
               <button class="btn btn-primary btn-lg" id="download-fixtures-btn" style="background: linear-gradient(135deg, #10b981, #059669);">
                 📥 Download HD Fixtures
+              </button>
+              <button class="btn btn-ghost btn-lg" id="lock-fixtures-btn" style="border-color:${state.fixturesLocked ? 'rgba(239,68,68,0.4);color:#ef4444;' : 'rgba(245,158,11,0.4);color:#f59e0b;'}">
+                ${state.fixturesLocked ? '🔒 Unlock Fixtures' : '🔓 Lock Fixtures'}
               </button>
             ` : ''}
           </div>
@@ -1928,30 +1924,52 @@ export class UI {
           <h2 style="text-align:center; margin-bottom:24px;">📅 Match Schedule</h2>
 
           <div class="fixtures-day-section">
-            <h3 class="fixtures-day-label">🗓️ Day 1 — 25 April 2026 <span style="font-size:0.7rem; color:var(--text-4); font-weight:500; margin-left:8px;">↕ drag matches to reorder</span></h3>
+            <h3 class="fixtures-day-label">🗓️ Day 1 — 25 April 2026 (6 League Matches) <span style="font-size:0.7rem; color:var(--text-4); font-weight:500; margin-left:8px;">↕ drag to reorder</span></h3>
+            <div style="font-size:0.8rem;color:var(--text-3);text-align:center;margin-bottom:12px;">🏏 8:30 AM – 2:30 PM &nbsp;•&nbsp; 1 hour per match</div>
             <div class="fixtures-match-grid" id="fixtures-day1-grid" data-day="1">
-              ${allFixtures.filter(f => f.date.includes('25')).map(renderMatch).join('')}
+              ${allFixtures.filter(f => f.day === 1).map(renderMatch).join('')}
             </div>
+            <div style="text-align:center;padding:8px;color:var(--text-4);font-size:0.75rem;font-style:italic;">🍽️ Lunch / Buffer: 2:30 – 3:30 PM</div>
           </div>
 
           <div class="fixtures-day-section">
-            <h3 class="fixtures-day-label">🗓️ Day 2 — 26 April 2026</h3>
+            <h3 class="fixtures-day-label">🗓️ Day 2 — 26 April 2026 (League + Knockouts)</h3>
+            <div style="font-size:0.8rem;color:var(--text-3);text-align:center;margin-bottom:12px;">🏏 League: 8:30 AM – 2:30 PM &nbsp;•&nbsp; 🔥 Knockouts: 2:30 – 6:30 PM</div>
             <div class="fixtures-match-grid" id="fixtures-day2-grid" data-day="2">
-              ${allFixtures.filter(f => f.date.includes('26')).map(renderMatch).join('')}
+              ${allFixtures.filter(f => f.day === 2).map(renderMatch).join('')}
             </div>
           </div>
 
-          <!-- Knockouts -->
+          <!-- Knockout Stage -->
           <div class="fixtures-day-section">
-            <h3 class="fixtures-day-label">⚡ Knockout Stage — 26 April 2026</h3>
+            <h3 class="fixtures-day-label">🔥 Knockout Stage — 26 April 2026 (2:30 – 6:30 PM)</h3>
             <div class="fixtures-match-grid">
-              ${knockouts.map(ko => `
-                <div class="fixture-match-card knockout-card">
-                  <div class="fixture-match-num">${ko.label}</div>
-                  <div class="fixture-knockout-desc">${ko.desc}</div>
-                  <div class="fixture-match-info">${ko.date} • ${ko.time}</div>
+              ${knockouts.map((ko, idx) => `
+                <div class="fixture-match-card knockout-card" style="border-top:3px solid ${ko.accent};">
+                  <div class="fixture-match-num" style="color:${ko.accent};">Match ${13 + idx} — ${ko.label}</div>
+                  <div class="fixture-knockout-desc" style="font-size:0.85rem;margin:8px 0;">${ko.desc}</div>
+                  <div class="fixture-match-teams" style="justify-content:center;">
+                    <div class="fixture-match-team" style="--tc: #666;">
+                      <div class="fixture-match-logo" style="background:#333;color:#999;">TBD</div>
+                      <span>TBD</span>
+                    </div>
+                    <div class="fixture-match-vs">VS</div>
+                    <div class="fixture-match-team" style="--tc: #666;">
+                      <div class="fixture-match-logo" style="background:#333;color:#999;">TBD</div>
+                      <span>TBD</span>
+                    </div>
+                  </div>
+                  <div class="fixture-match-info">26 April 2026 • ${ko.time}</div>
                 </div>
               `).join('')}
+            </div>
+            <div style="margin-top:16px; padding:16px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); text-align:center;">
+              <div style="font-size:0.85rem; color:var(--text-2); line-height:1.8;">
+                <strong style="color:var(--accent-gold);">Qualifier 1</strong>: A1 vs B1 → Winner to Final, Loser to Q2<br>
+                <strong style="color:var(--accent-red);">Eliminator</strong>: A2 vs B2 → Loser out, Winner to Q2<br>
+                <strong style="color:var(--accent-indigo);">Qualifier 2</strong>: Loser Q1 vs Winner Eliminator → Winner to Final<br>
+                <strong style="color:var(--accent-gold);">🏆 Final</strong>: Winner Q1 vs Winner Q2
+              </div>
             </div>
           </div>
         </div>
@@ -2280,6 +2298,233 @@ export class UI {
   /** Check if commentary panel is currently visible */
   isCommentaryPanelVisible() {
     return !!document.getElementById('commentary-panel');
+  }
+
+  // ═══════════════════════════════════════════
+  // STANDINGS TAB (Points Table)
+  // ═══════════════════════════════════════════
+
+  _renderStandingsTab(state, opts = {}) {
+    const standings = opts.standings;
+    if (!standings) {
+      return `<div class="standings-section"><div class="fixtures-empty" style="padding:40px;text-align:center;"><p style="font-size:1.2rem;">📋 Points Table</p><p style="margin-top:8px;color:var(--text-3);">Draw tokens in <strong>Fixtures</strong> tab and complete scorecards to see standings.</p></div></div>`;
+    }
+    const renderGroup = (grp, label, color) => {
+      return `<div class="standings-group"><div class="standings-group-title"><span class="standings-group-badge" style="background:${color}22;color:${color};">${label}</span></div><table class="standings-table"><thead><tr><th style="width:30px;">#</th><th style="text-align:left;padding-left:16px;">Team</th><th>M</th><th>W</th><th>L</th><th>T</th><th>Pts</th><th>NRR</th><th>Form</th><th></th></tr></thead><tbody>${grp.map((s,i) => {
+        const isQ = i < 2 && s.played > 0;
+        return `<tr class="${isQ?'standings-qualified':''}"><td style="font-weight:700;color:var(--text-3);">${i+1}</td><td><div class="team-cell">${s.team.logo?`<img class="team-logo-sm" src="${s.team.logo}" alt="${s.team.shortName}">`:`<span class="team-logo-sm" style="background:${s.team.color};color:${s.team.textColor||'#fff'};display:flex;align-items:center;justify-content:center;font-size:0.55rem;font-weight:800;">${s.team.shortName}</span>`}<span class="team-name-cell" style="color:${s.team.color}">${s.team.shortName}</span></div></td><td>${s.played}</td><td style="color:var(--accent-green);font-weight:700;">${s.won}</td><td style="color:var(--accent-red);">${s.lost}</td><td style="color:var(--accent-gold);">${s.noResult}</td><td style="font-weight:800;font-size:1rem;">${s.points}</td><td><span class="standings-nrr ${s.nrr>=0?'positive':'negative'}">${s.nrr>=0?'+':''}${s.nrr.toFixed(3)}</span></td><td><div class="form-indicator">${s.form.map(f=>`<span class="form-dot ${f}">${f}</span>`).join('')}${s.form.length===0?'<span style="color:var(--text-4);font-size:0.7rem;">—</span>':''}</div></td><td>${isQ?'<span class="standings-q-badge">✅ Q</span>':''}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+    };
+    return `<div class="standings-section">${renderGroup(standings.groupA,'GROUP A','#3b82f6')}${renderGroup(standings.groupB,'GROUP B','#ef4444')}<p style="text-align:center;color:var(--text-4);font-size:0.8rem;margin-top:16px;">${standings.completedCount} matches completed • Top 2 from each group qualify for knockouts</p></div>`;
+  }
+
+  // ═══════════════════════════════════════════
+  // PLAYER STATS TAB
+  // ═══════════════════════════════════════════
+
+  _renderPlayerStatsTab(state, opts = {}) {
+    const data = opts.playerStats;
+    if (!data || data.matchCount === 0) {
+      return `<div class="player-cards-section"><div class="fixtures-empty" style="padding:40px;text-align:center;"><p style="font-size:1.2rem;">🃏 Player Stats</p><p style="margin-top:8px;color:var(--text-3);">Complete match scorecards to see leaderboards.</p></div></div>`;
+    }
+    const lb = data.leaderboards, medals = ['🥇','🥈','🥉'];
+    const renderLB = (title, icon, items, statFn, subFn) => {
+      if (!items || items.length === 0) return '';
+      return `<div class="leaderboard-card"><div class="leaderboard-card-header"><span style="font-size:1.2rem;">${icon}</span><h4>${title}</h4></div><div class="leaderboard-card-body">${items.map((p,i) => `<div class="lb-row"><span class="lb-rank ${i<3?'lb-rank-'+(i+1):''}">${i<3?medals[i]:i+1}</span><span class="lb-name">${p.name}</span><span class="lb-team" style="color:${p.teamColor};background:${p.teamColor}15;">${p.teamShort}</span><div style="text-align:right;"><div class="lb-stat">${statFn(p)}</div>${subFn?`<div class="lb-sub">${subFn(p)}</div>`:''}</div></div>`).join('')}</div></div>`;
+    };
+    return `<div class="player-cards-section"><div style="text-align:center;margin-bottom:24px;"><h2>🃏 Player Performance Stats</h2><p style="color:var(--text-3);margin-top:4px;">${data.matchCount} matches completed</p></div><div class="leaderboard-grid">${renderLB('Top Run Scorers','🏏',lb.topRunScorers,p=>`${p.runs} runs`,p=>`${p.innings} inn • SR ${p.strikeRate}`)}${renderLB('Top Wicket Takers','🎯',lb.topWicketTakers,p=>`${p.wickets} wkts`,p=>`Eco ${p.economy} • Best ${p.bestBowling}`)}${renderLB('Best Strike Rate','⚡',lb.bestStrikeRate,p=>`SR ${p.strikeRate}`,p=>`${p.runs} runs off ${p.ballsFaced} balls`)}${renderLB('Best Economy','🎯',lb.bestEconomy,p=>`Eco ${p.economy}`,p=>`${p.oversBowled} ov • ${p.wickets} wkts`)}${renderLB('Most Sixes','💥',lb.mostSixes,p=>`${p.sixes} sixes`,p=>`${p.fours} fours • ${p.runs} runs`)}${renderLB('Most MOTM','🏅',lb.mostMotm,p=>`${p.motmCount} MOTM`,p=>`${p.matches} matches`)}${renderLB('Best Value Picks','🌟',lb.bestValue,p=>`${p.runs}r / ${p.wickets}w`,p=>`Bought @ ${(p.soldPrice||0).toLocaleString('en-IN')} pts`)}</div></div>`;
+  }
+
+  // ═══════════════════════════════════════════
+  // LIVE MATCH VIEW
+  // ═══════════════════════════════════════════
+
+  renderLiveMatch(matchState, matchList = []) {
+    if (!matchState) {
+      const leagueMatches = matchList.filter(m => {
+        const num = parseInt(m.matchId.replace('match-',''));
+        return num <= 12;
+      });
+      const knockoutMatches = matchList.filter(m => {
+        const num = parseInt(m.matchId.replace('match-',''));
+        return num > 12;
+      });
+      const koLabels = { 'match-13': 'Q1', 'match-14': 'ELIM', 'match-15': 'Q2', 'match-16': 'FINAL' };
+      const isTBD = (m) => m.teamAShort === 'TBD' || m.teamBShort === 'TBD';
+      const statusBadge = (m) => m.status === 'completed' ? '<span style="color:#10b981;font-size:0.7rem;">✅ Done</span>' : m.status === 'live' ? '<span style="color:#f59e0b;font-size:0.7rem;">🔴 Live</span>' : '';
+
+      const leagueHTML = leagueMatches.length > 0 ? `
+        <h3 style="text-align:center;color:var(--text-2);margin-bottom:12px;">📋 League Matches (${leagueMatches.length})</h3>
+        <div class="match-select-grid">${leagueMatches.map(m => `
+          <div class="match-select-card" data-live-match="${m.matchId}">
+            <div class="match-select-teams">${m.teamAShort} vs ${m.teamBShort}</div>
+            <div class="match-select-info">Match ${m.matchId.replace('match-','')} • ${m.time || m.date || ''}</div>
+            ${statusBadge(m)}
+          </div>`).join('')}
+        </div>` : '';
+
+      const knockoutHTML = knockoutMatches.length > 0 ? `
+        <h3 style="text-align:center;color:var(--accent-gold);margin:24px 0 12px;">🔥 Knockout Matches (${knockoutMatches.length})</h3>
+        <div class="match-select-grid">${knockoutMatches.map(m => `
+          <div class="match-select-card ${isTBD(m) ? 'knockout-tbd' : ''}" data-live-match="${m.matchId}" ${isTBD(m) ? 'style="opacity:0.6;pointer-events:none;"' : ''}>
+            <div style="font-size:0.65rem;color:var(--accent-gold);font-weight:700;letter-spacing:1px;">${koLabels[m.matchId] || 'KO'}</div>
+            <div class="match-select-teams">${m.teamAShort} vs ${m.teamBShort}</div>
+            <div class="match-select-info">${m.time || m.date || ''}</div>
+            ${isTBD(m) ? '<div style="font-size:0.65rem;color:var(--text-4);">Teams decided after league</div>' : statusBadge(m)}
+          </div>`).join('')}
+        </div>` : `
+        <div style="text-align:center;margin-top:24px;">
+          <button class="btn btn-primary" id="create-knockout-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+            🏆 Create Knockout Matches from Standings
+          </button>
+        </div>`;
+
+      this.mainEl.innerHTML = `<div class="live-match-page"><div style="text-align:center;margin-bottom:32px;"><h1 class="hero-title" style="font-size:clamp(1.8rem,3.5vw,2.5rem)">🏏 Live Match Scoring</h1><p class="hero-subtitle">Select a match to start ball-by-ball scoring</p></div>${matchList.length > 0 ? `${leagueHTML}${knockoutHTML}` : `<div class="fixtures-empty" style="padding:40px;text-align:center;"><p>📅 No matches available. Draw tokens first.</p></div>`}</div>`;
+      return;
+    }
+    const s = matchState;
+    const ballDisp = (b) => {
+      // Wicket + Wide (WD+RO or WD+ST)
+      if (b.wicket && b.isWide) {
+        const r = b.additionalRuns ? '+' + b.additionalRuns : '';
+        return `<span class="ball-chip wicket" style="font-size:0.55rem;">WD${r}·W</span>`;
+      }
+      // Wicket + No Ball (NB+RO)
+      if (b.wicket && b.isNoBall) {
+        const r = b.batRuns ? '+' + b.batRuns : '';
+        return `<span class="ball-chip wicket" style="font-size:0.55rem;">NB${r}·W</span>`;
+      }
+      // Plain wicket (with possible completed runs on run-out)
+      if (b.wicket) {
+        if (b.runs > 0) return `<span class="ball-chip wicket" style="font-size:0.6rem;">${b.runs}·W</span>`;
+        return '<span class="ball-chip wicket">W</span>';
+      }
+      if (b.isWide) return `<span class="ball-chip wide">WD${b.additionalRuns?'+'+b.additionalRuns:''}</span>`;
+      if (b.isNoBall) return `<span class="ball-chip noball">NB${(b.batRuns||b.byeRuns)?'+'+(b.batRuns||b.byeRuns):''}</span>`;
+      if (b.isBye) return `<span class="ball-chip bye">${b.extraRuns}B</span>`;
+      if (b.isLegBye) return `<span class="ball-chip bye">${b.extraRuns}LB</span>`;
+      if ((b.totalRuns||b.runs) === 6) return '<span class="ball-chip six">6</span>';
+      if ((b.totalRuns||b.runs) === 4 && b.isBoundary) return '<span class="ball-chip boundary">4</span>';
+      if (b.runs === 0 && !b.extraRuns) return '<span class="ball-chip dot">•</span>';
+      return `<span class="ball-chip">${b.runs||b.totalRuns||0}</span>`;
+    };
+
+    // ── SETUP ──
+    if (s.phase === 'setup') {
+      this.mainEl.innerHTML = `<div class="live-match-page"><div class="lm-setup-card">
+        <h2 style="text-align:center;margin-bottom:24px;">⚙️ Match Setup</h2>
+        <div class="lm-teams-display">
+          <div class="lm-team-badge" style="border-color:${s.teamA.color}">
+            ${s.teamA.logo?`<img src="${s.teamA.logo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">`:
+            `<div style="width:80px;height:80px;border-radius:50%;background:${s.teamA.color};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem;color:${s.teamA.textColor||'#fff'}">${s.teamA.short}</div>`}
+            <span style="color:${s.teamA.color};font-weight:700;font-size:1.1rem;margin-top:8px;">${s.teamA.name || s.teamA.short}</span>
+          </div>
+          <span class="lm-vs-text" style="font-size:1.5rem;font-weight:800;color:var(--accent-gold);">VS</span>
+          <div class="lm-team-badge" style="border-color:${s.teamB.color}">
+            ${s.teamB.logo?`<img src="${s.teamB.logo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">`:
+            `<div style="width:80px;height:80px;border-radius:50%;background:${s.teamB.color};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem;color:${s.teamB.textColor||'#fff'}">${s.teamB.short}</div>`}
+            <span style="color:${s.teamB.color};font-weight:700;font-size:1.1rem;margin-top:8px;">${s.teamB.name || s.teamB.short}</span>
+          </div>
+        </div>
+        <div class="lm-form-group"><label>🏏 OVER LIMIT</label>
+          <select id="lm-overs-select" class="lm-select">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${n===s.oversLimit?'selected':''}>${n} overs</option>`).join('')}</select>
+        </div>
+        <div class="lm-form-group"><label>🪙 TOSS WINNER</label>
+          <select id="lm-toss-winner" class="lm-select"><option value="">Select...</option><option value="${s.teamA.id}">${s.teamA.name || s.teamA.short}</option><option value="${s.teamB.id}">${s.teamB.name || s.teamB.short}</option></select>
+        </div>
+        <div class="lm-form-group"><label>📋 DECISION</label>
+          <select id="lm-toss-decision" class="lm-select"><option value="">Select...</option><option value="bat">🏏 Bat First</option><option value="bowl">🎯 Bowl First</option></select>
+        </div>
+        <button class="btn btn-primary btn-lg" id="lm-start-toss-btn" style="width:100%;margin-top:20px;font-size:1.1rem;">▶ Start Match</button>
+        <button class="btn btn-ghost btn-sm" id="live-back-btn" style="width:100%;margin-top:12px;">← Back</button>
+      </div></div>`;
+      return;
+    }
+
+    if (s.phase === 'batting-select' || s.phase === 'innings-break') {
+      const bt = s.battingTeam, bwt = s.bowlingTeam, isBreak = s.phase === 'innings-break';
+      const breakSummary = isBreak ? `<div class="lm-innings-summary"><h3>1st Innings Summary</h3><div class="lm-summary-score">${s.innings1.runs}/${s.innings1.wickets} (${s.innings1.overs} ov)</div><div class="lm-summary-target">Target: ${s.innings1.runs + 1}</div></div>` : '';
+      const roleIcon = (p) => p.role === 'Batsman' ? '🏏' : p.role === 'Bowler' ? '🎯' : p.role === 'All-Rounder' ? '⭐' : '🧤';
+      const batOpts = bt.squad.map(p => `<option value="${p.name}">${p.name} (${roleIcon(p)} ${p.role}${p.isWK?' • WK':''})</option>`).join('');
+      const bowlOpts = bwt.squad.map(p => `<option value="${p.name}">${p.name} (${roleIcon(p)} ${p.role})</option>`).join('');
+      this.mainEl.innerHTML = `<div class="live-match-page"><div class="lm-setup-card">${breakSummary}
+        <div style="text-align:center;margin-bottom:20px;">
+          <div style="display:inline-block;padding:6px 16px;border-radius:8px;background:${bt.color};color:${bt.textColor||'#fff'};font-weight:700;font-size:0.85rem;margin-bottom:8px;">${bt.name || bt.short} — BATTING</div>
+          <h2 style="margin:0;">🏏 ${isBreak?'2nd Innings ':''}Select Players</h2>
+        </div>
+        <div class="lm-form-group"><label>🏏 STRIKER (${bt.short})</label>
+          <select id="lm-striker" class="lm-select"><option value="">Select opening batsman...</option>${batOpts}</select>
+        </div>
+        <div class="lm-form-group"><label>🏃 NON-STRIKER (${bt.short})</label>
+          <select id="lm-non-striker" class="lm-select"><option value="">Select non-striker...</option>${batOpts}</select>
+        </div>
+        <div class="lm-form-group"><label>🎯 OPENING BOWLER (${bwt.short})</label>
+          <select id="lm-bowler" class="lm-select"><option value="">Select opening bowler...</option>${bowlOpts}</select>
+        </div>
+        <button class="btn btn-primary btn-lg" id="lm-confirm-openers-btn" style="width:100%;margin-top:20px;font-size:1.1rem;">▶ Start Innings</button>
+        ${isBreak ? '<button class="btn btn-ghost btn-sm" id="live-edit-score-btn" style="width:100%;margin-top:8px;color:var(--accent-gold);">↩ Undo Last Ball & Edit 1st Innings Score</button>' : ''}
+        <button class="btn btn-ghost btn-sm" id="live-back-btn" style="width:100%;margin-top:12px;">← Back</button>
+      </div></div>`;
+      return;
+    }
+
+    // ── NEW BATSMAN ──
+    if (s.phase === 'new-batsman') {
+      const avail = s.availableBatsmen || [];
+      this.mainEl.innerHTML = `<div class="live-match-page">${this._renderLiveScoreboard(s, ballDisp)}<div class="lm-modal-overlay"><div class="lm-modal"><h3>🏏 Select New Batsman</h3><button class="lm-modal-close" id="lm-modal-close-btn">&times;</button><div class="lm-modal-list">${avail.map(p=>`<button class="lm-modal-option" data-lm-new-batsman="${p.name}">${p.name}</button>`).join('')}${avail.length===0?'<p style="color:var(--text-4);">No batsmen available</p>':''}</div></div></div></div>`;
+      return;
+    }
+
+    // ── BOWLER SELECT ──
+    if (s.phase === 'bowler-select') {
+      const avail = s.availableBowlers || [];
+      this.mainEl.innerHTML = `<div class="live-match-page">${this._renderLiveScoreboard(s, ballDisp)}<div class="lm-modal-overlay"><div class="lm-modal"><h3>🎯 Select Next Bowler</h3><button class="lm-modal-close" id="lm-modal-close-btn">&times;</button><div class="lm-modal-list">${avail.map(p=>`<button class="lm-modal-option" data-lm-next-bowler="${p.name}">${p.name}</button>`).join('')}</div></div></div></div>`;
+      return;
+    }
+
+    // ── RESULT ──
+    if (s.phase === 'result') {
+      this.mainEl.innerHTML = `<div class="live-match-page"><div class="lm-result-card"><div class="lm-result-icon">${s.winnerId ? '🏆' : '🤝'}</div><h2 class="lm-result-text">${s.result}</h2><div style="margin-top:20px;display:flex;gap:40px;justify-content:center;"><div style="text-align:center;"><span style="color:${s.teamA.color};font-weight:700;">${s.teamA.short}</span><div style="font-size:1.5rem;font-weight:800;">${s.teamAScore.runs}/${s.teamAScore.wickets}</div><div style="font-size:0.8rem;color:var(--text-3);">(${s.teamAScore.overs} ov)</div></div><div style="text-align:center;"><span style="color:${s.teamB.color};font-weight:700;">${s.teamB.short}</span><div style="font-size:1.5rem;font-weight:800;">${s.teamBScore.runs}/${s.teamBScore.wickets}</div><div style="font-size:0.8rem;color:var(--text-3);">(${s.teamBScore.overs} ov)</div></div></div><div style="margin-top:24px;display:flex;flex-direction:column;gap:10px;align-items:center;"><div style="display:flex;gap:12px;justify-content:center;"><button class="btn btn-primary" id="live-save-scorecard-btn">💾 Save to Scorecard</button><button class="btn btn-ghost" id="live-back-btn">← Back</button></div><button class="btn btn-ghost btn-sm" id="live-edit-score-btn" style="color:var(--accent-gold);">↩ Undo Last Ball & Edit Score</button></div></div></div>`;
+      return;
+    }
+
+    // ── SCORING ──
+    const striker = s.striker, nonStriker = s.nonStriker, bowler = s.bowler;
+    const ext = s.extras;
+    const mh = s.currentInnings === 1 ? s.manhattan1 : s.manhattan2;
+    const maxMH = Math.max(...mh.map(o => o.runs), 1);
+    const batsmanCard = (b) => { if(!b) return ''; return `<div class="lm-batsman-card ${b.isStriker?'is-striker':''}"><div class="lm-batsman-name">${b.name} ${b.isStriker?'🏏':''}</div><div class="lm-batsman-stats"><span class="lm-stat-runs">${b.runs}</span><span class="lm-stat-detail">(${b.balls}b)</span><span class="lm-stat-detail">${b.fours}×4</span><span class="lm-stat-detail">${b.sixes}×6</span><span class="lm-stat-sr">SR ${b.balls>0?((b.runs/b.balls)*100).toFixed(1):'0.0'}</span></div></div>`; };
+    const bowlerCard = bowler ? `<div class="lm-bowler-card"><div class="lm-bowler-name">🎯 ${bowler.name}</div><div class="lm-bowler-stats"><span>${bowler.overs} ov</span><span>${bowler.runs}r</span><span>${bowler.wickets}w</span><span>Eco ${parseFloat(bowler.overs)>0?(bowler.runs/parseFloat(bowler.overs)).toFixed(1):'0.0'}</span></div></div>` : '';
+    this.mainEl.innerHTML = `<div class="live-match-page">${this._renderLiveScoreboard(s, ballDisp)}<div class="scoring-controls"><button class="score-btn" data-ball="0">•</button><button class="score-btn" data-ball="1">1</button><button class="score-btn" data-ball="2">2</button><button class="score-btn" data-ball="3">3</button><button class="score-btn btn-4" data-ball="4">4</button><button class="score-btn btn-6" data-ball="6">6</button><button class="score-btn btn-w" id="lm-wicket-btn" data-ball="W">W</button><div class="score-btn-group"><button class="score-btn btn-extra" id="lm-wd-toggle">WD▼</button><div class="lm-submenu" id="lm-wd-menu" style="display:none;"><button class="lm-sub-btn" data-ball="WD">WD</button><button class="lm-sub-btn" data-ball="WD+1">WD+1</button><button class="lm-sub-btn" data-ball="WD+2">WD+2</button><button class="lm-sub-btn" data-ball="WD+3">WD+3</button><button class="lm-sub-btn" data-ball="WD+4">WD+4</button><button class="lm-sub-btn" data-ball="WD+ST">WD+St</button><button class="lm-sub-btn" data-ball="WD+RO">WD+RO</button></div></div><div class="score-btn-group"><button class="score-btn btn-extra" id="lm-nb-toggle">NB▼</button><div class="lm-submenu" id="lm-nb-menu" style="display:none;"><button class="lm-sub-btn" data-ball="NB+0">NB+0</button><button class="lm-sub-btn" data-ball="NB+1">NB+1</button><button class="lm-sub-btn" data-ball="NB+2">NB+2</button><button class="lm-sub-btn" data-ball="NB+3">NB+3</button><button class="lm-sub-btn" data-ball="NB+4">NB+4</button><button class="lm-sub-btn" data-ball="NB+6">NB+6</button><button class="lm-sub-btn" data-ball="NB+1B">NB+1B</button><button class="lm-sub-btn" data-ball="NB+2B">NB+2B</button><button class="lm-sub-btn" data-ball="NB+4B">NB+4B</button><button class="lm-sub-btn" data-ball="NB+RO">NB+RO</button></div></div><div class="score-btn-group"><button class="score-btn btn-extra" id="lm-bye-toggle">BYE▼</button><div class="lm-submenu" id="lm-bye-menu" style="display:none;"><button class="lm-sub-btn" data-ball="B1">1B</button><button class="lm-sub-btn" data-ball="B2">2B</button><button class="lm-sub-btn" data-ball="B3">3B</button><button class="lm-sub-btn" data-ball="B4">4B</button></div></div><div class="score-btn-group"><button class="score-btn btn-extra" id="lm-lb-toggle">LB▼</button><div class="lm-submenu" id="lm-lb-menu" style="display:none;"><button class="lm-sub-btn" data-ball="LB1">1LB</button><button class="lm-sub-btn" data-ball="LB2">2LB</button><button class="lm-sub-btn" data-ball="LB3">3LB</button><button class="lm-sub-btn" data-ball="LB4">4LB</button></div></div><button class="score-btn btn-undo" id="live-undo-btn" ${s.canUndo?'':'disabled'}>↩</button><button class="score-btn" id="lm-swap-strike-btn" style="font-size:0.7rem;border-color:rgba(99,102,241,0.3);color:var(--accent-indigo);">🔄</button></div><div class="lm-batsmen-row">${batsmanCard(striker)}${batsmanCard(nonStriker)}</div>${bowlerCard}<div class="live-info-grid"><div class="partnership-card"><div class="partnership-label">Partnership</div><div class="partnership-value">${s.partnership.runs}</div><div class="partnership-balls">(${s.partnership.balls} balls)</div></div><div class="partnership-card"><div class="partnership-label">Extras</div><div class="partnership-value">${ext.total}</div><div class="partnership-balls">W${ext.wides} NB${ext.noBalls} B${ext.byes} LB${ext.legByes}</div></div></div>${mh.length>0?`<div style="margin-top:16px;"><h3 style="font-size:0.9rem;color:var(--text-3);margin-bottom:8px;text-align:center;">📊 Runs per Over</h3><div class="manhattan-chart">${mh.map(o=>`<div class="manhattan-bar" style="height:${Math.max(8,(o.runs/maxMH)*100)}%;background:${s.currentInnings===1?s.teamA.color:s.teamB.color};" data-label="Over ${o.over}: ${o.runs}r"></div>`).join('')}</div></div>`:''}<div style="text-align:center;margin-top:20px;"><button class="btn btn-ghost btn-sm" id="live-back-btn">← Back</button><button class="btn btn-ghost btn-sm" id="live-save-scorecard-btn" style="margin-left:8px;">💾 Save to Scorecard</button></div></div>`;
+  }
+
+  _renderLiveScoreboard(s, ballDisp) {
+    const overHist = s.overHistory || [];
+    const overHistoryHTML = overHist.length > 0 ? `<div class="lm-over-history">${overHist.map(o => `<div class="lm-over-row"><span class="lm-over-num">Over ${o.over}</span><span class="lm-over-balls">${o.balls.map(b => ballDisp(b)).join('')}</span><span class="lm-over-total">${o.runs}r</span></div>`).join('')}</div>` : '';
+    // Toss info line
+    const tossWinnerTeam = s.tossWinner === s.teamA.id ? s.teamA : s.teamB;
+    const tossInfo = s.tossWinner ? `<div class="lm-toss-info">${tossWinnerTeam.short} won the toss and elected to ${s.tossDecision === 'bat' ? 'bat' : 'bowl'} first</div>` : '';
+    return `<div class="live-match-header"><div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,${s.teamA.color},${s.teamB.color});"></div>${s.isFreeHit?'<div class="lm-freehit-badge">🔥 FREE HIT</div>':''}<div class="live-badge" style="margin-bottom:4px;">LIVE — Innings ${s.currentInnings}</div>${tossInfo}<div class="live-match-teams"><div class="live-match-team">${s.teamA.logo?`<img class="live-match-team-logo" src="${s.teamA.logo}">`:''}<span class="live-match-team-name" style="color:${s.teamA.color};">${s.teamA.short}</span><div class="live-match-score">${s.teamAScore.runs}/${s.teamAScore.wickets}</div><div class="live-match-overs">(${s.teamAScore.overs} ov)</div></div><div class="live-match-vs">VS</div><div class="live-match-team">${s.teamB.logo?`<img class="live-match-team-logo" src="${s.teamB.logo}">`:''}<span class="live-match-team-name" style="color:${s.teamB.color};">${s.teamB.short}</span><div class="live-match-score">${s.teamBScore.runs}/${s.teamBScore.wickets}</div><div class="live-match-overs">(${s.teamBScore.overs} ov)</div></div></div><div class="live-match-rr"><span>CRR: <strong>${s.current.crr}</strong></span>${s.rrr?`<span>RRR: <strong>${s.rrr.rrr}</strong></span><span>Need <strong>${s.rrr.remaining}</strong> off <strong>${s.rrr.ballsLeft}</strong></span>`:''}</div><div class="this-over"><span class="this-over-label">THIS OVER:</span>${s.currentOver.length>0?s.currentOver.map(b=>ballDisp(b)).join(''):'<span style="color:var(--text-4);">New over</span>'}</div>${overHistoryHTML}</div>`;
+  }
+
+  // ═══════════════════════════════════════════
+  // GALLERY VIEW
+  // ═══════════════════════════════════════════
+
+  renderGallery(photos = [], matches = [], filter = 'all') {
+    const filtered = filter === 'all' ? photos : photos.filter(p => p.day === filter);
+    this.mainEl.innerHTML = `<div class="gallery-page"><div class="gallery-header"><h1>📸 NPL 3.0 Gallery</h1><p style="color:var(--text-3);">Capture and share tournament memories</p></div><div class="gallery-filters"><button class="filter-btn ${filter==='all'?'active':''}" data-gallery-filter="all">All</button><button class="filter-btn ${filter==='Day 1'?'active':''}" data-gallery-filter="Day 1">Day 1</button><button class="filter-btn ${filter==='Day 2'?'active':''}" data-gallery-filter="Day 2">Day 2</button></div><div class="gallery-upload-zone" id="gallery-upload-zone"><div class="gallery-upload-icon">📷</div><div class="gallery-upload-text">Click or drag photos here to upload</div><input type="file" id="gallery-file-input" accept="image/*" multiple style="display:none;"></div>${filtered.length>0?`<div class="gallery-grid">${filtered.map(photo=>`<div class="gallery-item" data-photo-id="${photo.id}"><img src="${photo.dataUrl}" alt="${photo.caption||'Photo'}"><div class="gallery-item-overlay">${photo.caption||photo.day||''}</div><button class="gallery-item-delete" data-delete-photo="${photo.id}">&times;</button></div>`).join('')}</div>`:`<div class="fixtures-empty" style="padding:40px;text-align:center;"><p>📷 No photos yet. Upload tournament photos!</p></div>`}${matches.filter(m=>m.status==='completed').length>0?`<div class="social-cards-section"><h2 style="text-align:center;margin-bottom:20px;">📱 Share Match Results</h2><div class="social-cards-grid">${matches.filter(m=>m.status==='completed').map(m=>`<div class="social-card-preview"><div style="padding:16px;text-align:center;"><div style="font-weight:700;">${m.teamAShort} vs ${m.teamBShort}</div><div style="font-size:0.8rem;color:var(--text-3);">Match ${m.matchId.replace('match-','')}</div>${m.result.margin?`<div style="font-size:0.85rem;color:var(--accent-gold);margin-top:6px;">🏆 ${m.result.margin}</div>`:''}</div><div class="social-card-actions"><button class="btn btn-primary btn-sm" data-generate-card="${m.matchId}">📥 Generate Card</button></div></div>`).join('')}</div></div>`:''}</div>`;
+  }
+
+  // ═══════════════════════════════════════════
+  // AWARDS CEREMONY VIEW
+  // ═══════════════════════════════════════════
+
+  renderAwards(awards = [], revealedCount = 0) {
+    this.mainEl.innerHTML = `<div class="awards-page"><div class="awards-hero"><h1>✨ NPL 3.0 AWARDS NIGHT ✨</h1><p>Celebrating the best of Nakre Premier League 3.0</p>${revealedCount<awards.length?`<button class="awards-reveal-btn" id="awards-reveal-next-btn">🎭 Reveal Next Award (${revealedCount}/${awards.length})</button>`:`<p style="color:var(--accent-gold);font-weight:700;margin-top:16px;">🎉 All awards revealed!</p>`}</div><div class="awards-grid">${awards.map((award,i) => {
+      const isRevealed = i < revealedCount, isRevealing = i === revealedCount - 1;
+      return `<div class="award-card ${isRevealed?'revealed':'unrevealed'} ${isRevealing?'revealing':''} ${award.id==='champion'?'champion-card':''}" data-award-index="${i}"><div style="position:absolute;top:0;left:0;right:0;height:4px;background:${award.gradient};"></div>${!isRevealed?`<div class="award-envelope"><div class="award-envelope-icon">🎭</div><div class="award-envelope-text">${award.title}</div><div style="font-size:0.7rem;color:var(--text-4);margin-top:4px;">${award.category}</div></div>`:''}<div class="award-content"><div class="award-icon">${award.icon}</div><div class="award-category">${award.category}</div><div class="award-title">${award.title}</div>${award.subtitle?`<div class="award-subtitle">${award.subtitle}</div>`:''}${award.winner?`<div class="award-winner">${award.winner}</div>${award.team?`<span class="award-team" style="background:${award.teamColor||'#666'}22;color:${award.teamColor||'#666'};">${award.team}</span>`:''}<div class="award-stat">${award.stat}</div>`:`<div style="color:var(--text-4);margin-top:12px;font-style:italic;">To be announced</div>`}<div class="award-desc">${award.desc}</div></div></div>`;
+    }).join('')}</div><div style="text-align:center;padding:32px 0;"><button class="btn btn-ghost" id="awards-back-btn">← Back to Results</button>${revealedCount>0?`<button class="btn btn-ghost" id="awards-reset-btn" style="margin-left:8px;">🔄 Reset</button>`:''}</div></div>`;
   }
 }
 
