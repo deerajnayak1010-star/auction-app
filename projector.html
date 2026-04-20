@@ -432,29 +432,21 @@
 
     .proj-bid-amount {
       font-family: 'JetBrains Mono', monospace;
-      font-size: clamp(4rem, 8vw, 8rem);
+      font-size: clamp(2.5rem, 5.5vw, 5rem);
       font-weight: 800;
       color: var(--accent-gold);
       line-height: 1;
-      margin-bottom: 16px;
-      text-shadow:
-        0 0 30px rgba(245,158,11,0.4),
-        0 0 60px rgba(245,158,11,0.2),
-        0 0 100px rgba(245,158,11,0.1);
+      margin-bottom: 12px;
+      text-shadow: 0 0 40px rgba(245,158,11,0.25);
       transition: all 0.3s ease;
-      animation: bidGlow 3s ease-in-out infinite;
-    }
-    @keyframes bidGlow {
-      0%, 100% { text-shadow: 0 0 30px rgba(245,158,11,0.4), 0 0 60px rgba(245,158,11,0.2); }
-      50%      { text-shadow: 0 0 50px rgba(245,158,11,0.6), 0 0 100px rgba(245,158,11,0.3), 0 0 150px rgba(245,158,11,0.1); }
     }
     .proj-bid-amount.flash {
-      animation: bidFlash 0.5s ease;
+      animation: bidFlash 0.4s ease;
     }
     @keyframes bidFlash {
-      0%   { transform: scale(1); color: var(--accent-gold); }
-      25%  { transform: scale(1.12); color: #fff; text-shadow: 0 0 80px rgba(245,158,11,0.8), 0 0 120px rgba(245,158,11,0.4); }
-      100% { transform: scale(1); color: var(--accent-gold); }
+      0%   { transform: scale(1); }
+      30%  { transform: scale(1.08); text-shadow: 0 0 60px rgba(245,158,11,0.5); }
+      100% { transform: scale(1); }
     }
 
     .proj-bidder {
