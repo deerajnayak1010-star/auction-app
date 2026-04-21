@@ -827,7 +827,7 @@ class App {
   }
 
   async onClick(e) {
-    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], [data-ball], [data-live-match], [data-lm-new-batsman], [data-lm-next-bowler], [data-lm-coin-flip], [data-lm-dismissal], [data-lm-runout], [data-ro-runs], [data-gallery-filter], [data-delete-photo], [data-generate-card], #login-btn, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #recall-bid-btn, #recall-confirm-yes, #recall-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #video-bg-toggle-btn, #results-tab-squads, #results-tab-analytics, #results-tab-standings, #results-tab-stats, #results-tab-scorecard, #results-tab-fixtures, #draw-tokens-btn, #clear-tokens-btn, #clear-tokens-yes, #clear-tokens-no, #download-fixtures-btn, #lock-fixtures-btn, #create-knockout-btn, #sc-back-btn, #sc-back-btn2, #sc-save-btn, .sc-open-btn, #commentary-toggle-btn, #commentary-header, #open-projector-btn, #hamburger-toggle, #nav-more-toggle, .nav-more-item, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn, #live-undo-btn, #live-back-btn, #live-save-scorecard-btn, #lm-start-toss-btn, #lm-confirm-openers-btn, #lm-wd-toggle, #lm-nb-toggle, #lm-bye-toggle, #lm-lb-toggle, #lm-wicket-btn, #lm-modal-close-btn, #lm-save-yes-btn, #lm-save-no-btn, #lm-save-dismiss-btn, #lm-edit-score-btn, #live-edit-score-btn, #ro-swap-strike-btn, #lm-swap-strike-btn, #share-app-btn, #share-copy-wa-btn, #share-copy-ig-btn, #share-tab-wa, #share-tab-ig, #share-modal-close, #awards-reveal-next-btn, #awards-reset-btn, #awards-back-btn, .score-btn, .lm-sub-btn, .lm-modal-option, .lm-modal-close');
+    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], [data-ball], [data-live-match], [data-lm-new-batsman], [data-lm-next-bowler], [data-lm-coin-flip], [data-lm-dismissal], [data-lm-runout], [data-ro-runs], [data-gallery-filter], [data-delete-photo], [data-generate-card], #login-btn, #login-eye-toggle, #login-forgot-link, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #recall-bid-btn, #recall-confirm-yes, #recall-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #video-bg-toggle-btn, #results-tab-squads, #results-tab-analytics, #results-tab-standings, #results-tab-stats, #results-tab-scorecard, #results-tab-fixtures, #draw-tokens-btn, #clear-tokens-btn, #clear-tokens-yes, #clear-tokens-no, #download-fixtures-btn, #lock-fixtures-btn, #create-knockout-btn, #sc-back-btn, #sc-back-btn2, #sc-save-btn, .sc-open-btn, #commentary-toggle-btn, #commentary-header, #open-projector-btn, #hamburger-toggle, #nav-more-toggle, .nav-more-item, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn, #live-undo-btn, #live-back-btn, #live-save-scorecard-btn, #lm-start-toss-btn, #lm-confirm-openers-btn, #lm-wd-toggle, #lm-nb-toggle, #lm-bye-toggle, #lm-lb-toggle, #lm-wicket-btn, #lm-modal-close-btn, #lm-save-yes-btn, #lm-save-no-btn, #lm-save-dismiss-btn, #lm-edit-score-btn, #live-edit-score-btn, #ro-swap-strike-btn, #lm-swap-strike-btn, #share-app-btn, #share-copy-wa-btn, #share-copy-ig-btn, #share-tab-wa, #share-tab-ig, #share-modal-close, #awards-reveal-next-btn, #awards-reset-btn, #awards-back-btn, .score-btn, .lm-sub-btn, .lm-modal-option, .lm-modal-close');
     if (!target) return;
 
     // ── Premium Features Click Routing ──
@@ -836,6 +836,24 @@ class App {
     if (this.currentView === 'awards' && this._handleAwardsClick(target)) return;
 
     // ── Login: submit ──
+    // Password visibility toggle
+    if (target.id === 'login-eye-toggle') {
+      const passEl = document.getElementById('login-password');
+      if (passEl) {
+        const showing = passEl.type === 'text';
+        passEl.type = showing ? 'password' : 'text';
+        target.textContent = showing ? '👁️' : '👁️‍🗨️';
+        target.title = showing ? 'Show password' : 'Hide password';
+      }
+      return;
+    }
+
+    // Forgot password (decorative)
+    if (target.id === 'login-forgot-link') {
+      this.ui.showToast('Please contact the tournament admin to reset your password', 'info');
+      return;
+    }
+
     if (target.id === 'login-btn') {
       const userEl = document.getElementById('login-username');
       const passEl = document.getElementById('login-password');
@@ -863,6 +881,9 @@ class App {
               this.navigate('setup');
             } else {
               this.ui.showToast('Invalid username or password', 'error');
+              // Shake the login card
+              const card = document.querySelector('.login-card');
+              if (card) { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
             }
           }
         } catch (_) {
@@ -879,6 +900,8 @@ class App {
             this.navigate('setup');
           } else {
             this.ui.showToast('Invalid username or password', 'error');
+            const card = document.querySelector('.login-card');
+            if (card) { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
           }
         }
       }

@@ -759,21 +759,68 @@ export class UI {
   renderLogin() {
     this.mainEl.innerHTML = `
       <div class="login-page">
-        <div class="login-card glass-card">
-          <div class="login-icon">🔒</div>
+        <!-- Floating particles -->
+        <div class="login-particles">
+          <div class="login-particle" style="width:5px;height:5px;left:8%;bottom:25%;background:rgba(108,78,255,0.4);box-shadow:0 0 14px 5px rgba(108,78,255,0.15);--dur:9s;--delay:1s;"></div>
+          <div class="login-particle" style="width:3px;height:3px;right:12%;bottom:15%;background:rgba(255,200,87,0.4);box-shadow:0 0 12px 4px rgba(255,200,87,0.12);--dur:7s;--delay:3s;"></div>
+          <div class="login-particle" style="width:4px;height:4px;left:35%;bottom:8%;background:rgba(159,107,255,0.35);box-shadow:0 0 10px 4px rgba(159,107,255,0.12);--dur:10s;--delay:5s;"></div>
+          <div class="login-particle" style="width:3px;height:3px;right:30%;bottom:20%;background:rgba(108,78,255,0.3);box-shadow:0 0 10px 3px rgba(108,78,255,0.1);--dur:11s;--delay:2s;"></div>
+        </div>
+
+        <div class="login-card">
+          <!-- Logo Badge -->
+          <div class="login-logo">
+            <span class="login-logo-icon">🏏</span>
+            <span class="login-logo-text">NPL 3.0 • 2026</span>
+          </div>
+
           <h2 class="login-title">Admin Login</h2>
-          <p class="login-subtitle">Please sign in to access the auction</p>
+          <p class="login-subtitle">Please sign in to access the auction dashboard</p>
+
           <form class="login-form" onsubmit="event.preventDefault(); document.getElementById('login-btn').click();">
-            <div class="input-group" style="text-align: left; margin-bottom: 16px;">
-              <label for="login-username" style="display: block; margin-bottom: 6px; font-size: 0.85rem; color: var(--text-2);">Username</label>
-              <input type="text" id="login-username" class="search-input" style="width: 100%; box-sizing: border-box;" placeholder="Enter username" autocomplete="username">
+            <!-- Username -->
+            <div class="login-input-group">
+              <label for="login-username">Username</label>
+              <div class="login-input-wrapper">
+                <svg class="login-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <input type="text" id="login-username" class="login-input" placeholder="Enter username" autocomplete="username">
+              </div>
             </div>
-            <div class="input-group" style="text-align: left; margin-bottom: 24px;">
-              <label for="login-password" style="display: block; margin-bottom: 6px; font-size: 0.85rem; color: var(--text-2);">Password</label>
-              <input type="password" id="login-password" class="search-input" style="width: 100%; box-sizing: border-box;" placeholder="Enter password" autocomplete="current-password">
+
+            <!-- Password -->
+            <div class="login-input-group">
+              <label for="login-password">Password</label>
+              <div class="login-input-wrapper">
+                <svg class="login-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <input type="password" id="login-password" class="login-input" placeholder="Enter password" autocomplete="current-password" style="padding-right: 46px;">
+                <button type="button" class="login-eye-toggle" id="login-eye-toggle" title="Show password">👁️</button>
+              </div>
             </div>
-            <button type="submit" class="btn btn-primary btn-lg" id="login-btn" style="width: 100%;">Sign In</button>
+
+            <!-- Remember / Forgot -->
+            <div class="login-options-row">
+              <label class="login-remember">
+                <input type="checkbox" id="login-remember-me">
+                <span>Remember me</span>
+              </label>
+              <span class="login-forgot" id="login-forgot-link">Forgot password?</span>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" class="login-submit-btn" id="login-btn">
+              Sign In →
+            </button>
           </form>
+
+          <div class="login-footer">
+            Nakre Premier League 3.0 • Secure Admin Access
+          </div>
         </div>
       </div>
     `;
