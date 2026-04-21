@@ -1,52 +1,22 @@
 {
   "poster": "images/cricket-bg-poster.svg",
-  "defaultScene": "stadium-drone",
+  "defaultScene": "npl-playground",
+  "loopWindowSeconds": 0,
+  "loopRestartSeconds": 0,
+  "readyTimeoutMs": 5000,
   "fallbackPolicy": {
     "disableOnReducedMotion": true,
     "disableOnSaveData": true,
-    "slowConnections": ["slow-2g", "2g", "3g"]
+    "slowConnections": ["slow-2g", "2g"]
   },
   "scenes": [
     {
-      "id": "stadium-drone",
-      "title": "Stadium Drone",
+      "id": "npl-playground",
+      "title": "NPL Playground",
       "poster": "images/cricket-bg-poster.svg",
       "sources": [
         {
-          "src": "https://cdn.pixabay.com/video/2022/11/21/139865-773444813_large.mp4",
-          "type": "video/mp4"
-        }
-      ]
-    },
-    {
-      "id": "practice-action",
-      "title": "Practice Action",
-      "poster": "images/cricket-bg-poster.svg",
-      "sources": [
-        {
-          "src": "https://www.pexels.com/download/video/36088031/",
-          "type": "video/mp4"
-        }
-      ]
-    },
-    {
-      "id": "match-action",
-      "title": "Match Action",
-      "poster": "images/cricket-bg-poster.svg",
-      "sources": [
-        {
-          "src": "https://www.pexels.com/download/video/35550707/",
-          "type": "video/mp4"
-        }
-      ]
-    },
-    {
-      "id": "aerial-action",
-      "title": "Aerial Action",
-      "poster": "images/cricket-bg-poster.svg",
-      "sources": [
-        {
-          "src": "https://www.pexels.com/download/video/32660384/",
+          "src": "media/cricket-bg.mp4",
           "type": "video/mp4"
         }
       ]
