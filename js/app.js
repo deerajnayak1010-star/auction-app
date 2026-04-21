@@ -68,6 +68,9 @@ class App {
     this._stateSyncQueued = false;
     this._pendingStateStr = null;
     this._lastSyncedStateStr = null;
+    this._pendingPlayerImage = null;
+    this._playerImageBusy = false;
+    this._playerImageTaskId = 0;
   }
 
   async init() {
@@ -394,9 +397,8 @@ class App {
     state.fixturesLocked = this.fixturesLocked || false;
 
     // Include custom player data (only if modified from defaults)
-    if (this.allPlayers && this.allPlayers.length !== PLAYERS_DATA.length ||
-        this.allPlayers.some((p, i) => !PLAYERS_DATA[i] || p.name !== PLAYERS_DATA[i].name || p.image !== PLAYERS_DATA[i].image)) {
-      state.allPlayers = this.allPlayers;
+    if (this._hasCustomPlayerState()) {
+      state.allPlayers = this._getPlayerCatalog();
     }
 
     return state;
@@ -603,6 +605,35 @@ class App {
     };
   }
 
+  _getPlayerCatalog() {
+    return Array.isArray(this.allPlayers) && this.allPlayers.length ? this.allPlayers : PLAYERS_DATA;
+  }
+
+  _normalizePlayerRecord(player = {}) {
+    return {
+      id: Number(player?.id) || 0,
+      name: player?.name || '',
+      role: player?.role || 'Batsman',
+      location: player?.location || 'Nakre',
+      batting: player?.batting || 'Right Hand',
+      bowling: player?.bowling || 'Right Arm',
+      basePrice: Number(player?.basePrice) || 0,
+      isWK: !!player?.isWK,
+      image: player?.image || '',
+    };
+  }
+
+  _hasCustomPlayerState() {
+    const players = this._getPlayerCatalog();
+    if (players.length !== PLAYERS_DATA.length) return true;
+
+    return players.some((player, index) => {
+      const current = this._normalizePlayerRecord(player);
+      const defaults = this._normalizePlayerRecord(PLAYERS_DATA[index] || {});
+      return Object.keys(current).some((key) => current[key] !== defaults[key]);
+    });
+  }
+
   /** Add a new player */
   addPlayer(data) {
     if (!data.name) {
@@ -650,6 +681,7 @@ class App {
       return false;
     }
     const player = this.allPlayers[idx];
+    const previousName = player.name;
     player.name = data.name;
     player.role = data.role;
     player.location = data.location;
@@ -662,18 +694,74 @@ class App {
     }
     this._pendingPlayerImage = null;
 
-    // If auction in progress, update player in pool/sold/unsold
-    if (this.engine) {
-      const poolIdx = this.engine.playerPool.findIndex(p => p.id === id);
-      if (poolIdx !== -1) this.engine.playerPool[poolIdx] = { ...player };
-      if (this.engine.currentPlayer?.id === id) {
-        this.engine.currentPlayer = { ...player, soldPrice: this.engine.currentPlayer.soldPrice };
-      }
+    if (previousName !== player.name && this.selectedPlayerIds.has(previousName)) {
+      this.selectedPlayerIds.delete(previousName);
+      this.selectedPlayerIds.add(player.name);
     }
+
+    this._updatePlayerReferencesInAuction(id, player, previousName);
 
     this.saveState();
     this.ui.showToast(`✅ ${data.name} updated`, 'success');
     return true;
+  }
+
+  _updatePlayerReferencesInAuction(id, player, previousName) {
+    if (!this.engine) return;
+
+    this.engine.playerPool = this.engine.playerPool.map(entry =>
+      entry.id === id ? { ...entry, ...player } : entry
+    );
+
+    this.engine.unsoldPlayers = this.engine.unsoldPlayers.map(entry =>
+      entry.id === id ? { ...entry, ...player } : entry
+    );
+
+    this.engine.soldPlayers = this.engine.soldPlayers.map(entry => {
+      if (entry.player?.id !== id) return entry;
+      return {
+        ...entry,
+        player: {
+          ...entry.player,
+          ...player,
+          soldPrice: entry.player.soldPrice ?? entry.price,
+        },
+      };
+    });
+
+    for (const team of this.engine.teams.values()) {
+      team.squad = team.squad.map(entry =>
+        entry.id === id
+          ? { ...entry, ...player, soldPrice: entry.soldPrice }
+          : entry
+      );
+    }
+
+    if (this.engine.currentPlayer?.id === id) {
+      this.engine.currentPlayer = {
+        ...this.engine.currentPlayer,
+        ...player,
+        soldPrice: this.engine.currentPlayer.soldPrice,
+      };
+    }
+
+    if (this.engine.lastSale?.player?.id === id) {
+      this.engine.lastSale = {
+        ...this.engine.lastSale,
+        player: {
+          ...this.engine.lastSale.player,
+          ...player,
+          soldPrice: this.engine.lastSale.player.soldPrice,
+        },
+      };
+    }
+
+    if (this.engine.maxBidsPlayer?.name === previousName) {
+      this.engine.maxBidsPlayer = {
+        ...this.engine.maxBidsPlayer,
+        name: player.name,
+      };
+    }
   }
 
   /** Delete a player */
@@ -710,7 +798,69 @@ class App {
   }
 
   /** Handle image file → base64 */
-  _handlePlayerImageFile(file) {
+  _setPlayerImageBusy(isBusy, message = '') {
+    this._playerImageBusy = isBusy;
+
+    const saveBtn = document.getElementById('player-modal-save');
+    if (saveBtn) saveBtn.disabled = isBusy;
+
+    const statusEl = document.getElementById('player-image-status');
+    if (statusEl) {
+      statusEl.textContent = message || statusEl.dataset.defaultText || '';
+      statusEl.classList.toggle('is-busy', isBusy);
+      statusEl.classList.toggle('is-ready', !isBusy && message === 'Image optimized and ready');
+    }
+  }
+
+  _readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error || new Error('Unable to read file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  _loadImageData(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Unable to load image'));
+      img.src = src;
+    });
+  }
+
+  async _optimizePlayerImage(file) {
+    const sourceDataUrl = await this._readFileAsDataUrl(file);
+    const image = await this._loadImageData(sourceDataUrl);
+    const longestSide = Math.max(image.width, image.height);
+
+    if (!longestSide) return sourceDataUrl;
+
+    const maxSide = 960;
+    const scale = longestSide > maxSide ? maxSide / longestSide : 1;
+    if (scale === 1 && file.size <= 600 * 1024) {
+      return sourceDataUrl;
+    }
+
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) return sourceDataUrl;
+
+    canvas.width = width;
+    canvas.height = height;
+    ctx.drawImage(image, 0, 0, width, height);
+
+    const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+    const optimizedDataUrl = canvas.toDataURL(outputType, outputType === 'image/png' ? undefined : 0.84);
+
+    return optimizedDataUrl.length < sourceDataUrl.length ? optimizedDataUrl : sourceDataUrl;
+  }
+
+  async _handlePlayerImageFile(file) {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       this.ui.showToast('Image must be under 5MB', 'error');
@@ -721,16 +871,27 @@ class App {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      this._pendingPlayerImage = e.target.result;
+    const taskId = ++this._playerImageTaskId;
+    this._setPlayerImageBusy(true, 'Optimizing image...');
+
+    try {
+      const optimizedImage = await this._optimizePlayerImage(file);
+      if (taskId !== this._playerImageTaskId) return;
+
+      this._pendingPlayerImage = optimizedImage;
       const preview = document.getElementById('player-avatar-drop');
       if (preview) {
         preview.classList.add('has-image');
-        preview.innerHTML = `<img src="${e.target.result}" alt="Preview" id="pm-avatar-img">`;
+        preview.innerHTML = `<img src="${optimizedImage}" alt="Preview" id="pm-avatar-img">`;
       }
-    };
-    reader.readAsDataURL(file);
+
+      this._setPlayerImageBusy(false, 'Image optimized and ready');
+    } catch (error) {
+      if (taskId !== this._playerImageTaskId) return;
+      this._setPlayerImageBusy(false);
+      console.warn('Player image processing failed:', error);
+      this.ui.showToast('Could not process that image. Please try another file.', 'error');
+    }
   }
 
   /** Re-render the player select view after a CRUD operation */
@@ -744,7 +905,7 @@ class App {
     }
   }
 
-  /** Bind image upload and drag-drop events inside the player modal */
+  /** Bind image upload, drag-drop, and all button events inside the player modal */
   _bindPlayerModalEvents() {
     // File input change
     const fileInput = document.getElementById('player-image-upload');
@@ -774,6 +935,105 @@ class App {
         if (file) this._handlePlayerImageFile(file);
       });
     }
+
+    // ── Direct button handlers (bypass event delegation) ──
+
+    // Save button
+    const form = document.getElementById('player-modal-form');
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (this._playerImageBusy) {
+          this.ui.showToast('Please wait for the image to finish processing', 'info');
+          return;
+        }
+
+        const saveBtn = document.getElementById('player-modal-save');
+        const data = this._getPlayerFormData();
+        const editId = saveBtn?.dataset.playerId ? parseInt(saveBtn.dataset.playerId) : null;
+        let success;
+        if (editId) {
+          success = this.updatePlayer(editId, data);
+        } else {
+          success = this.addPlayer(data);
+        }
+        if (success) {
+          this.ui.closePlayerModal();
+          this._refreshPlayerView();
+        }
+      });
+    }
+
+    this._setPlayerImageBusy(false);
+
+    // Cancel button
+    document.getElementById('player-modal-cancel')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this._playerImageTaskId++;
+      this._setPlayerImageBusy(false);
+      this._pendingPlayerImage = null;
+      this.ui.closePlayerModal();
+    });
+
+    // Close (X) button
+    document.getElementById('player-modal-close')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this._playerImageTaskId++;
+      this._setPlayerImageBusy(false);
+      this._pendingPlayerImage = null;
+      this.ui.closePlayerModal();
+    });
+
+    // Click overlay background to close
+    const overlay = document.getElementById('player-modal-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          e.stopPropagation();
+          this._playerImageTaskId++;
+          this._setPlayerImageBusy(false);
+          this._pendingPlayerImage = null;
+          this.ui.closePlayerModal();
+        }
+      });
+    }
+
+    // Delete button → show confirmation
+    const deleteBtn = document.getElementById('player-modal-delete');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = parseInt(deleteBtn.dataset.playerId);
+        const player = this.allPlayers.find(p => p.id === id);
+        if (player) {
+          this.ui.renderPlayerDeleteConfirm(player.name, id);
+          this._bindDeleteConfirmEvents();
+        }
+      });
+    }
+  }
+
+  /** Bind direct click handlers on delete confirmation dialog buttons */
+  _bindDeleteConfirmEvents() {
+    document.getElementById('player-delete-yes')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = parseInt(e.currentTarget.dataset.playerId);
+      if (this.deletePlayer(id)) {
+        this.ui.closePlayerDeleteConfirm();
+        this.ui.closePlayerModal();
+        this._refreshPlayerView();
+      }
+    });
+
+    document.getElementById('player-delete-no')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.ui.closePlayerDeleteConfirm();
+    });
   }
 
   // ═══════════════════════════════════════════
@@ -998,7 +1258,7 @@ class App {
       searchInput.addEventListener('input', (e) => {
         this.poolSearch = e.target.value;
         const cursorPos = e.target.selectionStart;
-        this.ui.renderPlayerPool(PLAYERS_DATA, this.poolFilter, this.poolSearch);
+        this.ui.renderPlayerPool(this._getPlayerCatalog(), this.poolFilter, this.poolSearch);
         this.bindPoolEvents();
         const newInput = document.getElementById('player-search');
         if (newInput) {
@@ -1015,7 +1275,7 @@ class App {
       searchInput.addEventListener('input', (e) => {
         this.playerSelectSearch = e.target.value;
         const cursorPos = e.target.selectionStart;
-        this.ui.renderPlayerSelect(PLAYERS_DATA, this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
+        this.ui.renderPlayerSelect(this._getPlayerCatalog(), this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
         this.bindPlayerSelectEvents();
         const newInput = document.getElementById('player-select-search');
         if (newInput) {
@@ -1038,6 +1298,8 @@ class App {
     // ── Player Management Modal ──
     // Open Add Player modal
     if (target.id === 'add-player-btn') {
+      this._playerImageTaskId++;
+      this._playerImageBusy = false;
       this._pendingPlayerImage = null;
       this.ui.renderPlayerModal(null);
       this._bindPlayerModalEvents();
@@ -1050,6 +1312,8 @@ class App {
       const playerId = parseInt(target.dataset.playerEditId);
       const player = this.allPlayers.find(p => p.id === playerId);
       if (player) {
+        this._playerImageTaskId++;
+        this._playerImageBusy = false;
         this._pendingPlayerImage = null;
         this.ui.renderPlayerModal(player);
         this._bindPlayerModalEvents();
@@ -1221,11 +1485,11 @@ class App {
     if (target.classList.contains('filter-btn')) {
       if (this.currentView === 'player-select') {
         this.playerSelectFilter = target.dataset.role;
-        this.ui.renderPlayerSelect(PLAYERS_DATA, this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
+        this.ui.renderPlayerSelect(this._getPlayerCatalog(), this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
         this.bindPlayerSelectEvents();
       } else {
         this.poolFilter = target.dataset.role;
-        this.ui.renderPlayerPool(PLAYERS_DATA, this.poolFilter, this.poolSearch);
+        this.ui.renderPlayerPool(this._getPlayerCatalog(), this.poolFilter, this.poolSearch);
         this.bindPoolEvents();
       }
       return;
@@ -1732,7 +1996,7 @@ class App {
     }
 
     // Pre-select all players by default
-    this.selectedPlayerIds = new Set(PLAYERS_DATA.map(p => p.name));
+    this.selectedPlayerIds = new Set(this._getPlayerCatalog().map(p => p.name));
     this.playerSelectFilter = 'All';
     this.playerSelectSearch = '';
     this.ui.showToast('Now select players for the auction', 'info');
@@ -1745,13 +2009,13 @@ class App {
     } else {
       this.selectedPlayerIds.add(playerName);
     }
-    this.ui.renderPlayerSelect(PLAYERS_DATA, this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
+    this.ui.renderPlayerSelect(this._getPlayerCatalog(), this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
     this.bindPlayerSelectEvents();
   }
 
   selectAllPlayers() {
     // Get currently filtered players
-    let filtered = PLAYERS_DATA;
+    let filtered = this._getPlayerCatalog();
     if (this.playerSelectFilter === 'Wicket-Keeper') {
       filtered = filtered.filter(p => p.isWK);
     } else if (this.playerSelectFilter !== 'All') {
@@ -1770,7 +2034,7 @@ class App {
       // Select all filtered
       filtered.forEach(p => this.selectedPlayerIds.add(p.name));
     }
-    this.ui.renderPlayerSelect(PLAYERS_DATA, this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
+    this.ui.renderPlayerSelect(this._getPlayerCatalog(), this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
     this.bindPlayerSelectEvents();
   }
 
@@ -1781,7 +2045,7 @@ class App {
     }
 
     const selectedTeams = TEAMS_DATA.filter(t => this.selectedTeamIds.has(t.id));
-    const selectedPlayers = PLAYERS_DATA.filter(p => this.selectedPlayerIds.has(p.name));
+    const selectedPlayers = this._getPlayerCatalog().filter(p => this.selectedPlayerIds.has(p.name));
     this.engine = new AuctionEngine(selectedTeams, selectedPlayers, {
       timerDuration: this.timerDuration,
     });
@@ -3511,7 +3775,7 @@ Built entirely with vanilla HTML/CSS/JS — no frameworks needed! 💪
           const potmName = match.result.playerOfMatch;
 
           // 1. Check regular players pool (PLAYERS_DATA imported from data.js)
-          const potmPlayer = PLAYERS_DATA.find(p => p.name === potmName);
+          const potmPlayer = this._getPlayerCatalog().find(p => p.name === potmName);
           if (potmPlayer && potmPlayer.image) {
             potmImage = potmPlayer.image;
           }

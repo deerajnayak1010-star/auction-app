@@ -74,6 +74,64 @@
       100% { opacity: 1; transform: scale(1.03); }
     }
 
+    /* ── Video Background Stage ── */
+    .proj-bg-stage {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(245, 158, 11, 0.18), transparent 34%),
+        radial-gradient(circle at 18% 22%, rgba(99, 102, 241, 0.16), transparent 32%),
+        linear-gradient(180deg, #040916 0%, #071126 48%, #040812 100%);
+    }
+    .proj-bg-stage__poster,
+    .proj-bg-stage__video,
+    .proj-bg-stage__glow,
+    .proj-bg-stage__overlay {
+      position: absolute;
+      inset: 0;
+    }
+    .proj-bg-stage__poster {
+      background: url('images/cricket-bg-poster.svg') center/cover no-repeat;
+      transform: scale(1.04);
+      filter: saturate(1.15) contrast(1.05) brightness(0.65);
+      opacity: 0.96;
+    }
+    .proj-bg-stage__video {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transform: scale(1.08);
+      filter: saturate(1.2) contrast(1.05) brightness(0.7);
+      transition: opacity 0.8s ease;
+      animation: projBgDrift 26s ease-in-out infinite alternate;
+    }
+    .proj-bg-stage.is-video-ready .proj-bg-stage__video {
+      opacity: 0.94;
+    }
+    .proj-bg-stage.is-video-ready .proj-bg-stage__poster {
+      opacity: 0.34;
+    }
+    .proj-bg-stage__glow {
+      background:
+        radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.24), transparent 30%),
+        radial-gradient(circle at 16% 30%, rgba(99, 102, 241, 0.2), transparent 34%),
+        radial-gradient(circle at 86% 74%, rgba(59, 130, 246, 0.14), transparent 28%);
+      mix-blend-mode: screen;
+      opacity: 0.5;
+    }
+    .proj-bg-stage__overlay {
+      background:
+        linear-gradient(180deg, rgba(2, 6, 23, 0.15) 0%, rgba(2, 6, 23, 0.25) 18%, rgba(2, 6, 23, 0.55) 100%),
+        radial-gradient(circle at center, transparent 18%, rgba(2, 6, 23, 0.3) 100%);
+    }
+    @keyframes projBgDrift {
+      from { transform: scale(1.08) translate3d(0, 0, 0); }
+      to   { transform: scale(1.14) translate3d(-1.2%, -1%, 0); }
+    }
+
     /* ── Layout ── */
     .projector-root {
       position: relative;
@@ -905,6 +963,16 @@
 </head>
 <body>
 
+  <!-- Video Background Stage -->
+  <div class="proj-bg-stage" id="proj-bg-stage" aria-hidden="true">
+    <div class="proj-bg-stage__poster"></div>
+    <video class="proj-bg-stage__video" id="proj-bg-video" muted loop playsinline preload="metadata" tabindex="-1">
+      <source src="media/cricket-bg.mp4" type="video/mp4">
+    </video>
+    <div class="proj-bg-stage__glow"></div>
+    <div class="proj-bg-stage__overlay"></div>
+  </div>
+
   <div class="projector-root" id="projector-root">
     <!-- Top Bar -->
     <div class="proj-topbar">
@@ -946,5 +1014,36 @@
 
   <script src="js/projector-celebration.js"></script>
   <script src="js/projector.js"></script>
+  <script>
+    // Auto-play video background for projector
+    document.addEventListener('DOMContentLoaded', () => {
+      const stage = document.getElementById('proj-bg-stage');
+      const video = document.getElementById('proj-bg-video');
+      if (!stage || !video) return;
+
+      video.muted = true;
+      video.defaultMuted = true;
+      video.loop = true;
+      video.playsInline = true;
+
+      video.play().then(() => {
+        stage.classList.add('is-video-ready');
+      }).catch(() => {
+        console.log('[Projector] Video autoplay blocked, using poster fallback');
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          video.pause();
+        } else {
+          video.play().catch(() => {});
+        }
+      });
+
+      video.addEventListener('error', () => {
+        console.log('[Projector] Video error, keeping poster');
+      });
+    });
+  </script>
 </body>
 </html>

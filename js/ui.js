@@ -1178,6 +1178,7 @@ export class UI {
    * @param {object|null} player — null for add, player object for edit
    */
   renderPlayerModal(player = null) {
+    return this._renderPlayerModalPremium(player);
     const isEdit = !!player;
     const title = isEdit ? 'Edit Player' : 'Add New Player';
     const subtitle = isEdit ? `Editing ${player.name}` : 'Fill in the player details below';
@@ -1295,6 +1296,163 @@ export class UI {
     document.body.appendChild(modal);
   }
 
+  _renderPlayerModalPremium(player = null) {
+    const isEdit = !!player;
+    const title = isEdit ? 'Edit Player' : 'Add New Player';
+    const subtitle = isEdit ? `Editing ${player.name}` : 'Fill in the player details below';
+    const saveLabel = isEdit ? 'Update Player' : 'Save Player';
+    const role = ROLE_CONFIG[player?.role || 'Batsman'] || ROLE_CONFIG.Batsman || {};
+    const locationMeta = LOCATION_CONFIG[player?.location || 'Nakre'] || { icon: '📍' };
+    const basePrice = fmt(player?.basePrice || 1000);
+    const avatarHtml = player?.image
+      ? `<img src="${player.image}" alt="${player.name}" id="pm-avatar-img">`
+      : `<span class="avatar-placeholder">Upload</span>`;
+    const hasImageClass = player?.image ? 'has-image' : '';
+
+    document.getElementById('player-modal-root')?.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'player-modal-root';
+    modal.innerHTML = `
+      <div class="player-modal-overlay" id="player-modal-overlay">
+        <div class="player-modal">
+          <div class="player-modal-header">
+            <div class="player-modal-badge">
+              <span class="player-modal-badge-icon">NPL</span>
+              <span class="player-modal-badge-text">Player Management</span>
+            </div>
+            <button class="player-modal-close" type="button" id="player-modal-close" title="Close">✕</button>
+          </div>
+
+          <div class="player-modal-hero">
+            <div class="player-modal-hero-copy">
+              <h2 class="player-modal-title">${title}</h2>
+              <p class="player-modal-subtitle">${subtitle}</p>
+            </div>
+            <div class="player-modal-hero-pills">
+              <span class="player-modal-hero-pill" style="--pill-accent:${role.color || '#6366f1'}">${role.icon || ''} ${player?.role || 'Batsman'}</span>
+              <span class="player-modal-hero-pill subtle">${locationMeta.icon || '📍'} ${player?.location || 'Nakre'}</span>
+              <span class="player-modal-hero-pill price">Base ${basePrice}</span>
+            </div>
+          </div>
+
+          <form class="player-modal-shell" id="player-modal-form" novalidate>
+            <div class="player-modal-showcase">
+              <div class="player-avatar-zone">
+                <div class="player-avatar-preview ${hasImageClass}" id="player-avatar-drop">
+                  ${avatarHtml}
+                </div>
+                <div class="player-avatar-actions">
+                  <label class="player-avatar-label" for="player-image-upload">
+                    ${isEdit && player?.image ? 'Change image' : 'Upload image'}
+                  </label>
+                  <p class="player-avatar-help" id="player-image-status" data-default-text="JPG, PNG, or WEBP up to 5MB. Images are optimized automatically.">
+                    JPG, PNG, or WEBP up to 5MB. Images are optimized automatically.
+                  </p>
+                </div>
+                <input type="file" id="player-image-upload" accept="image/*" hidden>
+              </div>
+
+              <aside class="player-modal-sidepanel">
+                <span class="player-modal-panel-kicker">Auction Snapshot</span>
+                <div class="player-modal-panel-grid">
+                  <div class="player-modal-stat-card">
+                    <span>Role</span>
+                    <strong>${player?.role || 'Batsman'}</strong>
+                  </div>
+                  <div class="player-modal-stat-card">
+                    <span>Base Price</span>
+                    <strong>${basePrice}</strong>
+                  </div>
+                  <div class="player-modal-stat-card">
+                    <span>Batting</span>
+                    <strong>${player?.batting || 'Right Hand'}</strong>
+                  </div>
+                  <div class="player-modal-stat-card">
+                    <span>Bowling</span>
+                    <strong>${player?.bowling || 'Right Arm'}</strong>
+                  </div>
+                </div>
+                <p class="player-modal-note">Use this popup to fine-tune role, price, and photo without leaving the player workflow.</p>
+              </aside>
+            </div>
+
+            <div class="player-modal-form">
+              <div class="login-input-group full-width">
+                <label for="pm-name">Player Name *</label>
+                <div class="login-input-wrapper">
+                  <input type="text" id="pm-name" class="login-input" placeholder="Enter player name" value="${player?.name || ''}" required>
+                </div>
+              </div>
+
+              <div class="login-input-group">
+                <label for="pm-role">Role *</label>
+                <div class="login-input-wrapper">
+                  <select id="pm-role" class="login-input">
+                    <option value="Batsman" ${player?.role === 'Batsman' ? 'selected' : ''}>🏏 Batsman</option>
+                    <option value="Bowler" ${player?.role === 'Bowler' ? 'selected' : ''}>🎯 Bowler</option>
+                    <option value="All-Rounder" ${player?.role === 'All-Rounder' ? 'selected' : ''}>⭐ All-Rounder</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="login-input-group">
+                <label for="pm-location">Location</label>
+                <div class="login-input-wrapper">
+                  <input type="text" id="pm-location" class="login-input" placeholder="e.g. Nakre" value="${player?.location || 'Nakre'}">
+                </div>
+              </div>
+
+              <div class="login-input-group">
+                <label for="pm-batting">Batting Style</label>
+                <div class="login-input-wrapper">
+                  <select id="pm-batting" class="login-input">
+                    <option value="Right Hand" ${player?.batting === 'Right Hand' ? 'selected' : ''}>Right Hand</option>
+                    <option value="Left Hand" ${player?.batting === 'Left Hand' ? 'selected' : ''}>Left Hand</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="login-input-group">
+                <label for="pm-bowling">Bowling Style</label>
+                <div class="login-input-wrapper">
+                  <select id="pm-bowling" class="login-input">
+                    <option value="Right Arm" ${player?.bowling === 'Right Arm' ? 'selected' : ''}>Right Arm</option>
+                    <option value="Left Arm" ${player?.bowling === 'Left Arm' ? 'selected' : ''}>Left Arm</option>
+                    <option value="N/A" ${player?.bowling === 'N/A' ? 'selected' : ''}>N/A</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="login-input-group">
+                <label for="pm-price">Base Price</label>
+                <div class="login-input-wrapper">
+                  <input type="number" id="pm-price" class="login-input" placeholder="1000" value="${player?.basePrice || 1000}" min="500" step="500">
+                </div>
+              </div>
+
+              <div class="full-width player-modal-inline-row">
+                <label class="player-modal-checkbox">
+                  <input type="checkbox" id="pm-wk" ${player?.isWK ? 'checked' : ''}>
+                  <span>🧤 Wicket Keeper</span>
+                </label>
+                <p class="player-modal-inline-note">WK players keep their badge across the player pool, auction selection, and results screens.</p>
+              </div>
+            </div>
+
+            <div class="player-modal-actions">
+              <button class="player-modal-save" type="submit" id="player-modal-save" data-player-id="${player?.id || ''}">${saveLabel}</button>
+              <button class="player-modal-cancel" type="button" id="player-modal-cancel">Cancel</button>
+              ${isEdit ? `<button class="player-modal-delete" type="button" id="player-modal-delete" data-player-id="${player.id}">Delete</button>` : ''}
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+  }
+
   /** Close the player modal */
   closePlayerModal() {
     const root = document.getElementById('player-modal-root');
@@ -1356,7 +1514,10 @@ export class UI {
     this.mainEl.innerHTML = `
       <div class="pool-page">
         <div class="pool-header">
-          <h2>Player Pool <span style="color:var(--text-3); font-weight:400; font-size:1rem">(${players.length} players)</span></h2>
+          <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+            <h2>Player Pool <span style="color:var(--text-3); font-weight:400; font-size:1rem">(${players.length} players)</span></h2>
+            <button class="player-add-btn" id="add-player-btn"><span>+</span> Add Player</button>
+          </div>
           <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <div class="pool-filters">
               ${roles.map(r => `
@@ -1374,7 +1535,8 @@ export class UI {
             // Get original serial number from sorted full list
             const serialNo = sorted.findIndex(p => p.name === player.name) + 1;
             return `
-              <div class="player-pool-card">
+              <div class="player-pool-card" style="position:relative;">
+                <button class="player-edit-btn" type="button" data-player-edit-id="${player.id}" title="Edit player">✏️</button>
                 <div class="player-serial-no">${serialNo}</div>
                 <div class="player-initials player-img-trigger" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}88); overflow: hidden; width:64px; height:64px; cursor:pointer;" data-player-img="${player.image || ''}" data-player-name="${player.name}" title="View Image">
                   ${player.image ? `<img src="${player.image}" alt="${player.name}" style="width:100%;height:100%;object-fit:cover;object-position:top;">` : getInitials(player.name)}
