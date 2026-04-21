@@ -1997,6 +1997,16 @@ export class UI {
       historyEl.innerHTML = this.renderBidHistoryEntries(state);
     }
 
+    // Sync undo / redo button states
+    const undoBtn = document.getElementById('undo-bid-btn');
+    if (undoBtn) {
+      undoBtn.disabled = !state.canUndo;
+    }
+    const redoBtn = document.getElementById('redo-bid-btn');
+    if (redoBtn) {
+      redoBtn.disabled = !state.canRedo;
+    }
+
     const soldEl = document.getElementById('auction-progress-sold');
     if (soldEl) soldEl.textContent = `Sold: ${state.soldCount}`;
 
@@ -3103,7 +3113,7 @@ export class UI {
           <h2>NPL 3.0 GROUP DIVISION</h2>
           <p>25 & 26th April 2026</p>
           <div style="margin-top:16px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-            <button class="btn btn-primary btn-lg" id="draw-tokens-btn" ${state.fixturesLocked ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
+            <button class="btn btn-primary btn-lg" id="draw-tokens-btn" ${gd && state.fixturesLocked ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
               🎲 ${gd ? 'Re-Draw Tokens' : 'Draw Tokens'}
             </button>
             ${gd ? `
@@ -3944,7 +3954,9 @@ export class UI {
     // Toss info line
     const tossWinnerTeam = s.tossWinner === s.teamA.id ? s.teamA : s.teamB;
     const tossInfo = s.tossWinner ? `<div class="lm-toss-info">${tossWinnerTeam.short} won the toss and elected to ${s.tossDecision === 'bat' ? 'bat' : 'bowl'} first</div>` : '';
-    return `<div class="live-match-header"><div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,${s.teamA.color},${s.teamB.color});"></div>${s.isFreeHit?'<div class="lm-freehit-badge">🔥 FREE HIT</div>':''}<div class="live-badge" style="margin-bottom:4px;">LIVE — Innings ${s.currentInnings}</div>${tossInfo}<div class="live-match-teams"><div class="live-match-team">${s.teamA.logo?`<img class="live-match-team-logo" src="${s.teamA.logo}">`:''}<span class="live-match-team-name" style="color:${s.teamA.color};">${s.teamA.short}</span><div class="live-match-score">${s.teamAScore.runs}/${s.teamAScore.wickets}</div><div class="live-match-overs">(${s.teamAScore.overs} ov)</div></div><div class="live-match-vs">VS</div><div class="live-match-team">${s.teamB.logo?`<img class="live-match-team-logo" src="${s.teamB.logo}">`:''}<span class="live-match-team-name" style="color:${s.teamB.color};">${s.teamB.short}</span><div class="live-match-score">${s.teamBScore.runs}/${s.teamBScore.wickets}</div><div class="live-match-overs">(${s.teamBScore.overs} ov)</div></div></div><div class="live-match-rr"><span>CRR: <strong>${s.current.crr}</strong></span>${s.rrr?`<span>RRR: <strong>${s.rrr.rrr}</strong></span><span>Need <strong>${s.rrr.remaining}</strong> off <strong>${s.rrr.ballsLeft}</strong></span>`:''}</div><div class="this-over"><span class="this-over-label">THIS OVER:</span>${s.currentOver.length>0?s.currentOver.map(b=>ballDisp(b)).join(''):'<span style="color:var(--text-4);">New over</span>'}</div>${overHistoryHTML}</div>`;
+    // Striker info line
+    const strikerInfo = (s.striker || s.nonStriker) ? `<div class="lm-striker-info"><span class="lm-striker-label">${s.striker ? `🏏 <strong>${s.striker.name}</strong> ${s.striker.runs}(${s.striker.balls})` : ''}</span>${s.striker && s.nonStriker ? '<span class="lm-striker-sep">•</span>' : ''}<span class="lm-nonstriker-label">${s.nonStriker ? `${s.nonStriker.name} ${s.nonStriker.runs}(${s.nonStriker.balls})` : ''}</span></div>` : '';
+    return `<div class="live-match-header"><div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,${s.teamA.color},${s.teamB.color});"></div>${s.isFreeHit?'<div class="lm-freehit-badge">🔥 FREE HIT</div>':''}<div class="live-badge" style="margin-bottom:4px;">LIVE — Innings ${s.currentInnings}</div>${tossInfo}<div class="live-match-teams"><div class="live-match-team">${s.teamA.logo?`<img class="live-match-team-logo" src="${s.teamA.logo}">`:''}<span class="live-match-team-name" style="color:${s.teamA.color};">${s.teamA.short}</span><div class="live-match-score">${s.teamAScore.runs}/${s.teamAScore.wickets}</div><div class="live-match-overs">(${s.teamAScore.overs} ov)</div></div><div class="live-match-vs">VS</div><div class="live-match-team">${s.teamB.logo?`<img class="live-match-team-logo" src="${s.teamB.logo}">`:''}<span class="live-match-team-name" style="color:${s.teamB.color};">${s.teamB.short}</span><div class="live-match-score">${s.teamBScore.runs}/${s.teamBScore.wickets}</div><div class="live-match-overs">(${s.teamBScore.overs} ov)</div></div></div><div class="live-match-rr"><span>CRR: <strong>${s.current.crr}</strong></span>${s.rrr?`<span>RRR: <strong>${s.rrr.rrr}</strong></span><span>Need <strong>${s.rrr.remaining}</strong> off <strong>${s.rrr.ballsLeft}</strong></span>`:''}</div>${strikerInfo}<div class="this-over"><span class="this-over-label">THIS OVER:</span>${s.currentOver.length>0?s.currentOver.map(b=>ballDisp(b)).join(''):'<span style="color:var(--text-4);">New over</span>'}</div>${overHistoryHTML}</div>`;
   }
 
   // ═══════════════════════════════════════════

@@ -539,7 +539,11 @@ class App {
 
     this.syncViewportMetrics();
     this.ui.enhanceRenderedMedia(this.currentView);
-    this.ui.animateViewEntrance();
+    // Skip entrance animation for live-match (lobby has its own CSS animation,
+    // and scoring view should not animate on every ball re-render)
+    if (this.currentView !== 'live-match') {
+      this.ui.animateViewEntrance();
+    }
   }
 
   refreshAuctionRealtime(state = this.engine?.getState(), options = {}) {
@@ -1169,8 +1173,10 @@ class App {
 
     // ── Draw tokens for fixtures ──
     if (target.id === 'draw-tokens-btn' || target.closest('#draw-tokens-btn')) {
-      if (this.fixturesLocked) {
-        this.ui.showToast('🔒 Fixtures are locked. Unlock first.', 'warning');
+      const gd = this.engine?.groupDivision;
+      if (gd && this.fixturesLocked) {
+        // Only block Re-Draw if fixtures are already drawn and locked
+        this.ui.showToast('🔒 Fixtures are locked. Unlock first to re-draw.', 'warning');
         return;
       }
       this.handleTokenDraw();

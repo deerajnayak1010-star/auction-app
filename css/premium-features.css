@@ -147,7 +147,7 @@
   visibility: hidden;
   pointer-events: none;
   animation: none;
-  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s step-end;
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s 0.18s;
 }
 
 .nav-more-menu.is-open .nav-more-dropdown,
@@ -157,6 +157,7 @@
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s;
 }
 
 .nav-more-dropdown {
@@ -643,6 +644,15 @@
   background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3);
   color: var(--accent-red); font-size: 0.8rem;
 }
+
+/* Striker Info Line */
+.lm-striker-info {
+  display: flex; gap: 8px; align-items: center; justify-content: center;
+  padding: 8px 0; margin-top: 8px; font-size: 0.85rem; color: var(--text-2);
+}
+.lm-striker-label strong { color: var(--accent-gold); }
+.lm-nonstriker-label { color: var(--text-3); }
+.lm-striker-sep { color: var(--text-4); font-size: 0.7rem; }
 
 /* This Over Display */
 .this-over {
@@ -1288,11 +1298,11 @@
   margin: 0 auto;
   padding: 8px 10px 32px;
   min-height: calc(100vh - 120px);
-  animation: fadeIn 0.45s ease;
 }
 
 .live-match-page.live-match-lobby {
   max-width: 1360px;
+  animation: fadeIn 0.45s ease;
 }
 
 .live-match-hero {
