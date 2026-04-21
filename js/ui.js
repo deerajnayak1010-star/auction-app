@@ -1112,6 +1112,7 @@ export class UI {
               Select All ${currentFilter !== 'All' ? currentFilter + 's' : 'Players'}
             </label>
             <span class="player-select-count">${selectedPlayerIds.size} / ${players.length} selected</span>
+            <button class="player-add-btn" id="add-player-btn"><span>+</span> Add Player</button>
           </div>
         </div>
 
@@ -1133,6 +1134,7 @@ export class UI {
             const serialNo = sorted.findIndex(p => p.name === player.name) + 1;
             return `
               <div class="player-pool-card player-select-item ${isSelected ? 'ps-selected' : ''}" data-player-name="${player.name}">
+                <button class="player-edit-btn" data-player-edit-id="${player.id}" title="Edit player">✏️</button>
                 <div class="player-serial-no">${serialNo}</div>
                 <div class="ps-check-icon">${isSelected ? '✓' : ''}</div>
                 <div class="player-initials" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}88); overflow: hidden; width:56px; height:56px;">
@@ -1158,6 +1160,166 @@ export class UI {
         </div>
       </div>
     `;
+  }
+
+  // ═══════════════════════════════════════════
+  // PLAYER MANAGEMENT MODAL
+  // ═══════════════════════════════════════════
+
+  /**
+   * Open the player add/edit modal.
+   * @param {object|null} player — null for add, player object for edit
+   */
+  renderPlayerModal(player = null) {
+    const isEdit = !!player;
+    const title = isEdit ? 'Edit Player' : 'Add New Player';
+    const subtitle = isEdit ? `Editing ${player.name}` : 'Fill in the player details below';
+    const saveLabel = isEdit ? '💾 Update Player' : '💾 Save Player';
+
+    const avatarHtml = player?.image
+      ? `<img src="${player.image}" alt="${player.name}" id="pm-avatar-img">`
+      : `<span class="avatar-placeholder">📷</span>`;
+    const hasImageClass = player?.image ? 'has-image' : '';
+
+    // Remove existing modal if any
+    document.getElementById('player-modal-root')?.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'player-modal-root';
+    modal.innerHTML = `
+      <div class="player-modal-overlay" id="player-modal-overlay">
+        <div class="player-modal">
+          <!-- Header -->
+          <div class="player-modal-header">
+            <div class="player-modal-badge">
+              <span class="player-modal-badge-icon">🏏</span>
+              <span class="player-modal-badge-text">Player Management</span>
+            </div>
+            <button class="player-modal-close" id="player-modal-close" title="Close">✕</button>
+          </div>
+
+          <h2 class="player-modal-title">${title}</h2>
+          <p class="player-modal-subtitle">${subtitle}</p>
+
+          <!-- Avatar Upload -->
+          <div class="player-avatar-zone">
+            <div class="player-avatar-preview ${hasImageClass}" id="player-avatar-drop">
+              ${avatarHtml}
+            </div>
+            <label class="player-avatar-label" for="player-image-upload">
+              📎 ${isEdit && player?.image ? 'Change image' : 'Upload image'}
+            </label>
+            <input type="file" id="player-image-upload" accept="image/*" style="display:none;">
+          </div>
+
+          <!-- Form -->
+          <div class="player-modal-form">
+            <div class="login-input-group full-width">
+              <label for="pm-name">Player Name *</label>
+              <div class="login-input-wrapper">
+                <input type="text" id="pm-name" class="login-input" placeholder="Enter player name" value="${player?.name || ''}" required>
+              </div>
+            </div>
+
+            <div class="login-input-group">
+              <label for="pm-role">Role *</label>
+              <div class="login-input-wrapper">
+                <select id="pm-role" class="login-input">
+                  <option value="Batsman" ${player?.role === 'Batsman' ? 'selected' : ''}>🏏 Batsman</option>
+                  <option value="Bowler" ${player?.role === 'Bowler' ? 'selected' : ''}>🎯 Bowler</option>
+                  <option value="All-Rounder" ${player?.role === 'All-Rounder' ? 'selected' : ''}>⭐ All-Rounder</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="login-input-group">
+              <label for="pm-location">Location</label>
+              <div class="login-input-wrapper">
+                <input type="text" id="pm-location" class="login-input" placeholder="e.g. Nakre" value="${player?.location || 'Nakre'}">
+              </div>
+            </div>
+
+            <div class="login-input-group">
+              <label for="pm-batting">Batting Style</label>
+              <div class="login-input-wrapper">
+                <select id="pm-batting" class="login-input">
+                  <option value="Right Hand" ${player?.batting === 'Right Hand' ? 'selected' : ''}>Right Hand</option>
+                  <option value="Left Hand" ${player?.batting === 'Left Hand' ? 'selected' : ''}>Left Hand</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="login-input-group">
+              <label for="pm-bowling">Bowling Style</label>
+              <div class="login-input-wrapper">
+                <select id="pm-bowling" class="login-input">
+                  <option value="Right Arm" ${player?.bowling === 'Right Arm' ? 'selected' : ''}>Right Arm</option>
+                  <option value="Left Arm" ${player?.bowling === 'Left Arm' ? 'selected' : ''}>Left Arm</option>
+                  <option value="N/A" ${player?.bowling === 'N/A' ? 'selected' : ''}>N/A</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="login-input-group">
+              <label for="pm-price">Base Price</label>
+              <div class="login-input-wrapper">
+                <input type="number" id="pm-price" class="login-input" placeholder="1000" value="${player?.basePrice || 1000}" min="500" step="500">
+              </div>
+            </div>
+
+            <div class="full-width">
+              <label class="player-modal-checkbox">
+                <input type="checkbox" id="pm-wk" ${player?.isWK ? 'checked' : ''}>
+                <span>🧤 Wicket Keeper</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="player-modal-actions">
+            <button class="player-modal-save" id="player-modal-save" data-player-id="${player?.id || ''}">${saveLabel}</button>
+            <button class="player-modal-cancel" id="player-modal-cancel">Cancel</button>
+            ${isEdit ? `<button class="player-modal-delete" id="player-modal-delete" data-player-id="${player.id}">🗑️ Delete</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+  }
+
+  /** Close the player modal */
+  closePlayerModal() {
+    const root = document.getElementById('player-modal-root');
+    if (root) {
+      root.querySelector('.player-modal-overlay')?.style?.setProperty('animation', 'pmOverlayIn 0.2s ease reverse forwards');
+      setTimeout(() => root.remove(), 200);
+    }
+  }
+
+  /** Show delete confirmation dialog */
+  renderPlayerDeleteConfirm(playerName, playerId) {
+    document.getElementById('player-delete-root')?.remove();
+    const el = document.createElement('div');
+    el.id = 'player-delete-root';
+    el.innerHTML = `
+      <div class="player-delete-confirm">
+        <div class="player-delete-card">
+          <h3>🗑️ Delete Player</h3>
+          <p>Are you sure you want to delete <strong>${playerName}</strong>?<br>This action cannot be undone.</p>
+          <div class="player-delete-actions">
+            <button class="player-delete-yes" id="player-delete-yes" data-player-id="${playerId}">Yes, Delete</button>
+            <button class="player-delete-no" id="player-delete-no">Cancel</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(el);
+  }
+
+  /** Close delete confirmation */
+  closePlayerDeleteConfirm() {
+    document.getElementById('player-delete-root')?.remove();
   }
 
   // ═══════════════════════════════════════════

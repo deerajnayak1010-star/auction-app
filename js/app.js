@@ -20,6 +20,7 @@ class App {
     this.engine = null;
     this.selectedTeamIds = new Set();
     this.selectedPlayerIds = new Set();
+    this.allPlayers = [...PLAYERS_DATA]; // mutable copy for CRUD
     this.currentView = 'login';
     this.isLoggedIn = false;
     this.poolFilter = 'All';
@@ -392,6 +393,12 @@ class App {
     // Include fixtures lock state
     state.fixturesLocked = this.fixturesLocked || false;
 
+    // Include custom player data (only if modified from defaults)
+    if (this.allPlayers && this.allPlayers.length !== PLAYERS_DATA.length ||
+        this.allPlayers.some((p, i) => !PLAYERS_DATA[i] || p.name !== PLAYERS_DATA[i].name || p.image !== PLAYERS_DATA[i].image)) {
+      state.allPlayers = this.allPlayers;
+    }
+
     return state;
   }
 
@@ -501,6 +508,9 @@ class App {
     if (state.selectedPlayerIds) {
       this.selectedPlayerIds = new Set(state.selectedPlayerIds);
     }
+    if (state.allPlayers && Array.isArray(state.allPlayers)) {
+      this.allPlayers = state.allPlayers;
+    }
     if (state.currentView) {
       this.currentView = state.currentView;
     }
@@ -577,6 +587,196 @@ class App {
   }
 
   // ═══════════════════════════════════════════
+  // PLAYER MANAGEMENT (CRUD)
+  // ═══════════════════════════════════════════
+
+  /** Get form data from the player modal */
+  _getPlayerFormData() {
+    return {
+      name: document.getElementById('pm-name')?.value?.trim() || '',
+      role: document.getElementById('pm-role')?.value || 'Batsman',
+      location: document.getElementById('pm-location')?.value?.trim() || 'Nakre',
+      batting: document.getElementById('pm-batting')?.value || 'Right Hand',
+      bowling: document.getElementById('pm-bowling')?.value || 'Right Arm',
+      basePrice: parseInt(document.getElementById('pm-price')?.value) || 1000,
+      isWK: document.getElementById('pm-wk')?.checked || false,
+    };
+  }
+
+  /** Add a new player */
+  addPlayer(data) {
+    if (!data.name) {
+      this.ui.showToast('Player name is required', 'error');
+      return false;
+    }
+    // Duplicate name check
+    if (this.allPlayers.some(p => p.name.toLowerCase() === data.name.toLowerCase())) {
+      this.ui.showToast(`Player "${data.name}" already exists`, 'error');
+      return false;
+    }
+    const maxId = this.allPlayers.reduce((max, p) => Math.max(max, p.id), 0);
+    const newPlayer = {
+      id: maxId + 1,
+      name: data.name,
+      role: data.role,
+      location: data.location,
+      batting: data.batting,
+      bowling: data.bowling,
+      basePrice: data.basePrice,
+      isWK: data.isWK,
+      image: this._pendingPlayerImage || '',
+    };
+    this.allPlayers.push(newPlayer);
+    this._pendingPlayerImage = null;
+    this.saveState();
+    this.ui.showToast(`✅ ${data.name} added successfully`, 'success');
+    return true;
+  }
+
+  /** Update an existing player */
+  updatePlayer(id, data) {
+    const idx = this.allPlayers.findIndex(p => p.id === id);
+    if (idx === -1) {
+      this.ui.showToast('Player not found', 'error');
+      return false;
+    }
+    if (!data.name) {
+      this.ui.showToast('Player name is required', 'error');
+      return false;
+    }
+    // Duplicate check (excluding self)
+    if (this.allPlayers.some(p => p.id !== id && p.name.toLowerCase() === data.name.toLowerCase())) {
+      this.ui.showToast(`Player "${data.name}" already exists`, 'error');
+      return false;
+    }
+    const player = this.allPlayers[idx];
+    player.name = data.name;
+    player.role = data.role;
+    player.location = data.location;
+    player.batting = data.batting;
+    player.bowling = data.bowling;
+    player.basePrice = data.basePrice;
+    player.isWK = data.isWK;
+    if (this._pendingPlayerImage) {
+      player.image = this._pendingPlayerImage;
+    }
+    this._pendingPlayerImage = null;
+
+    // If auction in progress, update player in pool/sold/unsold
+    if (this.engine) {
+      const poolIdx = this.engine.playerPool.findIndex(p => p.id === id);
+      if (poolIdx !== -1) this.engine.playerPool[poolIdx] = { ...player };
+      if (this.engine.currentPlayer?.id === id) {
+        this.engine.currentPlayer = { ...player, soldPrice: this.engine.currentPlayer.soldPrice };
+      }
+    }
+
+    this.saveState();
+    this.ui.showToast(`✅ ${data.name} updated`, 'success');
+    return true;
+  }
+
+  /** Delete a player */
+  deletePlayer(id) {
+    const idx = this.allPlayers.findIndex(p => p.id === id);
+    if (idx === -1) return false;
+
+    const player = this.allPlayers[idx];
+
+    // Check if player is sold in auction
+    if (this.engine) {
+      const isSold = this.engine.soldPlayers.some(s => s.player.id === id);
+      if (isSold) {
+        this.ui.showToast(`Cannot delete ${player.name} — already sold in auction`, 'error');
+        return false;
+      }
+      if (this.engine.currentPlayer?.id === id) {
+        this.ui.showToast(`Cannot delete ${player.name} — currently being auctioned`, 'error');
+        return false;
+      }
+      // Remove from pool if pending
+      this.engine.playerPool = this.engine.playerPool.filter(p => p.id !== id);
+    }
+
+    // Remove from selected
+    this.selectedPlayerIds.delete(player.name);
+
+    // Remove from allPlayers
+    this.allPlayers.splice(idx, 1);
+
+    this.saveState();
+    this.ui.showToast(`🗑️ ${player.name} deleted`, 'success');
+    return true;
+  }
+
+  /** Handle image file → base64 */
+  _handlePlayerImageFile(file) {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      this.ui.showToast('Image must be under 5MB', 'error');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      this.ui.showToast('Please select an image file', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this._pendingPlayerImage = e.target.result;
+      const preview = document.getElementById('player-avatar-drop');
+      if (preview) {
+        preview.classList.add('has-image');
+        preview.innerHTML = `<img src="${e.target.result}" alt="Preview" id="pm-avatar-img">`;
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /** Re-render the player select view after a CRUD operation */
+  _refreshPlayerView() {
+    if (this.currentView === 'player-select') {
+      this.ui.renderPlayerSelect(this.allPlayers, this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
+      this.bindPlayerSelectEvents();
+    } else if (this.currentView === 'players') {
+      this.ui.renderPlayerPool(this.allPlayers, this.poolFilter, this.poolSearch);
+      this.bindPoolEvents();
+    }
+  }
+
+  /** Bind image upload and drag-drop events inside the player modal */
+  _bindPlayerModalEvents() {
+    // File input change
+    const fileInput = document.getElementById('player-image-upload');
+    if (fileInput) {
+      fileInput.addEventListener('change', (e) => {
+        this._handlePlayerImageFile(e.target.files[0]);
+      });
+    }
+
+    // Click avatar to trigger file input
+    const dropZone = document.getElementById('player-avatar-drop');
+    if (dropZone) {
+      dropZone.addEventListener('click', () => fileInput?.click());
+
+      // Drag-drop
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+      });
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+      });
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        const file = e.dataTransfer?.files?.[0];
+        if (file) this._handlePlayerImageFile(file);
+      });
+    }
+  }
+
+  // ═══════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════
 
@@ -606,14 +806,14 @@ class App {
         this.bindTimerSetting();
         break;
       case 'player-select':
-        this.ui.renderPlayerSelect(PLAYERS_DATA, this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
+        this.ui.renderPlayerSelect(this.allPlayers, this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
         this.bindPlayerSelectEvents();
         break;
       case 'rules':
         this.ui.renderRulesPremium();
         break;
       case 'players':
-        this.ui.renderPlayerPool(PLAYERS_DATA, this.poolFilter, this.poolSearch);
+        this.ui.renderPlayerPool(this.allPlayers, this.poolFilter, this.poolSearch);
         this.bindPoolEvents();
         break;
       case 'auction':
@@ -827,13 +1027,93 @@ class App {
   }
 
   async onClick(e) {
-    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], [data-ball], [data-live-match], [data-lm-new-batsman], [data-lm-next-bowler], [data-lm-coin-flip], [data-lm-dismissal], [data-lm-runout], [data-ro-runs], [data-gallery-filter], [data-delete-photo], [data-generate-card], #login-btn, #login-eye-toggle, #login-forgot-link, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #recall-bid-btn, #recall-confirm-yes, #recall-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #video-bg-toggle-btn, #results-tab-squads, #results-tab-analytics, #results-tab-standings, #results-tab-stats, #results-tab-scorecard, #results-tab-fixtures, #draw-tokens-btn, #clear-tokens-btn, #clear-tokens-yes, #clear-tokens-no, #download-fixtures-btn, #lock-fixtures-btn, #create-knockout-btn, #sc-back-btn, #sc-back-btn2, #sc-save-btn, .sc-open-btn, #commentary-toggle-btn, #commentary-header, #open-projector-btn, #hamburger-toggle, #nav-more-toggle, .nav-more-item, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn, #live-undo-btn, #live-back-btn, #live-save-scorecard-btn, #lm-start-toss-btn, #lm-confirm-openers-btn, #lm-wd-toggle, #lm-nb-toggle, #lm-bye-toggle, #lm-lb-toggle, #lm-wicket-btn, #lm-modal-close-btn, #lm-save-yes-btn, #lm-save-no-btn, #lm-save-dismiss-btn, #lm-edit-score-btn, #live-edit-score-btn, #ro-swap-strike-btn, #lm-swap-strike-btn, #share-app-btn, #share-copy-wa-btn, #share-copy-ig-btn, #share-tab-wa, #share-tab-ig, #share-modal-close, #awards-reveal-next-btn, #awards-reset-btn, #awards-back-btn, .score-btn, .lm-sub-btn, .lm-modal-option, .lm-modal-close');
+    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], [data-player-edit-id], [data-ball], [data-live-match], [data-lm-new-batsman], [data-lm-next-bowler], [data-lm-coin-flip], [data-lm-dismissal], [data-lm-runout], [data-ro-runs], [data-gallery-filter], [data-delete-photo], [data-generate-card], #login-btn, #login-eye-toggle, #login-forgot-link, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #recall-bid-btn, #recall-confirm-yes, #recall-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #video-bg-toggle-btn, #results-tab-squads, #results-tab-analytics, #results-tab-standings, #results-tab-stats, #results-tab-scorecard, #results-tab-fixtures, #draw-tokens-btn, #clear-tokens-btn, #clear-tokens-yes, #clear-tokens-no, #download-fixtures-btn, #lock-fixtures-btn, #create-knockout-btn, #sc-back-btn, #sc-back-btn2, #sc-save-btn, .sc-open-btn, #commentary-toggle-btn, #commentary-header, #open-projector-btn, #hamburger-toggle, #nav-more-toggle, .nav-more-item, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn, #live-undo-btn, #live-back-btn, #live-save-scorecard-btn, #lm-start-toss-btn, #lm-confirm-openers-btn, #lm-wd-toggle, #lm-nb-toggle, #lm-bye-toggle, #lm-lb-toggle, #lm-wicket-btn, #lm-modal-close-btn, #lm-save-yes-btn, #lm-save-no-btn, #lm-save-dismiss-btn, #lm-edit-score-btn, #live-edit-score-btn, #ro-swap-strike-btn, #lm-swap-strike-btn, #share-app-btn, #share-copy-wa-btn, #share-copy-ig-btn, #share-tab-wa, #share-tab-ig, #share-modal-close, #awards-reveal-next-btn, #awards-reset-btn, #awards-back-btn, #add-player-btn, #player-modal-save, #player-modal-cancel, #player-modal-close, #player-modal-delete, #player-modal-overlay, #player-delete-yes, #player-delete-no, .player-edit-btn, .score-btn, .lm-sub-btn, .lm-modal-option, .lm-modal-close');
     if (!target) return;
 
     // ── Premium Features Click Routing ──
     if (this.currentView === 'live-match' && await this._handleLiveMatchClick(target)) return;
     if (this.currentView === 'gallery' && this._handleGalleryClick(target)) return;
     if (this.currentView === 'awards' && this._handleAwardsClick(target)) return;
+
+    // ── Player Management Modal ──
+    // Open Add Player modal
+    if (target.id === 'add-player-btn') {
+      this._pendingPlayerImage = null;
+      this.ui.renderPlayerModal(null);
+      this._bindPlayerModalEvents();
+      return;
+    }
+
+    // Edit player button on card
+    if (target.dataset.playerEditId) {
+      e.stopPropagation(); // prevent card selection toggle
+      const playerId = parseInt(target.dataset.playerEditId);
+      const player = this.allPlayers.find(p => p.id === playerId);
+      if (player) {
+        this._pendingPlayerImage = null;
+        this.ui.renderPlayerModal(player);
+        this._bindPlayerModalEvents();
+      }
+      return;
+    }
+
+    // Save player (add or update)
+    if (target.id === 'player-modal-save') {
+      const data = this._getPlayerFormData();
+      const editId = target.dataset.playerId ? parseInt(target.dataset.playerId) : null;
+      let success;
+      if (editId) {
+        success = this.updatePlayer(editId, data);
+      } else {
+        success = this.addPlayer(data);
+      }
+      if (success) {
+        this.ui.closePlayerModal();
+        this._refreshPlayerView();
+      }
+      return;
+    }
+
+    // Cancel / Close modal
+    if (target.id === 'player-modal-cancel' || target.id === 'player-modal-close') {
+      this._pendingPlayerImage = null;
+      this.ui.closePlayerModal();
+      return;
+    }
+
+    // Close on overlay click (only if click is directly on overlay, not card)
+    if (target.id === 'player-modal-overlay') {
+      this._pendingPlayerImage = null;
+      this.ui.closePlayerModal();
+      return;
+    }
+
+    // Delete button → show confirmation
+    if (target.id === 'player-modal-delete') {
+      const id = parseInt(target.dataset.playerId);
+      const player = this.allPlayers.find(p => p.id === id);
+      if (player) {
+        this.ui.renderPlayerDeleteConfirm(player.name, id);
+      }
+      return;
+    }
+
+    // Confirm delete
+    if (target.id === 'player-delete-yes') {
+      const id = parseInt(target.dataset.playerId);
+      if (this.deletePlayer(id)) {
+        this.ui.closePlayerDeleteConfirm();
+        this.ui.closePlayerModal();
+        this._refreshPlayerView();
+      }
+      return;
+    }
+
+    // Cancel delete
+    if (target.id === 'player-delete-no') {
+      this.ui.closePlayerDeleteConfirm();
+      return;
+    }
 
     // ── Login: submit ──
     // Password visibility toggle
