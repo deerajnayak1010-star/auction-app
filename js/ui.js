@@ -676,22 +676,22 @@ export class UI {
             <span class="nav-link-text">${view.label}</span>
           </button>
         `).join('')}
-        <div class="nav-more-menu">
-          <button class="nav-link nav-link-more ${isMoreActive ? 'active' : ''}" id="nav-more-toggle" aria-haspopup="true" aria-expanded="false">
-            <span class="nav-link-icon">⚙️</span>
-            <span class="nav-link-text">More</span>
-            <span class="nav-link-caret">▾</span>
-          </button>
-          <div class="nav-more-dropdown" id="nav-more-dropdown" role="menu">
-            ${moreViews.map((view) => `
-              <button class="nav-more-item ${currentView === view.id ? 'active' : ''}" data-view="${view.id}" role="menuitem">
-                <span class="nav-more-item-icon">${view.icon}</span>
-                <span class="nav-more-item-label">${view.label}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
+        <button class="nav-link nav-link-more ${isMoreActive ? 'active' : ''}" id="nav-more-toggle" aria-haspopup="true" aria-expanded="false">
+          <span class="nav-link-icon">⚙️</span>
+          <span class="nav-link-text">More</span>
+          <span class="nav-link-caret">▾</span>
+        </button>
       </nav>
+      <div class="nav-more-menu" id="nav-more-menu-wrapper">
+        <div class="nav-more-dropdown" id="nav-more-dropdown" role="menu">
+          ${moreViews.map((view) => `
+            <button class="nav-more-item ${currentView === view.id ? 'active' : ''}" data-view="${view.id}" role="menuitem">
+              <span class="nav-more-item-icon">${view.icon}</span>
+              <span class="nav-more-item-label">${view.label}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
       <div class="nav-right">
         <div class="nav-stats">
           ${stats.remaining !== undefined ? `

@@ -101,7 +101,7 @@ export class BackgroundMediaManager {
 
   async _loadConfig() {
     try {
-      const response = await fetch(this.configUrl, { cache: 'force-cache' });
+      const response = await fetch(this.configUrl, { cache: 'no-cache' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const remoteConfig = await response.json();
       return this._normalizeConfig(remoteConfig);

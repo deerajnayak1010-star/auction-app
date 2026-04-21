@@ -81,7 +81,7 @@ class App {
 
     // Close header menus when the pointer/click leaves their trigger areas
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('.hamburger-menu') && !e.target.closest('.nav-more-menu')) {
+      if (!e.target.closest('.hamburger-menu') && !e.target.closest('.nav-more-menu') && !e.target.closest('#nav-more-toggle')) {
         this._closeHeaderMenus();
       }
     });
@@ -621,8 +621,17 @@ class App {
     this._closeHeaderMenus(menu);
     menu.classList.add('is-open');
 
-    const toggle = menu.querySelector('[id$="-toggle"]');
+    const toggle = menu.querySelector('[id$="-toggle"]') || document.getElementById('nav-more-toggle');
     if (toggle) toggle.setAttribute('aria-expanded', 'true');
+
+    // Position .nav-more-menu below the toggle button
+    if (menu.id === 'nav-more-menu-wrapper' && toggle) {
+      const headerRect = this.ui.headerEl.getBoundingClientRect();
+      const toggleRect = toggle.getBoundingClientRect();
+      const centerX = toggleRect.left + toggleRect.width / 2 - headerRect.left;
+      menu.style.left = `${centerX}px`;
+      menu.style.top = `${headerRect.height}px`;
+    }
   }
 
   _closeHeaderMenu(menu) {
