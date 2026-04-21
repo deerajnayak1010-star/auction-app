@@ -144,12 +144,12 @@ class App {
 
     this.wsClient.on('connected', () => {
       console.log('[App] WebSocket connected');
-      this.render(); // Re-render to show sync status
+      this._updateSyncChip(); // Only update sync indicator, don't re-render entire page
     });
 
     this.wsClient.on('disconnected', () => {
       console.log('[App] WebSocket disconnected');
-      this.render(); // Re-render to show offline status
+      this._updateSyncChip();
     });
 
     this.wsClient.on('role-assigned', ({ role }) => {
@@ -161,7 +161,7 @@ class App {
         // Immediately broadcast current state so spectators sync
         this.broadcastState();
       }
-      this.render();
+      this._updateSyncChip();
     });
 
     // ── Receive state from primary host (spectator mode) ──
@@ -465,8 +465,24 @@ class App {
 
     this._applyingRemoteState = true;
     try {
-      this._restoreFromState(state);
-      this.render();
+      // Don't overwrite currentView — let spectators navigate independently
+      const savedView = this.currentView;
+      await this._restoreFromState(state);
+      this.currentView = savedView;
+
+      // Smart re-render: only update header stats + current view data
+      // This avoids wiping form state (toss dropdowns, etc.)
+      if (this.currentView === 'auction' && this.engine) {
+        this.refreshAuctionRealtime();
+      } else if (this.currentView === 'results') {
+        this.render();
+      } else if (this.currentView === 'live-match') {
+        // Don't re-render live match — it would clear toss/over selections
+        // The live match engine state is already updated via _restoreFromState
+      } else {
+        // For other views, a full render is safe
+        this.render();
+      }
     } catch (e) {
       console.warn('[App] Failed to apply remote state:', e);
     } finally {
@@ -537,6 +553,27 @@ class App {
     this.saveState(); 
     this.ui.showToast('🔄 Auction reset. Starting fresh!', 'info');
     this.navigate('setup');
+  }
+
+  /** Update only the sync status chip in the header without a full re-render */
+  _updateSyncChip() {
+    const chip = document.querySelector('.sync-chip');
+    if (!chip) return; // Header not rendered yet
+
+    const { connected, role } = { connected: this.wsClient.connected, role: this.wsClient.role };
+
+    // Update classes
+    chip.className = `nav-stat-chip sync-chip sync-chip--${connected ? (role || 'unknown') : 'offline'}`;
+
+    // Update text
+    const dot = '<span class="sync-dot"></span>';
+    if (connected) {
+      chip.innerHTML = `${dot} ${role === 'primary' ? 'Primary' : role === 'spectator' ? 'Live Sync' : 'Connected'}`;
+      chip.title = role === 'primary' ? 'You are the primary host' : 'Live syncing with primary host';
+    } else {
+      chip.innerHTML = `${dot} Offline`;
+      chip.title = 'Not connected to server';
+    }
   }
 
   // ═══════════════════════════════════════════
