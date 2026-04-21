@@ -193,11 +193,8 @@
 }
 
 .nav-more-menu {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 9999;
-  pointer-events: none;
+  position: relative;
+  display: inline-flex;
 }
 
 .nav-more-menu.is-open {
@@ -206,6 +203,7 @@
 
 .nav-more-dropdown,
 .hamburger-dropdown {
+  display: none;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -213,10 +211,16 @@
   transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s 0.18s;
 }
 
-.nav-more-menu.is-open .nav-more-dropdown,
-.nav-more-menu:focus-within .nav-more-dropdown,
-.hamburger-menu.is-open .hamburger-dropdown,
-.hamburger-menu:focus-within .hamburger-dropdown {
+.nav-more-menu.is-open .nav-more-dropdown {
+  display: grid;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s;
+}
+
+.hamburger-menu.is-open .hamburger-dropdown {
+  display: block;
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -224,7 +228,6 @@
 }
 
 .nav-more-dropdown {
-  display: grid;
   grid-template-columns: repeat(5, minmax(60px, 1fr));
   gap: 8px;
   min-width: min(420px, calc(100vw - 48px));
@@ -497,8 +500,7 @@
     min-width: min(320px, calc(100vw - 32px));
   }
 
-  .nav-more-menu.is-open .nav-more-dropdown,
-  .nav-more-menu:focus-within .nav-more-dropdown {
+  .nav-more-menu.is-open .nav-more-dropdown {
     transform: translateY(0) scale(1);
   }
 }
@@ -2534,6 +2536,7 @@
 
 .nav-more-dropdown,
 .hamburger-dropdown {
+  display: none;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -2541,10 +2544,15 @@
   transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s step-end;
 }
 
-.nav-more-menu.is-open .nav-more-dropdown,
-.nav-more-menu:focus-within .nav-more-dropdown,
-.hamburger-menu.is-open .hamburger-dropdown,
-.hamburger-menu:focus-within .hamburger-dropdown {
+.nav-more-menu.is-open .nav-more-dropdown {
+  display: grid;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.hamburger-menu.is-open .hamburger-dropdown {
+  display: block;
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -2554,7 +2562,6 @@
   top: calc(100% + 14px);
   left: 50%;
   right: auto;
-  display: grid;
   grid-template-columns: repeat(5, minmax(60px, 1fr));
   gap: 8px;
   min-width: min(420px, calc(100vw - 48px));
