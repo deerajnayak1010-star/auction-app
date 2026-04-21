@@ -1116,7 +1116,7 @@ export class UI {
           </div>
         </div>
 
-        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:20px;">
+        <div class="player-select-controls">
           <div class="pool-filters">
             ${roles.map(r => `
               <button class="filter-btn ${currentFilter === r ? 'active' : ''}" data-role="${r}">
@@ -1134,9 +1134,16 @@ export class UI {
             const serialNo = sorted.findIndex(p => p.name === player.name) + 1;
             return `
               <div class="player-pool-card player-select-item ${isSelected ? 'ps-selected' : ''}" data-player-name="${player.name}">
-                <button class="player-edit-btn" data-player-edit-id="${player.id}" title="Edit player">✏️</button>
-                <div class="player-serial-no">${serialNo}</div>
-                <div class="ps-check-icon">${isSelected ? '✓' : ''}</div>
+                <div class="player-select-card-toolbar">
+                  <div class="player-select-card-tools-left">
+                    <div class="player-serial-no player-select-serial">${serialNo}</div>
+                    <button class="player-edit-btn player-select-edit-btn" type="button" data-player-edit-id="${player.id}" title="Edit player">Edit</button>
+                  </div>
+                  <div class="player-select-checkbox ${isSelected ? 'checked' : ''}" aria-hidden="true">
+                    <span class="player-select-checkbox-box">${isSelected ? '✓' : ''}</span>
+                    <span class="player-select-checkbox-label">${isSelected ? 'Selected' : 'Select'}</span>
+                  </div>
+                </div>
                 <div class="player-initials" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}88); overflow: hidden; width:56px; height:56px;">
                   ${player.image ? `<img src="${player.image}" alt="${player.name}" style="width:100%;height:100%;object-fit:cover;object-position:top;">` : getInitials(player.name)}
                 </div>
@@ -1763,6 +1770,8 @@ export class UI {
         ${this._renderActivityLog(state)}
       </div>
     `;
+
+    this._syncBidderTeamLabel(state, this.mainEl);
   }
 
   _renderTeamsSidebar(state, connectedMobiles = []) {
@@ -1888,8 +1897,8 @@ export class UI {
           <div class="bid-current-label">Current Bid</div>
           <div class="bid-current-amount" id="bid-amount">${state.phase === 'bidding' ? fmt(state.currentBid) : '—'}</div>
           ${bidderTeam ? `
-            <div class="bid-current-team" id="bid-current-team" style="color: ${bidderTeam.color}">
-              🏆 ${bidderTeam.name}
+            <div class="bid-current-team has-bid" id="bid-current-team" style="color: ${bidderTeam.color}">
+              ${bidderTeam.name}
             </div>
           ` : `
             <div class="bid-current-team" id="bid-current-team">No bids yet</div>
@@ -2066,6 +2075,22 @@ export class UI {
     return `${state.phase}:${state.currentPlayer?.name || 'idle'}`;
   }
 
+  _syncBidderTeamLabel(state, root = document) {
+    const bidderTeamEl = root.querySelector('#bid-current-team');
+    if (!bidderTeamEl) return;
+
+    if (state.currentBidderTeam) {
+      bidderTeamEl.classList.add('has-bid');
+      bidderTeamEl.textContent = state.currentBidderTeam.name;
+      bidderTeamEl.style.color = state.currentBidderTeam.color;
+      return;
+    }
+
+    bidderTeamEl.classList.remove('has-bid');
+    bidderTeamEl.textContent = 'No bids yet';
+    bidderTeamEl.style.color = '';
+  }
+
   buildAuctionLogText(state) {
     const lastLog = state.auctionLog[0];
     if (!lastLog) return 'Auction started. Nominate the first player.';
@@ -2159,6 +2184,8 @@ export class UI {
         bidderTeamEl.style.color = '';
       }
     }
+
+    this._syncBidderTeamLabel(state);
 
     const nextInfoEl = document.getElementById('bid-next-info');
     if (nextInfoEl) {

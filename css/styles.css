@@ -1579,9 +1579,15 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
 }
 .sidebar-team-info { flex: 1; min-width: 0; }
 .sidebar-team-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-1);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 .sidebar-team.highest-bidder .sidebar-team-name {
   color: #fff7df;
@@ -1961,10 +1967,20 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
   animation: bidGlow 3s ease-in-out infinite, bidValueFlash 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .bid-current-team {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   font-size: 0.92rem;
   color: var(--text-2);
   font-weight: 700;
+  line-height: 1.35;
   margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+.bid-current-team.has-bid::before {
+  content: "\1F3C6";
+  flex-shrink: 0;
 }
 .bid-increment-info {
   font-size: 0.74rem;
@@ -2682,7 +2698,22 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
 .player-select-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 16px;
+}
+
+.player-select-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.player-select-controls .search-input {
+  flex: 1 1 280px;
+  min-width: min(280px, 100%);
 }
 
 .select-all-label {
@@ -2779,6 +2810,147 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
 .player-select-item.ps-selected .ps-check-icon {
   opacity: 1;
   transform: scale(1);
+}
+
+.player-select-card-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.player-select-card-tools-left {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  gap: 10px;
+  min-width: 0;
+}
+
+.player-select-item .player-select-serial {
+  position: static;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+}
+
+.player-select-item .player-select-edit-btn {
+  position: static;
+  left: auto;
+  right: auto;
+  width: auto;
+  height: auto;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(99,102,241,0.16);
+  border: 1px solid rgba(129,140,248,0.3);
+  color: #dbe4ff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  opacity: 1;
+  transform: none;
+}
+
+.player-select-item .player-select-edit-btn:hover {
+  background: rgba(99,102,241,0.24);
+  transform: translateY(-1px);
+}
+
+.player-select-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.22);
+  background: rgba(15,23,42,0.44);
+  color: rgba(226,232,240,0.7);
+  font-size: 0.74rem;
+  font-weight: 700;
+  margin-left: auto;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.player-select-checkbox-label {
+  min-width: 0;
+}
+
+.player-select-checkbox-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1.5px solid currentColor;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+}
+
+.player-select-checkbox.checked {
+  background: rgba(99,102,241,0.18);
+  border-color: rgba(99,102,241,0.4);
+  color: #ffffff;
+}
+
+.player-select-checkbox.checked .player-select-checkbox-box {
+  background: var(--accent-indigo);
+  border-color: var(--accent-indigo);
+}
+
+@media (max-width: 560px) {
+  .player-select-card-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .player-select-card-tools-left {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .player-select-checkbox {
+    justify-content: center;
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .player-select-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .bid-buttons-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .auction-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .bid-current-amount {
+    font-size: clamp(2.05rem, 11vw, 2.6rem);
+    line-height: 1;
+    word-break: break-word;
+  }
+
+  .team-bid-btn {
+    padding: 14px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .player-select-controls .search-input {
+    min-width: 100%;
+  }
+
+  .select-all-label,
+  .player-select-count,
+  .player-add-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* ══════════════════════════════════════════════
@@ -3619,24 +3791,38 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
   }
   .auction-sidebar {
     grid-column: auto;
-    flex-direction: row;
-    flex-wrap: wrap;
     grid-row: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+    overflow: visible;
+    padding-right: 0;
+    order: 3;
   }
   .auction-info-panel {
     grid-column: auto;
     grid-row: auto;
+    order: 1;
     padding-right: 0;
   }
   .auction-center {
     grid-column: auto;
     grid-row: auto;
     overflow: visible;
+    order: 2;
     padding: 0;
   }
   .auction-log {
     grid-column: auto;
     grid-row: auto;
+    order: 4;
+  }
+  .player-select-actions,
+  .player-select-controls {
+    width: 100%;
+  }
+  .player-select-controls {
+    align-items: stretch;
   }
   .player-auction-card {
     width: min(100%, 420px);
@@ -3658,8 +3844,22 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
   .results-teams-grid { grid-template-columns: 1fr; }
   .hero-title { font-size: 2rem; }
   .player-select-header { flex-direction: column; align-items: flex-start; }
+  .player-select-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .player-select-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .player-select-controls .search-input {
+    width: 100%;
+  }
   .player-select-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .auction-layout { gap: 18px; }
+  .bid-info-card {
+    padding: 18px 16px;
+  }
   .player-auction-card {
     max-width: 360px;
     padding: 20px 16px 18px;
