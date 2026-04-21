@@ -144,6 +144,30 @@ class App {
 
     this.wsClient.on('connected', () => {
       console.log('[App] WebSocket connected');
+      this.render(); // Re-render to show sync status
+    });
+
+    this.wsClient.on('disconnected', () => {
+      console.log('[App] WebSocket disconnected');
+      this.render(); // Re-render to show offline status
+    });
+
+    this.wsClient.on('role-assigned', ({ role }) => {
+      console.log(`[App] Role: ${role}`);
+      if (role === 'spectator') {
+        this.ui.showToast('👁️ Spectator mode — live updates from primary host', 'info');
+      } else if (role === 'primary') {
+        this.ui.showToast('🎯 You are the primary host', 'success');
+        // Immediately broadcast current state so spectators sync
+        this.broadcastState();
+      }
+      this.render();
+    });
+
+    // ── Receive state from primary host (spectator mode) ──
+    this.wsClient.on('remote-state-update', (remoteState) => {
+      if (this.wsClient.isPrimary()) return; // Primary host ignores its own echoes
+      this._applyRemoteState(remoteState);
     });
 
     this.wsClient.on('session-created', (msg) => {
@@ -176,14 +200,16 @@ class App {
     });
   }
 
-  /** Broadcast current auction state to all mobile clients + projector tabs */
+  /** Broadcast current auction state to all mobile clients + projector tabs + spectator hosts */
   broadcastState() {
     if (!this.engine) return;
     const state = this.engine.getState();
 
     // WebSocket broadcast (when server is running)
     if (this.wsClient.connected) {
-      this.wsClient.broadcastState(state);
+      // Send auction state for mobiles/projectors + full persistent state for spectator hosts
+      const fullState = this._buildPersistentState();
+      this.wsClient.broadcastState(state, fullState);
     }
 
     // BroadcastChannel for cross-tab projector (works on GitHub Pages / static hosting)
@@ -314,6 +340,14 @@ class App {
 
   /** Save current auction state to localStorage */
   saveState({ immediate = false } = {}) {
+    // When applying remote state, only save to localStorage (no server echo)
+    if (this._applyingRemoteState) {
+      try {
+        localStorage.setItem('npl_auction_state', JSON.stringify(this._buildPersistentState()));
+      } catch(e) {}
+      return;
+    }
+
     try {
       const stateStr = JSON.stringify(this._buildPersistentState());
       localStorage.setItem('npl_auction_state', stateStr);
@@ -335,7 +369,8 @@ class App {
   }
 
   _buildPersistentState() {
-    return {
+    // Build a single object containing ALL syncable state
+    const state = {
       isLoggedIn: this.isLoggedIn,
       selectedTeamIds: [...this.selectedTeamIds],
       selectedPlayerIds: [...this.selectedPlayerIds],
@@ -343,6 +378,21 @@ class App {
       engine: this.engine ? this.engine.serialize() : null,
       scorecards: this.scorecardMgr.serialize(),
     };
+
+    // Include live match data for multi-device sync
+    if (this.liveMatchEngine) {
+      state.liveMatch = this.liveMatchEngine.serialize();
+    }
+
+    // Include gallery data for multi-device sync
+    if (this.galleryMgr) {
+      try { state.gallery = this.galleryMgr.serialize(); } catch(e) {}
+    }
+
+    // Include fixtures lock state
+    state.fixturesLocked = this.fixturesLocked || false;
+
+    return state;
   }
 
   async flushStateSync({ keepalive = false } = {}) {
@@ -401,36 +451,79 @@ class App {
       if (!raw) return;
 
       const state = JSON.parse(raw);
-      if (state.isLoggedIn !== undefined) {
-        this.isLoggedIn = state.isLoggedIn;
-      }
-      if (state.selectedTeamIds) {
-        this.selectedTeamIds = new Set(state.selectedTeamIds);
-      }
-      if (state.selectedPlayerIds) {
-        this.selectedPlayerIds = new Set(state.selectedPlayerIds);
-      }
-      if (state.currentView) {
-        this.currentView = state.currentView;
-      }
-      if (state.engine) {
-        this.engine = AuctionEngine.restore(state.engine);
-        console.log('[App] Auction state restored from localStorage');
-      }
-      if (state.scorecards) {
-        this.scorecardMgr = ScorecardManager.restore(state.scorecards);
-        console.log('[App] Scorecards restored');
-      }
+      this._restoreFromState(state);
+    } catch (e) {
+      console.warn('Failed to load state:', e);
+      localStorage.removeItem('npl_auction_state');
+    }
+  }
 
-      // Restore gallery
+  /** Apply state received from primary host (spectator mode) — no echo back */
+  async _applyRemoteState(state) {
+    if (!state || typeof state !== 'object') return;
+    console.log('[App] Applying remote state update');
+
+    this._applyingRemoteState = true;
+    try {
+      this._restoreFromState(state);
+      this.render();
+    } catch (e) {
+      console.warn('[App] Failed to apply remote state:', e);
+    } finally {
+      this._applyingRemoteState = false;
+    }
+  }
+
+  /** Common state restoration logic used by loadState and _applyRemoteState */
+  async _restoreFromState(state) {
+    if (state.isLoggedIn !== undefined) {
+      this.isLoggedIn = state.isLoggedIn;
+    }
+    if (state.selectedTeamIds) {
+      this.selectedTeamIds = new Set(state.selectedTeamIds);
+    }
+    if (state.selectedPlayerIds) {
+      this.selectedPlayerIds = new Set(state.selectedPlayerIds);
+    }
+    if (state.currentView) {
+      this.currentView = state.currentView;
+    }
+    if (state.engine) {
+      this.engine = AuctionEngine.restore(state.engine);
+      console.log('[App] Auction state restored');
+    }
+    if (state.scorecards) {
+      this.scorecardMgr = ScorecardManager.restore(state.scorecards);
+      console.log('[App] Scorecards restored');
+    }
+
+    // Restore live match (multi-device sync)
+    if (state.liveMatch) {
+      try {
+        const LME = await this._ensureLiveMatchEngineClass();
+        this.liveMatchEngine = LME.restore(state.liveMatch);
+        console.log('[App] Live match restored from sync');
+      } catch (e) {
+        console.warn('[App] Live match restore failed:', e);
+      }
+    }
+
+    // Restore gallery (multi-device sync)
+    if (state.gallery) {
+      try { this.galleryMgr = GalleryManager.restore(state.gallery); }
+      catch(e) { console.warn('Gallery restore failed:', e); }
+    } else {
+      // Fall back to localStorage for gallery
       const galleryRaw = localStorage.getItem('npl_gallery');
       if (galleryRaw) {
         try { this.galleryMgr = GalleryManager.restore(JSON.parse(galleryRaw)); }
         catch(e) { console.warn('Gallery restore failed:', e); }
       }
-    } catch (e) {
-      console.warn('Failed to load state:', e);
-      localStorage.removeItem('npl_auction_state');
+    }
+
+    // Restore fixtures lock state
+    if (state.fixturesLocked !== undefined) {
+      this.fixturesLocked = state.fixturesLocked;
     }
   }
 
@@ -462,7 +555,8 @@ class App {
       stats,
       this.sounds.muted,
       this.commentaryVisible,
-      this.backgroundMedia.getUiState()
+      this.backgroundMedia.getUiState(),
+      { connected: this.wsClient.connected, role: this.wsClient.role }
     );
     this.bindNavEvents();
 

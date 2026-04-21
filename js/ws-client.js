@@ -1,11 +1,13 @@
 // ─────────────────────────────────────────────
 // ws-client.js — WebSocket client for auction host
+// Supports multi-device sync (primary/spectator roles)
 // ─────────────────────────────────────────────
 
 export class WSClient {
   constructor() {
     this.ws = null;
     this.connected = false;
+    this.role = 'unknown';          // 'primary' | 'spectator' | 'unknown'
     this.handlers = new Map();
     this.reconnectTimer = null;
     this.connectedMobiles = new Map(); // teamId -> info
@@ -40,7 +42,20 @@ export class WSClient {
 
       switch (msg.type) {
         case 'host-registered':
-          console.log('[WS] Registered as host');
+          this.role = msg.role || 'primary';
+          console.log(`[WS] Registered as host (role: ${this.role})`);
+          this._emit('role-assigned', { role: this.role });
+          break;
+
+        case 'host-role':
+          this.role = msg.role;
+          console.log(`[WS] Role updated: ${this.role}`);
+          this._emit('role-assigned', { role: this.role });
+          break;
+
+        case 'state-update':
+          // Received state from server (broadcast by primary host)
+          this._emit('remote-state-update', msg.state);
           break;
 
         case 'session-created':
@@ -69,6 +84,7 @@ export class WSClient {
 
     this.ws.onclose = () => {
       this.connected = false;
+      this.role = 'unknown';
       console.log('[WS] Disconnected');
       this._emit('disconnected');
       // Auto-reconnect after 3 seconds
@@ -81,6 +97,11 @@ export class WSClient {
     };
   }
 
+  /** Whether this client is the primary (controlling) host */
+  isPrimary() {
+    return this.role === 'primary';
+  }
+
   /** Send a message to the server */
   send(data) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -88,9 +109,16 @@ export class WSClient {
     }
   }
 
-  /** Broadcast auction state to all mobile clients */
-  broadcastState(state) {
-    this.send({ type: 'state-update', state });
+  /** Broadcast auction state to all mobile clients + spectator hosts */
+  broadcastState(state, fullState = null) {
+    const msg = { type: 'state-update', state };
+    if (fullState) msg.fullState = fullState;
+    this.send(msg);
+  }
+
+  /** Send full persistent state to spectator hosts */
+  broadcastFullState(fullState) {
+    this.send({ type: 'full-state-sync', state: fullState });
   }
 
   /** Send an event only to projector clients (not mobile) */

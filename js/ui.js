@@ -634,7 +634,7 @@ export class UI {
   // LOGIN PAGE
   // ═══════════════════════════════════════════
   
-  renderHeader(currentView, stats = {}, soundMuted = false, commentaryVisible = false, backgroundMediaState = null) {
+  renderHeader(currentView, stats = {}, soundMuted = false, commentaryVisible = false, backgroundMediaState = null, syncStatus = {}) {
     const primaryViews = [
       { id: 'live-match', icon: '🏏', label: 'Live' },
       { id: 'auction', icon: '🏷️', label: 'Auction' },
@@ -699,6 +699,17 @@ export class UI {
             <span class="nav-stat-chip">Sold <span class="nav-stat-value">${stats.sold || 0}</span></span>
             <span class="nav-stat-chip">Unsold <span class="nav-stat-value">${stats.unsold || 0}</span></span>
           ` : ''}
+          ${syncStatus.connected ? `
+            <span class="nav-stat-chip sync-chip sync-chip--${syncStatus.role || 'unknown'}" title="${syncStatus.role === 'primary' ? 'You are the primary host' : 'Live syncing with primary host'}">
+              <span class="sync-dot"></span>
+              ${syncStatus.role === 'primary' ? 'Primary' : syncStatus.role === 'spectator' ? 'Live Sync' : 'Connected'}
+            </span>
+          ` : `
+            <span class="nav-stat-chip sync-chip sync-chip--offline" title="Not connected to server">
+              <span class="sync-dot"></span>
+              Offline
+            </span>
+          `}
         </div>
         <div class="nav-actions">
           <button class="btn-fullscreen" id="fullscreen-btn" title="${isFs ? 'Exit Fullscreen' : 'Enter Fullscreen'}">

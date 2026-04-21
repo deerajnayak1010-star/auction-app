@@ -263,9 +263,10 @@ const server = http.createServer(async (req, res) => {
 
 const wss = new WebSocketServer({ server });
 
-let hostSocket = null;
-const mobileClients = new Map(); // ws -> { teamId, teamName, ... }
-const projectorClients = new Set(); // set of ws clients
+const hostClients = new Set();      // all host ws connections
+let primaryHost = null;              // the host that controls the auction
+const mobileClients = new Map();     // ws -> { teamId, teamName, ... }
+const projectorClients = new Set();  // set of ws clients
 let latestState = null;
 
 function broadcastToProjectors(state) {
@@ -286,6 +287,18 @@ function broadcastToMobiles(state) {
       client.send(JSON.stringify({
         type: 'state-update',
         state: filterStateForMobile(state, info.teamId),
+      }));
+    }
+  }
+}
+
+/** Broadcast full persistent state to all spectator hosts (not the sender) */
+function broadcastToSpectatorHosts(senderWs, fullState) {
+  for (const client of hostClients) {
+    if (client !== senderWs && client.readyState === 1) {
+      client.send(JSON.stringify({
+        type: 'state-update',
+        state: fullState,
       }));
     }
   }
@@ -379,11 +392,19 @@ wss.on('connection', (ws) => {
         break;
 
       // ── Host registers ──
-      case 'host-register':
-        hostSocket = ws;
-        console.log('[WS] Host registered');
-        ws.send(JSON.stringify({ type: 'host-registered' }));
+      case 'host-register': {
+        hostClients.add(ws);
+        const isPrimary = !primaryHost || primaryHost.readyState !== 1;
+        if (isPrimary) primaryHost = ws;
+        const role = (ws === primaryHost) ? 'primary' : 'spectator';
+        console.log(`[WS] Host registered as ${role} (${hostClients.size} total)`);
+        ws.send(JSON.stringify({ type: 'host-registered', role }));
+        // Send latest state to new spectator hosts so they're instantly up-to-date
+        if (role === 'spectator' && latestState) {
+          ws.send(JSON.stringify({ type: 'state-update', state: latestState }));
+        }
         break;
+      }
 
       // ── Host creates session for mobile access ──
       case 'create-session':
@@ -414,6 +435,15 @@ wss.on('connection', (ws) => {
       case 'state-update':
         latestState = msg.state;
         broadcastToMobiles(msg.state);
+        // Also broadcast full state to other host tabs (spectators)
+        if (msg.fullState) {
+          broadcastToSpectatorHosts(ws, msg.fullState);
+        }
+        break;
+
+      // ── Host sends full persistent state sync (for multi-device) ──
+      case 'full-state-sync':
+        broadcastToSpectatorHosts(ws, msg.state);
         break;
 
       // ── Host sends bid result back to mobile ──
@@ -490,9 +520,9 @@ wss.on('connection', (ws) => {
 
         console.log(`[WS] Mobile authenticated: ${team.shortName}`);
 
-        // Notify host
-        if (hostSocket && hostSocket.readyState === 1) {
-          hostSocket.send(JSON.stringify({
+        // Notify primary host
+        if (primaryHost && primaryHost.readyState === 1) {
+          primaryHost.send(JSON.stringify({
             type: 'mobile-connected',
             teamId: team.id,
             teamName: team.name,
@@ -516,9 +546,9 @@ wss.on('connection', (ws) => {
 
         console.log(`[WS] Mobile bid from ${clientInfo.teamShortName}`);
 
-        // Relay bid to host for processing
-        if (hostSocket && hostSocket.readyState === 1) {
-          hostSocket.send(JSON.stringify({
+        // Relay bid to primary host for processing
+        if (primaryHost && primaryHost.readyState === 1) {
+          primaryHost.send(JSON.stringify({
             type: 'mobile-bid',
             teamId: clientInfo.teamId,
             teamName: clientInfo.teamName,
@@ -537,22 +567,39 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    if (ws === hostSocket) {
-      hostSocket = null;
-      console.log('[WS] Host disconnected');
-      for (const [client] of mobileClients) {
-        if (client.readyState === 1) {
-          client.send(JSON.stringify({ type: 'host-disconnected' }));
+    // Host disconnected
+    if (hostClients.has(ws)) {
+      hostClients.delete(ws);
+      const wasPrimary = ws === primaryHost;
+      if (wasPrimary) {
+        // Promote next host to primary
+        primaryHost = null;
+        for (const client of hostClients) {
+          if (client.readyState === 1) {
+            primaryHost = client;
+            client.send(JSON.stringify({ type: 'host-role', role: 'primary' }));
+            console.log('[WS] Promoted new primary host');
+            break;
+          }
+        }
+        if (!primaryHost) {
+          console.log('[WS] Primary host disconnected, no hosts remaining');
+          for (const [client] of mobileClients) {
+            if (client.readyState === 1) {
+              client.send(JSON.stringify({ type: 'host-disconnected' }));
+            }
+          }
         }
       }
+      console.log(`[WS] Host disconnected (${hostClients.size} remaining)`);
     }
 
     if (mobileClients.has(ws)) {
       const info = mobileClients.get(ws);
       console.log(`[WS] Mobile disconnected: ${info.teamShortName}`);
       mobileClients.delete(ws);
-      if (hostSocket && hostSocket.readyState === 1) {
-        hostSocket.send(JSON.stringify({
+      if (primaryHost && primaryHost.readyState === 1) {
+        primaryHost.send(JSON.stringify({
           type: 'mobile-disconnected',
           teamId: info.teamId,
           teamShortName: info.teamShortName,
