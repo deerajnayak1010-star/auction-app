@@ -1414,7 +1414,7 @@ class App {
   }
 
   async onClick(e) {
-    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], [data-player-edit-id], [data-ball], [data-live-match], [data-lm-new-batsman], [data-lm-next-bowler], [data-lm-coin-flip], [data-lm-dismissal], [data-lm-runout], [data-ro-runs], [data-gallery-filter], [data-delete-photo], [data-generate-card], #login-btn, #login-eye-toggle, #login-forgot-link, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #recall-bid-btn, #recall-confirm-yes, #recall-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #video-bg-toggle-btn, #results-tab-squads, #results-tab-analytics, #results-tab-standings, #results-tab-stats, #results-tab-scorecard, #results-tab-fixtures, #draw-tokens-btn, #clear-tokens-btn, #clear-tokens-yes, #clear-tokens-no, #download-fixtures-btn, #lock-fixtures-btn, #create-knockout-btn, #sc-back-btn, #sc-back-btn2, #sc-save-btn, .sc-open-btn, #commentary-toggle-btn, #commentary-header, #open-projector-btn, #hamburger-toggle, #nav-more-toggle, .nav-more-item, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn, #live-undo-btn, #live-back-btn, #live-save-scorecard-btn, #lm-start-toss-btn, #lm-confirm-openers-btn, #lm-wd-toggle, #lm-nb-toggle, #lm-bye-toggle, #lm-lb-toggle, #lm-wicket-btn, #lm-modal-close-btn, #lm-save-yes-btn, #lm-save-no-btn, #lm-save-dismiss-btn, #lm-edit-score-btn, #live-edit-score-btn, #ro-swap-strike-btn, #lm-swap-strike-btn, #share-app-btn, #share-copy-wa-btn, #share-copy-ig-btn, #share-tab-wa, #share-tab-ig, #share-modal-close, #awards-reveal-next-btn, #awards-reset-btn, #awards-back-btn, #add-player-btn, #player-modal-save, #player-modal-cancel, #player-modal-close, #player-modal-delete, #player-modal-overlay, #player-delete-yes, #player-delete-no, .player-edit-btn, .score-btn, .lm-sub-btn, .lm-modal-option, .lm-modal-close');
+    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], [data-player-edit-id], [data-ball], [data-live-match], [data-lm-new-batsman], [data-lm-next-bowler], [data-lm-coin-flip], [data-lm-dismissal], [data-lm-runout], [data-ro-runs], [data-gallery-filter], [data-delete-photo], [data-generate-card], #login-btn, #login-eye-toggle, #login-forgot-link, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #recall-bid-btn, #recall-confirm-yes, #recall-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #video-bg-toggle-btn, #results-tab-squads, #results-tab-analytics, #results-tab-standings, #results-tab-stats, #results-tab-scorecard, #results-tab-fixtures, #draw-tokens-btn, #clear-tokens-btn, #clear-tokens-yes, #clear-tokens-no, #download-fixtures-btn, #lock-fixtures-btn, #create-knockout-btn, #sc-back-btn, #sc-back-btn2, #sc-save-btn, .sc-open-btn, #commentary-toggle-btn, #commentary-header, #open-projector-btn, #hamburger-toggle, #nav-more-toggle, .nav-more-item, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn, #live-undo-btn, #live-back-btn, #live-save-scorecard-btn, #lm-start-toss-btn, #lm-confirm-openers-btn, #lm-wd-toggle, #lm-nb-toggle, #lm-bye-toggle, #lm-lb-toggle, #lm-wicket-btn, #lm-modal-close-btn, #lm-save-yes-btn, #lm-save-no-btn, #lm-save-dismiss-btn, #lm-edit-score-btn, #live-edit-score-btn, #ro-swap-strike-btn, #lm-swap-strike-btn, #share-app-btn, #share-copy-wa-btn, #share-copy-ig-btn, #share-tab-wa, #share-tab-ig, #share-modal-close, #awards-reveal-next-btn, #awards-reset-btn, #awards-back-btn, #add-player-btn, #player-modal-save, #player-modal-cancel, #player-modal-close, #player-modal-delete, #player-modal-overlay, #player-delete-yes, #player-delete-no, #copy-player-pool-link-btn, .player-edit-btn, .score-btn, .lm-sub-btn, .lm-modal-option, .lm-modal-close');
     if (!target) return;
 
     // ── Premium Features Click Routing ──
@@ -1424,6 +1424,35 @@ class App {
 
     // ── Player Management Modal ──
     // Open Add Player modal
+    // Copy public player pool link
+    if (target.id === 'copy-player-pool-link-btn') {
+      const baseUrl = 'https://deerajnayak1010-star.github.io/auction-app/';
+      const publicUrl = baseUrl + 'players.html';
+      navigator.clipboard.writeText(publicUrl).then(() => {
+        this.ui.showToast('✅ Public player pool link copied!', 'success');
+        target.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!`;
+        target.style.borderColor = 'rgba(16,185,129,0.4)';
+        target.style.color = '#10b981';
+        setTimeout(() => {
+          target.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Copy Public Link`;
+          target.style.borderColor = 'rgba(99,102,241,0.3)';
+          target.style.color = 'var(--accent-indigo)';
+        }, 2000);
+      }).catch(() => {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = publicUrl;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        this.ui.showToast('✅ Public player pool link copied!', 'success');
+      });
+      return;
+    }
+
     if (target.id === 'add-player-btn') {
       this._playerImageTaskId++;
       this._playerImageBusy = false;

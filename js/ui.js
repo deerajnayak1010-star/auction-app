@@ -1539,6 +1539,10 @@ export class UI {
           <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
             <h2>Player Pool <span style="color:var(--text-3); font-weight:400; font-size:1rem">(${players.length} players)</span></h2>
             <button class="player-add-btn" id="add-player-btn"><span>+</span> Add Player</button>
+            <button class="btn btn-ghost btn-sm" id="copy-player-pool-link-btn" style="display:inline-flex;align-items:center;gap:6px;border-color:rgba(99,102,241,0.3);color:var(--accent-indigo);font-size:0.78rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Copy Public Link
+            </button>
           </div>
           <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <div class="pool-filters">
