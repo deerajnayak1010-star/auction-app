@@ -15,8 +15,8 @@ function getInitials(name) {
 function renderRulesPremiumView() {
     const overview = [
       { label: 'Budget Cap', value: '1,00,000 pts' },
-      { label: 'Auctioned Slots', value: '12 per team' },
-      { label: 'Full Squad Size', value: '14 players' },
+      { label: 'Auctioned Slots', value: '13 per team' },
+      { label: 'Full Squad Size', value: '15 players' },
       { label: 'Room Limit', value: '3-4 members' },
     ];
 
@@ -31,7 +31,7 @@ function renderRulesPremiumView() {
             <li>Each team has a fixed budget of <strong>1,00,000 pts</strong></li>
             <li>Base price starts from <strong>1,000 pts</strong></li>
             <li>
-              Maximum bid for a single player: <strong>89,000 pts</strong>
+              Maximum bid for a single player: <strong>88,000 pts</strong>
               <div class="rules-list-note">Budget must reserve 1,000 pts × remaining empty slots.</div>
             </li>
             <li>
@@ -68,12 +68,12 @@ function renderRulesPremiumView() {
           <ul class="rules-list">
             <li>Each team must stay within their <strong>total budget</strong></li>
             <li>
-              Maximum squad size: <strong>14 players</strong>
+              Maximum squad size: <strong>15 players</strong>
               <div class="rules-table">
-                <div class="rules-row"><span>Auctioned Players</span><span><strong>12</strong></span></div>
+                <div class="rules-row"><span>Auctioned Players</span><span><strong>13</strong></span></div>
                 <div class="rules-row"><span>Owner</span><span><strong>1</strong></span></div>
                 <div class="rules-row"><span>Icon Player</span><span><strong>1</strong></span></div>
-                <div class="rules-row"><span>Total per Team</span><span><strong>14</strong></span></div>
+                <div class="rules-row"><span>Total per Team</span><span><strong>15</strong></span></div>
               </div>
             </li>
             <li>Build a balanced squad with batsmen, bowlers, and all-rounders</li>
@@ -988,12 +988,12 @@ export class UI {
             </div>
             <ul class="rules-list">
               <li>Each team must stay within their <strong>total budget</strong></li>
-              <li>Maximum squad size: <strong>14 players</strong>
+              <li>Maximum squad size: <strong>15 players</strong>
                 <div class="rules-table" style="margin-top: 6px;">
-                  <div class="rules-row"><span>🏏 Auctioned Players</span><span><strong>12</strong></span></div>
+                  <div class="rules-row"><span>🏏 Auctioned Players</span><span><strong>13</strong></span></div>
                   <div class="rules-row"><span>👑 Owner</span><span><strong>1</strong></span></div>
                   <div class="rules-row"><span>⭐ Icon Player</span><span><strong>1</strong></span></div>
-                  <div class="rules-row" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px; margin-top: 4px;"><span>Total per Team</span><span><strong>14</strong></span></div>
+                  <div class="rules-row" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px; margin-top: 4px;"><span>Total per Team</span><span><strong>15</strong></span></div>
                 </div>
               </li>
               <li>Build a balanced squad with batsmen, bowlers, and all-rounders</li>
@@ -1915,7 +1915,7 @@ export class UI {
               <div class="history-current-badge">🔴 CURRENT SEASON</div>
               <h3>The Revolution</h3>
               <p class="history-season-tagline">Technology meets tradition — the most ambitious NPL ever</p>
-              <div class="history-season-desc"><p>NPL 3.0 is the most ambitious season yet — featuring <strong>8 powerhouse teams</strong>, <strong>92+ players</strong>, and for the first time ever, a fully digital auction platform with live projector display, mobile bidding, AI commentary, and cinematic celebrations.</p><p>This season represents the perfect fusion of Suraj Shettey's cricketing vision and cutting-edge technology. With real-time WebSocket bidding, HD player cards, fireworks animations, and team poster generation — NPL 3.0 sets a new standard for what a grassroots cricket league can achieve.</p><p style="font-weight:700; color:var(--accent-gold); margin-top:12px;">🏆 This isn't just cricket. This is the Nakre Premier League — where legends are born.</p></div>
+              <div class="history-season-desc"><p>NPL 3.0 is the most ambitious season yet — featuring <strong>8 powerhouse teams</strong>, <strong>100 players</strong>, and for the first time ever, a fully digital auction platform with live projector display, mobile bidding, AI commentary, and cinematic celebrations.</p><p>This season represents the perfect fusion of Suraj Shettey's cricketing vision and cutting-edge technology. With real-time WebSocket bidding, HD player cards, fireworks animations, and team poster generation — NPL 3.0 sets a new standard for what a grassroots cricket league can achieve.</p><p style="font-weight:700; color:var(--accent-gold); margin-top:12px;">🏆 This isn't just cricket. This is the Nakre Premier League — where legends are born.</p></div>
               <div class="history-season-stats"><span>🏏 8 Teams</span><span>👥 92+ Players</span><span>💰 1,00,000 pts Budget</span><span>⚡ Digital Auction</span></div>
             </div>
           </div>
@@ -1964,7 +1964,7 @@ export class UI {
       <div class="auction-sidebar">
         ${state.teams.map(team => {
           const isHighest = state.currentBidder === team.id;
-          const isFull = team.squad.length >= 12;
+          const isFull = team.squad.length >= 13;
           const pursePct = (team.purse / 100000) * 100;
           const barClass = pursePct < 15 ? 'critical' : pursePct < 40 ? 'low' : '';
           const isMobileConnected = connectedIds.has(team.id);
@@ -1981,7 +1981,7 @@ export class UI {
                   ${isMobileConnected ? '<span class="mobile-indicator" title="Connected via mobile">📱</span>' : ''}
                 </div>
                 <div class="sidebar-team-purse" data-sidebar-team-purse>${fmt(team.purse)}</div>
-                <div class="sidebar-team-squad" data-sidebar-team-squad>${team.squad.length}/12 players</div>
+                <div class="sidebar-team-squad" data-sidebar-team-squad>${team.squad.length}/13 players</div>
                 <div class="purse-bar">
                   <div class="purse-bar-fill ${barClass}" data-sidebar-team-purse-fill style="width: ${pursePct}%"></div>
                 </div>
@@ -2335,7 +2335,7 @@ export class UI {
       const barClass = pursePct < 15 ? 'critical' : pursePct < 40 ? 'low' : '';
 
       card.classList.toggle('highest-bidder', state.currentBidder === team.id);
-      card.classList.toggle('squad-full', team.squad.length >= 12);
+      card.classList.toggle('squad-full', team.squad.length >= 13);
 
       const nameEl = card.querySelector('[data-sidebar-team-name]');
       if (nameEl) {
@@ -2349,7 +2349,7 @@ export class UI {
       if (purseEl) purseEl.textContent = fmt(team.purse);
 
       const squadEl = card.querySelector('[data-sidebar-team-squad]');
-      if (squadEl) squadEl.textContent = `${team.squad.length}/12 players`;
+      if (squadEl) squadEl.textContent = `${team.squad.length}/13 players`;
 
       const fillEl = card.querySelector('[data-sidebar-team-purse-fill]');
       if (fillEl) {
@@ -2573,7 +2573,7 @@ export class UI {
                 <div class="result-team-meta">
                   <span>Spent: ${fmt(team.totalSpent)}</span>
                   <span>Purse: ${fmt(team.purse)}</span>
-                  <span>Squad: ${team.squad.length}/12</span>
+                  <span>Squad: ${team.squad.length}/13</span>
                 </div>
               </div>
               <div class="result-team-people">
@@ -2868,7 +2868,7 @@ export class UI {
     return `
       <div class="results-teams-grid">
         ${state.teams.map(team => {
-          const squadLimit = 12;
+          const squadLimit = 13;
           const squadSize = team.squad.length;
           const auctionBudget = Math.max(team.totalSpent + team.purse, 1);
           const spendPercent = Math.round((team.totalSpent / auctionBudget) * 100);

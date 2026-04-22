@@ -450,10 +450,10 @@ export class CommentaryEngine {
     if (teamState) {
       const squadSize = teamState.squad.length;
       const remaining = teamState.purse;
-      const slotsLeft = 12 - squadSize;
+      const slotsLeft = 13 - squadSize;
 
       const squadTemplates = [
-        `👥 ${teamShortName} squad update: ${squadSize}/12 players, ${fmt(remaining)} in the kitty. ${slotsLeft} slots to fill.`,
+        `👥 ${teamShortName} squad update: ${squadSize}/13 players, ${fmt(remaining)} in the kitty. ${slotsLeft} slots to fill.`,
         `👥 ${teamShortName} now has ${squadSize} players with ${fmt(remaining)} remaining. Building nicely!`,
       ];
       this._addLine('squad', pick(squadTemplates));
@@ -471,7 +471,7 @@ export class CommentaryEngine {
       }
 
       // Squad full warning
-      if (squadSize >= 12) {
+      if (squadSize >= 13) {
         this._addLine('squad', `📢 ${teamShortName} almost full! Only ${slotsLeft} spot${slotsLeft !== 1 ? 's' : ''} left in the squad!`);
       }
     }

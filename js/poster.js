@@ -186,7 +186,7 @@ export async function generateTeamPoster(team) {
   ctx.stroke();
 
   const stats = [
-    { label: 'SQUAD', value: `${team.squad.length} / 12` },
+    { label: 'SQUAD', value: `${team.squad.length} / 13` },
     { label: 'TOTAL SPENT', value: fmt(team.totalSpent) },
     { label: 'PURSE LEFT', value: fmt(team.purse) },
   ];
@@ -399,8 +399,8 @@ export async function generateTeamPoster(team) {
   }
 
   // ── Empty slots ───────────────────────────
-  if (team.squad.length < 12) {
-    const emptyCount = 12 - team.squad.length;
+  if (team.squad.length < 13) {
+    const emptyCount = 13 - team.squad.length;
     const emptyY = gridStartY + Math.ceil(team.squad.length / cols) * (cellH + rowGap) + 10;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';

@@ -1273,7 +1273,7 @@
       const squadCount = myTeamData?.squad?.length || 0;
       const squadFull = squadCount >= 14;
       const nextBid = isMyBid ? state.currentBid : state.nextBidAmount;
-      const slotsAfterBid = Math.max(0, 12 - squadCount - 1);
+      const slotsAfterBid = Math.max(0, 13 - squadCount - 1);
       const reserve = slotsAfterBid * 1000;
       const canAffordBid = Boolean(
         state.phase === 'bidding' &&

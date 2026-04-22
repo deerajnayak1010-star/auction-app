@@ -494,7 +494,7 @@ class ProjectorApp {
     if (purse === null || purse === undefined) return '';
 
     const purseAfterBid = purse - s.currentBid;
-    const slotsNeeded = Math.max(0, 12 - squadCount - 1); // -1 for current player
+    const slotsNeeded = Math.max(0, 13 - squadCount - 1); // -1 for current player
     const purseStr = this.formatPoints(Math.max(0, purseAfterBid));
 
     // Determine warning level

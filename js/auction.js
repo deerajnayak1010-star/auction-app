@@ -192,7 +192,7 @@ export class AuctionEngine {
 
     const team = this.teams.get(teamId);
     if (!team) return false;
-    if (team.squad.length >= 12) return false;             // max squad
+    if (team.squad.length >= 13) return false;             // max squad
     if (this.currentBidder === teamId) return false;       // already highest bidder
 
     // Max bid cap reached
@@ -201,7 +201,7 @@ export class AuctionEngine {
     const nextBid = this.getNextBidAmount();
 
     // Reserve enough purse for remaining minimum squad slots at base price
-    const slotsAfterThis = Math.max(0, 12 - team.squad.length - 1);
+    const slotsAfterThis = Math.max(0, 13 - team.squad.length - 1);
     const reserve = slotsAfterThis * 1000;
 
     return team.purse >= nextBid + reserve;
@@ -276,7 +276,7 @@ export class AuctionEngine {
 
     const team = this.teams.get(teamId);
     if (!team) return { success: false, error: 'Team not found' };
-    if (team.squad.length >= 12) return { success: false, error: 'Squad full' };
+    if (team.squad.length >= 13) return { success: false, error: 'Squad full' };
 
     // Amount must be >= base price
     if (amount < this.currentPlayer.basePrice) {
@@ -294,7 +294,7 @@ export class AuctionEngine {
     }
 
     // Reserve check
-    const slotsAfterThis = Math.max(0, 12 - team.squad.length - 1);
+    const slotsAfterThis = Math.max(0, 13 - team.squad.length - 1);
     const reserve = slotsAfterThis * 1000;
     if (team.purse < amount + reserve) {
       return { success: false, error: 'Insufficient budget' };
