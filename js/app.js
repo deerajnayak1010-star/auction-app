@@ -510,6 +510,15 @@ class App {
         : this._selectPreferredState(serverState, localState);
       if (!state) return;
 
+      // ── Merge allPlayers: ensure CRUD changes are never lost ──
+      // If the preferred state has no allPlayers, pull from the other source.
+      const otherState = (state === serverState) ? localState : serverState;
+      if ((!state.allPlayers || !Array.isArray(state.allPlayers) || state.allPlayers.length === 0)
+          && otherState?.allPlayers && Array.isArray(otherState.allPlayers) && otherState.allPlayers.length > 0) {
+        state.allPlayers = otherState.allPlayers;
+        console.log('[App] Merged allPlayers from alternate source (' + otherState.allPlayers.length + ' players)');
+      }
+
       const stateStr = JSON.stringify(state);
       this._pendingStateStr = stateStr;
       if (serverState && state === serverState) {
@@ -523,6 +532,13 @@ class App {
       }
 
       await this._restoreFromState(state);
+
+      // Ensure the merged state (with allPlayers) is pushed to the server DB
+      // so future sessions / new browsers always get the full player catalog.
+      if (this.isLoggedIn) {
+        this._pendingStateStr = JSON.stringify(this._buildPersistentState());
+        this.flushStateSync().catch((e) => console.warn('[App] Post-load server sync failed', e));
+      }
     } catch (e) {
       console.warn('Failed to load state:', e);
     }
