@@ -329,6 +329,148 @@
     }
     .pp-footer a:hover { text-decoration: underline; }
 
+    /* ── Clickable avatar ── */
+    .pp-avatar.has-image {
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .pp-avatar.has-image:hover {
+      transform: scale(1.1);
+      box-shadow: 0 8px 28px rgba(99,102,241,0.3);
+      border-color: rgba(99,102,241,0.5);
+    }
+    .pp-avatar.has-image::after {
+      content: '🔍';
+      position: absolute;
+      bottom: -2px; right: -2px;
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+      background: rgba(15,23,42,0.9);
+      border: 1px solid rgba(99,102,241,0.3);
+      font-size: 0.55rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .pp-avatar.has-image:hover::after { opacity: 1; }
+
+    /* ── Image Modal ── */
+    .pp-img-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .pp-img-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .pp-img-modal-content {
+      position: relative;
+      max-width: 500px;
+      width: 92vw;
+      text-align: center;
+      animation: ppModalIn 0.3s ease;
+    }
+    @keyframes ppModalIn {
+      from { transform: scale(0.85); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .pp-img-modal-content img {
+      width: 100%;
+      max-height: 70vh;
+      object-fit: contain;
+      border-radius: 16px;
+      border: 2px solid rgba(255,255,255,0.1);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    }
+    .pp-img-modal-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 800;
+      margin-top: 14px;
+      color: #fff;
+    }
+    .pp-img-modal-close {
+      position: absolute;
+      top: -12px; right: -12px;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: rgba(239,68,68,0.2);
+      border: 1px solid rgba(239,68,68,0.4);
+      color: #ef4444;
+      font-size: 1.3rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      line-height: 1;
+    }
+    .pp-img-modal-close:hover {
+      background: rgba(239,68,68,0.4);
+      transform: scale(1.1);
+    }
+    .pp-img-download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+      padding: 10px 24px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.15));
+      border: 1px solid rgba(99,102,241,0.3);
+      color: #a5b4fc;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .pp-img-download-btn:hover {
+      background: linear-gradient(135deg, rgba(99,102,241,0.35), rgba(139,92,246,0.25));
+      border-color: rgba(99,102,241,0.5);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(99,102,241,0.2);
+    }
+
+    /* ── Instructions Banner ── */
+    .pp-instructions {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 20px auto 0;
+      padding: 0 20px;
+    }
+    .pp-instructions-card {
+      padding: 16px 20px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(59,130,246,0.05));
+      border: 1px solid rgba(99,102,241,0.15);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .pp-instructions-icon {
+      font-size: 1.3rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .pp-instructions-text {
+      font-size: 0.82rem;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+    .pp-instructions-text strong {
+      color: #a5b4fc;
+    }
+
     /* ── Responsive ── */
     @media (max-width: 640px) {
       .pp-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
@@ -336,6 +478,7 @@
       .pp-avatar { width: 56px; height: 56px; }
       .pp-name { font-size: 0.88rem; }
       .pp-header { padding: 32px 16px 24px; }
+      .pp-instructions-card { flex-direction: column; gap: 8px; }
     }
   </style>
 </head>
@@ -353,7 +496,26 @@
   <input type="text" class="pp-search" id="pp-search" placeholder="🔍 Search players by name or location...">
 </div>
 
+<div class="pp-instructions">
+  <div class="pp-instructions-card">
+    <span class="pp-instructions-icon">💡</span>
+    <div class="pp-instructions-text">
+      <strong>How to view & download player photos:</strong> Tap on any player's profile picture to open a full-size view. Use the <strong>📥 Download</strong> button to save the image to your device. You can also filter by role or search by name.
+    </div>
+  </div>
+</div>
+
 <div class="pp-grid" id="pp-grid"></div>
+
+<!-- Image Popup Modal -->
+<div class="pp-img-modal" id="pp-img-modal">
+  <div class="pp-img-modal-content">
+    <button class="pp-img-modal-close" id="pp-img-close">&times;</button>
+    <img id="pp-img-full" src="" alt="">
+    <div class="pp-img-modal-name" id="pp-img-name"></div>
+    <a class="pp-img-download-btn" id="pp-img-download" href="" download="">📥 Download Full Image</a>
+  </div>
+</div>
 
 <div class="pp-footer">
   <p>NPL 3.0 © 2026 — <a href="index.html">Go to Auction App</a></p>
@@ -436,7 +598,7 @@
       return `
         <div class="pp-card">
           <div class="pp-serial">${serialNo}</div>
-          <div class="pp-avatar" style="background: linear-gradient(135deg, ${role.color}, ${role.color}88);">
+          <div class="pp-avatar ${p.image ? 'has-image' : ''}" style="background: linear-gradient(135deg, ${role.color}, ${role.color}88);" ${p.image ? `data-pp-img="${p.image}" data-pp-name="${p.name}"` : ''}>
             ${p.image ? `<img src="${p.image}" alt="${p.name}">` : getInitials(p.name)}
           </div>
           <div class="pp-name">${p.name}</div>
@@ -469,6 +631,34 @@
   document.getElementById('pp-search').addEventListener('input', (e) => {
     searchQuery = e.target.value;
     renderGrid();
+  });
+
+  // Image popup
+  const imgModal = document.getElementById('pp-img-modal');
+  const imgFull = document.getElementById('pp-img-full');
+  const imgName = document.getElementById('pp-img-name');
+  const imgDownload = document.getElementById('pp-img-download');
+  const imgClose = document.getElementById('pp-img-close');
+
+  document.getElementById('pp-grid').addEventListener('click', (e) => {
+    const avatar = e.target.closest('[data-pp-img]');
+    if (!avatar) return;
+    const src = avatar.dataset.ppImg;
+    const name = avatar.dataset.ppName;
+    imgFull.src = src;
+    imgFull.alt = name;
+    imgName.textContent = name;
+    imgDownload.href = src;
+    imgDownload.download = name.replace(/\s+/g, '_') + '.jpg';
+    imgModal.classList.add('active');
+  });
+
+  imgClose.addEventListener('click', () => imgModal.classList.remove('active'));
+  imgModal.addEventListener('click', (e) => {
+    if (e.target === imgModal) imgModal.classList.remove('active');
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') imgModal.classList.remove('active');
   });
 </script>
 
