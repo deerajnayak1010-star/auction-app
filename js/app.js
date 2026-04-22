@@ -20,7 +20,7 @@ class App {
     this.engine = null;
     this.selectedTeamIds = new Set();
     this.selectedPlayerIds = new Set();
-    this.allPlayers = PLAYERS_DATA.map(player => ({ ...player })); // mutable copy for CRUD
+    this.allPlayers = []; // Will be populated from server state; falls back to PLAYERS_DATA
     this.currentView = 'login';
     this.isLoggedIn = false;
     this.poolFilter = 'All';
@@ -109,6 +109,12 @@ class App {
 
     // Try to restore saved state
     await this.loadState();
+
+    // If no persisted player data was found, fall back to hardcoded defaults
+    if (!this.allPlayers || this.allPlayers.length === 0) {
+      this.allPlayers = PLAYERS_DATA.map(player => ({ ...player }));
+    }
+
     await this.backgroundMedia.init();
 
     // Enforce login
@@ -170,7 +176,6 @@ class App {
 
     // ── Receive state from primary host (spectator mode) ──
     this.wsClient.on('remote-state-update', (remoteState) => {
-      if (this.wsClient.isPrimary()) return; // Primary host ignores its own echoes
       this._applyRemoteState(remoteState);
     });
 
@@ -229,6 +234,12 @@ class App {
     } catch (e) {
       // BroadcastChannel not supported — ignore
     }
+  }
+
+  /** Broadcast only the persistent app state to spectator hosts. */
+  broadcastPersistentState() {
+    if (!this.wsClient.connected) return;
+    this.wsClient.broadcastFullState(this._buildPersistentState());
   }
 
   /** Filter auction state to projector-safe subset (mirrors server.js filterStateForProjector) */
@@ -397,10 +408,8 @@ class App {
     // Include fixtures lock state
     state.fixturesLocked = this.fixturesLocked || false;
 
-    // Include custom player data (only if modified from defaults)
-    if (this._hasCustomPlayerState()) {
-      state.allPlayers = this._getPlayerCatalog();
-    }
+    // Always include player catalog so CRUD changes persist across sessions/browsers
+    state.allPlayers = this._getPlayerCatalog();
 
     return state;
   }
@@ -480,7 +489,7 @@ class App {
   }
 
   /** Load saved auction state from server/localStorage */
-  async loadState() {
+  async loadState({ preferServer = false } = {}) {
     try {
       let serverRaw = null;
       try {
@@ -496,7 +505,9 @@ class App {
       const localRaw = localStorage.getItem('npl_auction_state');
       const serverState = this._parsePersistedState(serverRaw);
       const localState = this._parsePersistedState(localRaw);
-      const state = this._selectPreferredState(serverState, localState);
+      const state = preferServer && serverState
+        ? serverState
+        : this._selectPreferredState(serverState, localState);
       if (!state) return;
 
       const stateStr = JSON.stringify(state);
@@ -524,6 +535,15 @@ class App {
 
     this._applyingRemoteState = true;
     try {
+      try {
+        const stateStr = JSON.stringify(state);
+        this._pendingStateStr = stateStr;
+        this._lastSyncedStateStr = stateStr;
+        localStorage.setItem('npl_auction_state', stateStr);
+      } catch (e) {
+        console.warn('[App] Failed to cache remote state locally:', e);
+      }
+
       // Don't overwrite currentView — let spectators navigate independently
       const savedView = this.currentView;
       await this._restoreFromState(state);
@@ -694,15 +714,9 @@ class App {
     return false;
   }
 
+  /** @deprecated No longer needed — allPlayers is always persisted */
   _hasCustomPlayerState() {
-    const players = this._getPlayerCatalog();
-    if (players.length !== PLAYERS_DATA.length) return true;
-
-    return players.some((player, index) => {
-      const current = this._normalizePlayerRecord(player);
-      const defaults = this._normalizePlayerRecord(PLAYERS_DATA[index] || {});
-      return Object.keys(current).some((key) => current[key] !== defaults[key]);
-    });
+    return true;
   }
 
   /** Add a new player */
@@ -731,7 +745,8 @@ class App {
     this.allPlayers.push(newPlayer);
     this._pendingPlayerImage = null;
     this._showPlayerModalFeedback('');
-    this.saveState();
+    this.saveState({ immediate: true });
+    this.broadcastPersistentState();
     this.ui.showToast(`✅ ${data.name} added successfully`, 'success');
     return true;
   }
@@ -774,7 +789,8 @@ class App {
     this._updatePlayerReferencesInAuction(id, player, previousName);
 
     this._showPlayerModalFeedback('');
-    this.saveState();
+    this.saveState({ immediate: true });
+    this.broadcastPersistentState();
     this.ui.showToast(`✅ ${data.name} updated`, 'success');
     return true;
   }
@@ -865,7 +881,8 @@ class App {
     // Remove from allPlayers
     this.allPlayers.splice(idx, 1);
 
-    this.saveState();
+    this.saveState({ immediate: true });
+    this.broadcastPersistentState();
     this.ui.showToast(`🗑️ ${player.name} deleted`, 'success');
     return true;
   }
@@ -1488,9 +1505,11 @@ class App {
             const data = await res.json();
             serverHandled = true;
             if (data.success) {
-              this.isLoggedIn = true;
               localStorage.setItem('npl_token', data.token || 'npl-auth-token');
-              this.saveState();
+              await this.loadState({ preferServer: true });
+              this.isLoggedIn = true;
+              this.saveState({ immediate: true });
+              this.broadcastPersistentState();
               this.ui.showToast('Login successful!', 'success');
               this.navigate('setup');
             } else {
@@ -1509,7 +1528,8 @@ class App {
           if (username.toUpperCase() === 'RCB' && password === 'RCB2.0') {
             this.isLoggedIn = true;
             localStorage.setItem('npl_token', 'npl-auth-token');
-            this.saveState();
+            this.saveState({ immediate: true });
+            this.broadcastPersistentState();
             this.ui.showToast('Login successful!', 'success');
             this.navigate('setup');
           } else {
@@ -2780,6 +2800,7 @@ class App {
     const day1Slots = this._fixtureLeagueSlotsPerDay();
     orderedCards.slice(0, day1Slots).forEach((card) => day1Grid.appendChild(card));
     orderedCards.slice(day1Slots).forEach((card) => day2Grid.appendChild(card));
+    this._updateFixtureTimes();
   }
 
   _previewFixtureCardPosition(grid, draggedEl, x, y) {
