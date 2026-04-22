@@ -2,7 +2,7 @@
 // app.js — Main Controller, Routing & Events
 // ─────────────────────────────────────────────
 
-import { TEAMS_DATA, PLAYERS_DATA } from './data.js';
+import { TEAMS_DATA, PLAYERS_DATA } from './data.js?v=2';
 import { AuctionEngine } from './auction.js';
 import { UI } from './ui.js?v=4';
 import { WSClient } from './ws-client.js';
@@ -113,6 +113,20 @@ class App {
     // If no persisted player data was found, fall back to hardcoded defaults
     if (!this.allPlayers || this.allPlayers.length === 0) {
       this.allPlayers = PLAYERS_DATA.map(player => ({ ...player }));
+    } else {
+      // Merge any NEW players from PLAYERS_DATA that aren't in the persisted list.
+      // This ensures new entries added to data.js appear even when the server DB
+      // has a stale snapshot.
+      const existingNames = new Set(this.allPlayers.map(p => p.name.toLowerCase()));
+      const newPlayers = PLAYERS_DATA.filter(p => !existingNames.has(p.name.toLowerCase()));
+      if (newPlayers.length > 0) {
+        const maxId = this.allPlayers.reduce((max, p) => Math.max(max, p.id), 0);
+        newPlayers.forEach((p, i) => {
+          this.allPlayers.push({ ...p, id: maxId + 1 + i });
+        });
+        console.log(`[App] Merged ${newPlayers.length} new player(s) from PLAYERS_DATA`);
+        this.saveState({ immediate: true });
+      }
     }
 
     await this.backgroundMedia.init();
@@ -2767,6 +2781,8 @@ class App {
         this._previewFixtureCardPosition(grid, draggedEl, e.clientX, e.clientY);
 
         this._persistFixtureScheduleFromDom();
+        // Sync updated schedule to the Live match lobby
+        this.syncFixturesToLive({ showToast: false, renderCurrent: false });
         clearDragState();
       });
     });
@@ -2820,25 +2836,51 @@ class App {
   }
 
   _previewFixtureCardPosition(grid, draggedEl, x, y) {
-    const orderedCards = this._getCombinedFixtureCards(draggedEl);
-    const closestCard = this._getClosestMatchCard(grid, x, y, draggedEl);
-    const targetGridStart = grid.dataset.day === '1' ? 0 : this._fixtureLeagueSlotsPerDay();
+    // Collect all cards from both day grids, EXCLUDING the dragged element
+    const day1Grid = document.getElementById('fixtures-day1-grid');
+    const day2Grid = document.getElementById('fixtures-day2-grid');
+    if (!day1Grid || !day2Grid) return;
 
-    let targetIndex = orderedCards.length;
-    if (closestCard) {
-      const closestIndex = orderedCards.indexOf(closestCard);
-      if (closestIndex !== -1) {
-        targetIndex = this._shouldInsertAfterFixtureCard(closestCard, x, y)
-          ? closestIndex + 1
-          : closestIndex;
+    const day1Slots = this._fixtureLeagueSlotsPerDay();
+
+    // Get cards in the TARGET grid only (excluding dragged)
+    const targetCards = [...grid.querySelectorAll('.fixture-match-card')]
+      .filter(c => c !== draggedEl && !c.classList.contains('dragging'));
+
+    // Find where to insert within the target grid
+    let insertBeforeCard = null;
+    for (const card of targetCards) {
+      const box = card.getBoundingClientRect();
+      const midY = box.top + box.height / 2;
+      const midX = box.left + box.width / 2;
+      if (y < midY || (y < midY + box.height / 2 && x < midX)) {
+        insertBeforeCard = card;
+        break;
       }
-    } else if (grid.dataset.day === '1') {
-      targetIndex = Math.min(this._fixtureLeagueSlotsPerDay(), orderedCards.length);
     }
 
-    targetIndex = Math.max(targetGridStart, Math.min(targetIndex, orderedCards.length));
-    orderedCards.splice(targetIndex, 0, draggedEl);
-    this._renderFixtureOrderPreview(orderedCards);
+    // Move the dragged element into the target grid at the right position
+    if (insertBeforeCard) {
+      grid.insertBefore(draggedEl, insertBeforeCard);
+    } else {
+      grid.appendChild(draggedEl);
+    }
+
+    // Now collect the combined ordered list from both grids as they currently are in the DOM
+    const day1Cards = [...day1Grid.querySelectorAll('.fixture-match-card')];
+    const day2Cards = [...day2Grid.querySelectorAll('.fixture-match-card')];
+
+    // Enforce day1 max slots: overflow cards go to day2
+    if (day1Cards.length > day1Slots) {
+      const overflow = day1Cards.splice(day1Slots);
+      overflow.forEach(card => day2Grid.insertBefore(card, day2Grid.firstChild));
+    }
+    // If day1 has room and day2 has excess, pull cards up
+    if (day1Cards.length < day1Slots && day2Cards.length > day1Slots) {
+      // No auto-pull — let user explicitly drag
+    }
+
+    this._updateFixtureTimes();
   }
 
   _shouldInsertAfterFixtureCard(card, x, y) {

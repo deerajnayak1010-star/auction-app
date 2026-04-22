@@ -106,9 +106,9 @@ export class AuctionEngine {
   /**
    * Get the bid increment based on the current bid amount.
    * Up to 10,000 → +500 | 10,000–20,000 → +1,000 | 20,000+ → +2,000
-   * Maximum bid for a single player: 88,000 pts
+   * Maximum bid for a single player: 87,000 pts
    */
-  static MAX_BID = 88000;
+  static MAX_BID = 87000;
 
   getIncrement(bid) {
     if (bid >= AuctionEngine.MAX_BID) return 0;

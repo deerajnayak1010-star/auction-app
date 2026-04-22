@@ -2,7 +2,7 @@
 // ui.js — UI Rendering for all views
 // ─────────────────────────────────────────────
 
-import { ROLE_CONFIG, LOCATION_CONFIG } from './data.js';
+import { ROLE_CONFIG, LOCATION_CONFIG } from './data.js?v=2';
 import { AuctionEngine } from './auction.js';
 
 /** Get player initials (first letter of first + last name) */
@@ -31,7 +31,7 @@ function renderRulesPremiumView() {
             <li>Each team has a fixed budget of <strong>1,00,000 pts</strong></li>
             <li>Base price starts from <strong>1,000 pts</strong></li>
             <li>
-              Maximum bid for a single player: <strong>88,000 pts</strong>
+              Maximum bid for a single player: <strong>87,000 pts</strong>
               <div class="rules-list-note">Budget must reserve 1,000 pts × remaining empty slots.</div>
             </li>
             <li>
@@ -953,7 +953,7 @@ export class UI {
             <ul class="rules-list">
               <li>Each team has a fixed budget of <strong>1,00,000 pts</strong></li>
               <li>Base price starts from <strong>1,000 pts</strong></li>
-              <li>Maximum bid for a single player: <strong>89,000 pts</strong>
+              <li>Maximum bid for a single player: <strong>87,000 pts</strong>
                 <div style="font-size: 0.82rem; color: var(--text-3); margin-top: 4px;">Budget must reserve 1,000 pts × remaining empty slots</div>
               </li>
               <li>Bid increments:

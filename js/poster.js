@@ -3,7 +3,7 @@
 // Square format optimized for Instagram & WhatsApp
 // ─────────────────────────────────────────────
 
-import { ROLE_CONFIG } from './data.js';
+import { ROLE_CONFIG } from './data.js?v=2';
 import { AuctionEngine } from './auction.js';
 
 // Output dimensions (social media optimized)
