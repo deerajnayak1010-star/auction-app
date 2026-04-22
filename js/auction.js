@@ -43,6 +43,7 @@ export class AuctionEngine {
 
     // Group division for tournament fixtures
     this.groupDivision = null;  // { groupA: [...teamIds], groupB: [...teamIds], tokenMap: {...} }
+    this.fixtureSchedule = null; // persisted league schedule after drag-drop reordering
   }
 
   // ── Helpers ───────────────────────────────────
@@ -587,6 +588,7 @@ export class AuctionEngine {
       maxBid: AuctionEngine.MAX_BID,
       // Group Division
       groupDivision: this.groupDivision,
+      fixtureSchedule: this.fixtureSchedule,
     };
   }
 
@@ -628,6 +630,7 @@ export class AuctionEngine {
       maxBidsPlayer: this.maxBidsPlayer,
       lastSale: this.lastSale ? { ...this.lastSale } : null,
       groupDivision: this.groupDivision || null,
+      fixtureSchedule: this.fixtureSchedule || null,
     };
   }
 
@@ -655,6 +658,7 @@ export class AuctionEngine {
     engine.maxBidsPlayer = data.maxBidsPlayer || null;
     engine.lastSale = data.lastSale || null;
     engine.groupDivision = data.groupDivision || null;
+    engine.fixtureSchedule = data.fixtureSchedule || null;
     return engine;
   }
 }

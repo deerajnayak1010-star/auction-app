@@ -1377,6 +1377,8 @@ export class UI {
               </aside>
             </div>
 
+            <div class="player-modal-feedback" id="player-modal-feedback" role="alert" aria-live="polite" hidden></div>
+
             <div class="player-modal-form">
               <div class="login-input-group full-width">
                 <label for="pm-name">Player Name *</label>
@@ -1460,6 +1462,26 @@ export class UI {
       root.querySelector('.player-modal-overlay')?.style?.setProperty('animation', 'pmOverlayIn 0.2s ease reverse forwards');
       setTimeout(() => root.remove(), 200);
     }
+  }
+
+  setPlayerModalFeedback(message, type = 'error') {
+    const feedbackEl = document.getElementById('player-modal-feedback');
+    if (!feedbackEl) return false;
+
+    feedbackEl.textContent = message || '';
+    feedbackEl.hidden = !message;
+    feedbackEl.className = `player-modal-feedback${message ? ` is-visible ${type}` : ''}`;
+    return true;
+  }
+
+  clearPlayerModalFeedback() {
+    const feedbackEl = document.getElementById('player-modal-feedback');
+    if (!feedbackEl) return false;
+
+    feedbackEl.textContent = '';
+    feedbackEl.hidden = true;
+    feedbackEl.className = 'player-modal-feedback';
+    return true;
   }
 
   /** Show delete confirmation dialog */
@@ -3410,10 +3432,20 @@ export class UI {
     const FIXED_A = 'bfcl';
     const FIXED_B = 'bfc';
     const getTeam = (id) => state.teams.find(t => t.id === id);
-    let allFixtures = [];
+    let allFixtures = (Array.isArray(opts.fixtures) ? opts.fixtures : []).map((fixture, index) => ({
+      matchId: fixture.matchId || `match-${fixture.matchNum || index + 1}`,
+      matchNum: fixture.matchNum || index + 1,
+      teamA: fixture.teamA || getTeam(fixture.teamAId),
+      teamB: fixture.teamB || getTeam(fixture.teamBId),
+      group: fixture.group,
+      day: fixture.day,
+      date: fixture.date,
+      time: fixture.time || '',
+    })).filter((fixture) => fixture.teamA && fixture.teamB);
     let knockouts = [];
 
     if (gd) {
+      if (allFixtures.length === 0) {
       const rrPairs = (g) => [
         [g[0],g[1]], [g[2],g[3]],
         [g[0],g[2]], [g[1],g[3]],
@@ -3443,6 +3475,8 @@ export class UI {
       });
 
       // Build knockout data — use resolved teams from scorecard if available
+      }
+
       const koData = opts.knockoutMatches || [];
       const koMeta = [
         { label: 'Qualifier 1', desc: 'A1 vs B1 — Winner → Final', matchId: 'match-13', time: '2:30 – 3:30', accent: '#f59e0b' },
@@ -3456,6 +3490,11 @@ export class UI {
         return { ...ko, teamA: hasTeams ? { short: resolved.teamAShort, color: resolved.teamAColor, textColor: resolved.teamATextColor, logo: resolved.teamALogo } : null, teamB: hasTeams ? { short: resolved.teamBShort, color: resolved.teamBColor, textColor: resolved.teamBTextColor, logo: resolved.teamBLogo } : null };
       });
     }
+
+    const day1Fixtures = allFixtures.filter(f => f.day === 1);
+    const day2Fixtures = allFixtures.filter(f => f.day === 2);
+    const day1CountLabel = `${day1Fixtures.length} League Match${day1Fixtures.length === 1 ? '' : 'es'}`;
+    const day2CountLabel = `${day2Fixtures.length} League Match${day2Fixtures.length === 1 ? '' : 'es'} + Knockouts`;
 
     // Render token slot
     const renderSlot = (tokenNum, teamId) => {
@@ -3494,24 +3533,24 @@ export class UI {
 
     // Render match card
     const renderMatch = (fixture) => `
-      <div class="fixture-match-card" draggable="true" data-match-num="${fixture.matchNum}" data-team-a="${fixture.teamA.id}" data-team-b="${fixture.teamB.id}" data-group="${fixture.group}">
+      <div class="fixture-match-card" draggable="${state.fixturesLocked ? 'false' : 'true'}" data-match-id="${fixture.matchId || `match-${fixture.matchNum}`}" data-match-num="${fixture.matchNum}" data-team-a="${fixture.teamA.id}" data-team-b="${fixture.teamB.id}" data-group="${fixture.group}">
         <div class="fixture-match-num">Match ${fixture.matchNum}</div>
         <div class="fixture-match-teams">
           <div class="fixture-match-team" style="--tc: ${fixture.teamA.color}">
             <div class="fixture-match-logo" style="background: ${fixture.teamA.color}; color: ${fixture.teamA.textColor}">
-              ${fixture.teamA.logo ? `<img src="${fixture.teamA.logo}" alt="">` : fixture.teamA.shortName}
+              ${fixture.teamA.logo ? `<img src="${fixture.teamA.logo}" alt="" draggable="false">` : fixture.teamA.shortName}
             </div>
             <span>${fixture.teamA.shortName}</span>
           </div>
           <div class="fixture-match-vs">VS</div>
           <div class="fixture-match-team" style="--tc: ${fixture.teamB.color}">
             <div class="fixture-match-logo" style="background: ${fixture.teamB.color}; color: ${fixture.teamB.textColor}">
-              ${fixture.teamB.logo ? `<img src="${fixture.teamB.logo}" alt="">` : fixture.teamB.shortName}
+              ${fixture.teamB.logo ? `<img src="${fixture.teamB.logo}" alt="" draggable="false">` : fixture.teamB.shortName}
             </div>
             <span>${fixture.teamB.shortName}</span>
           </div>
         </div>
-        <div class="fixture-match-info">${fixture.date} • ${fixture.time || ''}</div>
+        <div class="fixture-match-info">${[fixture.date, fixture.time].filter(Boolean).join(' • ')}</div>
       </div>
     `;
 
@@ -3528,6 +3567,9 @@ export class UI {
             ${gd ? `
               <button class="btn btn-ghost btn-lg" id="clear-tokens-btn" ${state.fixturesLocked ? 'disabled style="opacity:0.4;cursor:not-allowed;border-color:rgba(239,68,68,0.15);color:#ef444480;"' : 'style="border-color: rgba(239,68,68,0.3); color: #ef4444;"'}>
                 🗑️ Clear Draw
+              </button>
+              <button class="btn btn-ghost btn-lg" id="sync-live-fixtures-btn" style="border-color: rgba(59,130,246,0.35); color: #60a5fa;">
+                Sync Live Fixtures
               </button>
               <button class="btn btn-primary btn-lg" id="download-fixtures-btn" style="background: linear-gradient(135deg, #10b981, #059669);">
                 📥 Download HD Fixtures
@@ -3567,19 +3609,19 @@ export class UI {
           <h2 style="text-align:center; margin-bottom:24px;">📅 Match Schedule</h2>
 
           <div class="fixtures-day-section">
-            <h3 class="fixtures-day-label">🗓️ Day 1 — 25 April 2026 (6 League Matches) <span style="font-size:0.7rem; color:var(--text-4); font-weight:500; margin-left:8px;">↕ drag to reorder</span></h3>
+            <h3 class="fixtures-day-label">🗓️ Day 1 — 25 April 2026 (6 League Matches) <span style="font-size:0.7rem; color:var(--text-4); font-weight:500; margin-left:8px;">↕ insert and shift the full schedule</span></h3>
             <div style="font-size:0.8rem;color:var(--text-3);text-align:center;margin-bottom:12px;">🏏 8:30 AM – 2:30 PM &nbsp;•&nbsp; 1 hour per match</div>
             <div class="fixtures-match-grid" id="fixtures-day1-grid" data-day="1">
-              ${allFixtures.filter(f => f.day === 1).map(renderMatch).join('')}
+              ${day1Fixtures.map(renderMatch).join('')}
             </div>
             <div style="text-align:center;padding:8px;color:var(--text-4);font-size:0.75rem;font-style:italic;">🍽️ Lunch / Buffer: 2:30 – 3:30 PM</div>
           </div>
 
           <div class="fixtures-day-section">
-            <h3 class="fixtures-day-label">🗓️ Day 2 — 26 April 2026 (League + Knockouts)</h3>
+            <h3 class="fixtures-day-label">🗓️ Day 2 — 26 April 2026 (League + Knockouts) <span style="font-size:0.7rem; color:var(--text-4); font-weight:500; margin-left:8px;">↕ insert and shift the full schedule</span></h3>
             <div style="font-size:0.8rem;color:var(--text-3);text-align:center;margin-bottom:12px;">🏏 League: 8:30 AM – 2:30 PM &nbsp;•&nbsp; 🔥 Knockouts: 2:30 – 6:30 PM</div>
             <div class="fixtures-match-grid" id="fixtures-day2-grid" data-day="2">
-              ${allFixtures.filter(f => f.day === 2).map(renderMatch).join('')}
+              ${day2Fixtures.map(renderMatch).join('')}
             </div>
           </div>
 
@@ -4071,19 +4113,24 @@ export class UI {
 
   renderLiveMatch(matchState, matchList = []) {
     if (!matchState) {
-      const leagueMatches = matchList.filter(m => {
+      const orderedMatches = [...matchList].sort((a, b) => {
+        const aNum = parseInt(String(a.matchId || '').replace('match-', ''), 10) || 999;
+        const bNum = parseInt(String(b.matchId || '').replace('match-', ''), 10) || 999;
+        return aNum - bNum;
+      });
+      const leagueMatches = orderedMatches.filter(m => {
         const num = parseInt(m.matchId.replace('match-',''));
         return num <= 12;
       });
-      const knockoutMatches = matchList.filter(m => {
+      const knockoutMatches = orderedMatches.filter(m => {
         const num = parseInt(m.matchId.replace('match-',''));
         return num > 12;
       });
       const koLabels = { 'match-13': 'Q1', 'match-14': 'ELIM', 'match-15': 'Q2', 'match-16': 'FINAL' };
       const isTBD = (m) => m.teamAShort === 'TBD' || m.teamBShort === 'TBD';
-      const completedCount = matchList.filter(m => m.status === 'completed').length;
-      const liveCount = matchList.filter(m => m.status === 'live').length;
-      const upcomingCount = matchList.length - completedCount - liveCount;
+      const completedCount = orderedMatches.filter(m => m.status === 'completed').length;
+      const liveCount = orderedMatches.filter(m => m.status === 'live').length;
+      const upcomingCount = orderedMatches.length - completedCount - liveCount;
       const statusBadge = (m, forceLocked = false) => {
         if (forceLocked) {
           return '<span class="match-select-status is-locked">Waiting</span>';
@@ -4176,7 +4223,7 @@ export class UI {
             <p class="live-match-subtitle">Select a fixture to launch premium ball-by-ball scoring with scoreboard, history, and match control in one flow.</p>
             <div class="live-match-hero-stats">
               <div class="live-match-stat">
-                <span>${matchList.length}</span>
+                <span>${orderedMatches.length}</span>
                 <small>Fixtures</small>
               </div>
               <div class="live-match-stat is-live">
@@ -4193,7 +4240,7 @@ export class UI {
               </div>
             </div>
           </div>
-          ${matchList.length > 0 ? `${leagueHTML}${knockoutHTML}` : `
+          ${orderedMatches.length > 0 ? `${leagueHTML}${knockoutHTML}` : `
             <div class="live-match-empty">
               <p>📅 No matches available yet.</p>
               <p>Draw tokens in Fixtures first to build the live match center.</p>

@@ -87,6 +87,16 @@ export class ScorecardManager {
     return match;
   }
 
+  syncFixtureMatch(matchId, teamA, teamB, opts = {}) {
+    const existing = this.matches.get(matchId);
+    if (!existing || existing.status === 'upcoming') {
+      return this.createMatch(matchId, teamA, teamB, opts);
+    }
+
+    this.updateMatchInfo(matchId, opts);
+    return existing;
+  }
+
   getMatch(matchId) {
     return this.matches.get(matchId) || null;
   }
@@ -160,6 +170,8 @@ export class ScorecardManager {
   updateMatchInfo(matchId, info) {
     const match = this.matches.get(matchId);
     if (!match) return;
+    if (info.date !== undefined) match.date = info.date;
+    if (info.time !== undefined) match.time = info.time;
     if (info.venue !== undefined) match.venue = info.venue;
     if (info.tossWinner !== undefined) match.tossWinner = info.tossWinner;
     if (info.tossDecision !== undefined) match.tossDecision = info.tossDecision;

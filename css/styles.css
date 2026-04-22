@@ -1301,6 +1301,32 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
   line-height: 1.55;
 }
 
+.player-modal-feedback {
+  display: none;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid transparent;
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.player-modal-feedback.is-visible {
+  display: block;
+}
+
+.player-modal-feedback.error {
+  background: rgba(239,68,68,0.12);
+  border-color: rgba(239,68,68,0.28);
+  color: #fecaca;
+}
+
+.player-modal-feedback.info {
+  background: rgba(59,130,246,0.12);
+  border-color: rgba(59,130,246,0.3);
+  color: #bfdbfe;
+}
+
 .player-modal-form {
   padding: 22px;
   border-radius: 22px;
@@ -3088,16 +3114,16 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
 
 .player-select-card-toolbar {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   margin-bottom: 14px;
 }
 
 .player-select-card-tools-left {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex: 1 1 auto;
   gap: 10px;
   min-width: 0;
@@ -3135,6 +3161,7 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
 .player-select-checkbox {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 6px 11px;
   border-radius: 999px;
@@ -3143,13 +3170,15 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
   color: rgba(226,232,240,0.7);
   font-size: 0.74rem;
   font-weight: 700;
-  margin-left: auto;
+  margin-left: 0;
   max-width: 100%;
-  white-space: nowrap;
+  width: 100%;
+  white-space: normal;
 }
 
 .player-select-checkbox-label {
   min-width: 0;
+  text-align: center;
 }
 
 .player-select-checkbox-box {
@@ -5945,12 +5974,23 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
 }
 
 /* ── Drag-Drop Fixtures ── */
-.fixture-match-card[draggable] { cursor: grab; }
-.fixture-match-card[draggable]:active { cursor: grabbing; }
+.fixture-match-card[draggable="true"] {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.fixture-match-card[draggable="true"]:active { cursor: grabbing; }
+.fixture-match-card[draggable="true"] .fixture-match-teams,
+.fixture-match-card[draggable="true"] .fixture-match-teams * {
+  pointer-events: none;
+}
 .fixture-match-card.dragging {
   opacity: 0.4;
   transform: scale(0.95);
   box-shadow: 0 0 0 2px var(--accent-indigo);
+}
+.fixture-match-card[draggable="true"] .fixture-match-logo img {
+  -webkit-user-drag: none;
 }
 .fixtures-match-grid.drag-over {
   outline: 2px dashed var(--accent-indigo);

@@ -20,7 +20,7 @@ class App {
     this.engine = null;
     this.selectedTeamIds = new Set();
     this.selectedPlayerIds = new Set();
-    this.allPlayers = [...PLAYERS_DATA]; // mutable copy for CRUD
+    this.allPlayers = PLAYERS_DATA.map(player => ({ ...player })); // mutable copy for CRUD
     this.currentView = 'login';
     this.isLoggedIn = false;
     this.poolFilter = 'All';
@@ -375,6 +375,7 @@ class App {
   _buildPersistentState() {
     // Build a single object containing ALL syncable state
     const state = {
+      updatedAt: Date.now(),
       isLoggedIn: this.isLoggedIn,
       selectedTeamIds: [...this.selectedTeamIds],
       selectedPlayerIds: [...this.selectedPlayerIds],
@@ -404,6 +405,34 @@ class App {
     return state;
   }
 
+  _parsePersistedState(raw) {
+    if (!raw || raw === 'null') return null;
+
+    try {
+      const state = JSON.parse(raw);
+      return state && typeof state === 'object' ? state : null;
+    } catch (e) {
+      console.warn('Failed to parse persisted state:', e);
+      return null;
+    }
+  }
+
+  _selectPreferredState(...candidates) {
+    let preferred = null;
+    let preferredTs = Number.NEGATIVE_INFINITY;
+
+    candidates.forEach((candidate) => {
+      if (!candidate || typeof candidate !== 'object') return;
+      const candidateTs = Number(candidate.updatedAt) || 0;
+      if (!preferred || candidateTs >= preferredTs) {
+        preferred = candidate;
+        preferredTs = candidateTs;
+      }
+    });
+
+    return preferred;
+  }
+
   async flushStateSync({ keepalive = false } = {}) {
     clearTimeout(this._stateSyncTimer);
     if (!this.isLoggedIn || !this._pendingStateStr) return;
@@ -424,8 +453,19 @@ class App {
       },
       body: stateStr,
       keepalive
-    }).then(() => {
+    }).then(async (res) => {
+      if (!res.ok) {
+        let message = `State sync failed (${res.status})`;
+        try {
+          const data = await res.json();
+          if (data?.error) message = data.error;
+        } catch (e) {
+          // Ignore JSON parse errors for non-JSON failures.
+        }
+        throw new Error(message);
+      }
       this._lastSyncedStateStr = stateStr;
+      return res;
     }).catch((e) => {
       console.warn('Server sync failed', e);
       throw e;
@@ -442,28 +482,38 @@ class App {
   /** Load saved auction state from server/localStorage */
   async loadState() {
     try {
-      let raw = null;
+      let serverRaw = null;
       try {
         const res = await fetch('/api/state');
         const ct = res.headers.get('content-type') || '';
         if (res.ok && ct.includes('application/json')) {
-          raw = await res.text();
+          serverRaw = await res.text();
         }
       } catch (e) {
         // Server unavailable (GitHub Pages) — will fall back to localStorage
       }
 
-      if (!raw) {
-        raw = localStorage.getItem('npl_auction_state');
+      const localRaw = localStorage.getItem('npl_auction_state');
+      const serverState = this._parsePersistedState(serverRaw);
+      const localState = this._parsePersistedState(localRaw);
+      const state = this._selectPreferredState(serverState, localState);
+      if (!state) return;
+
+      const stateStr = JSON.stringify(state);
+      this._pendingStateStr = stateStr;
+      if (serverState && state === serverState) {
+        this._lastSyncedStateStr = stateStr;
       }
 
-      if (!raw) return;
+      try {
+        localStorage.setItem('npl_auction_state', stateStr);
+      } catch (e) {
+        console.warn('Failed to refresh local state cache:', e);
+      }
 
-      const state = JSON.parse(raw);
-      this._restoreFromState(state);
+      await this._restoreFromState(state);
     } catch (e) {
       console.warn('Failed to load state:', e);
-      localStorage.removeItem('npl_auction_state');
     }
   }
 
@@ -486,8 +536,11 @@ class App {
       } else if (this.currentView === 'results') {
         this.render();
       } else if (this.currentView === 'live-match') {
-        // Don't re-render live match — it would clear toss/over selections
-        // The live match engine state is already updated via _restoreFromState
+        // Re-render the lobby so fixture order changes appear on synced screens,
+        // but avoid wiping an active scoring session.
+        if (!this.liveMatchEngine) {
+          this._renderLiveMatchView();
+        }
       } else {
         // For other views, a full render is safe
         this.render();
@@ -501,6 +554,8 @@ class App {
 
   /** Common state restoration logic used by loadState and _applyRemoteState */
   async _restoreFromState(state) {
+    if (!state || typeof state !== 'object') return;
+
     if (state.isLoggedIn !== undefined) {
       this.isLoggedIn = state.isLoggedIn;
     }
@@ -511,7 +566,7 @@ class App {
       this.selectedPlayerIds = new Set(state.selectedPlayerIds);
     }
     if (state.allPlayers && Array.isArray(state.allPlayers)) {
-      this.allPlayers = state.allPlayers;
+      this.allPlayers = state.allPlayers.map(player => ({ ...player }));
     }
     if (state.currentView) {
       this.currentView = state.currentView;
@@ -606,7 +661,9 @@ class App {
   }
 
   _getPlayerCatalog() {
-    return Array.isArray(this.allPlayers) && this.allPlayers.length ? this.allPlayers : PLAYERS_DATA;
+    return Array.isArray(this.allPlayers) && this.allPlayers.length
+      ? this.allPlayers
+      : PLAYERS_DATA.map(player => ({ ...player }));
   }
 
   _normalizePlayerRecord(player = {}) {
@@ -623,6 +680,20 @@ class App {
     };
   }
 
+  _showPlayerModalFeedback(message, type = 'error') {
+    if (!message) {
+      this.ui.clearPlayerModalFeedback();
+      return true;
+    }
+
+    if (this.ui.setPlayerModalFeedback(message, type)) {
+      return true;
+    }
+
+    this.ui.showToast(message, type);
+    return false;
+  }
+
   _hasCustomPlayerState() {
     const players = this._getPlayerCatalog();
     if (players.length !== PLAYERS_DATA.length) return true;
@@ -637,12 +708,12 @@ class App {
   /** Add a new player */
   addPlayer(data) {
     if (!data.name) {
-      this.ui.showToast('Player name is required', 'error');
+      this._showPlayerModalFeedback('Player name is required', 'error');
       return false;
     }
     // Duplicate name check
     if (this.allPlayers.some(p => p.name.toLowerCase() === data.name.toLowerCase())) {
-      this.ui.showToast(`Player "${data.name}" already exists`, 'error');
+      this._showPlayerModalFeedback(`Player "${data.name}" already exists`, 'error');
       return false;
     }
     const maxId = this.allPlayers.reduce((max, p) => Math.max(max, p.id), 0);
@@ -659,6 +730,7 @@ class App {
     };
     this.allPlayers.push(newPlayer);
     this._pendingPlayerImage = null;
+    this._showPlayerModalFeedback('');
     this.saveState();
     this.ui.showToast(`✅ ${data.name} added successfully`, 'success');
     return true;
@@ -668,16 +740,16 @@ class App {
   updatePlayer(id, data) {
     const idx = this.allPlayers.findIndex(p => p.id === id);
     if (idx === -1) {
-      this.ui.showToast('Player not found', 'error');
+      this._showPlayerModalFeedback('Player not found', 'error');
       return false;
     }
     if (!data.name) {
-      this.ui.showToast('Player name is required', 'error');
+      this._showPlayerModalFeedback('Player name is required', 'error');
       return false;
     }
     // Duplicate check (excluding self)
     if (this.allPlayers.some(p => p.id !== id && p.name.toLowerCase() === data.name.toLowerCase())) {
-      this.ui.showToast(`Player "${data.name}" already exists`, 'error');
+      this._showPlayerModalFeedback(`Player "${data.name}" already exists`, 'error');
       return false;
     }
     const player = this.allPlayers[idx];
@@ -701,6 +773,7 @@ class App {
 
     this._updatePlayerReferencesInAuction(id, player, previousName);
 
+    this._showPlayerModalFeedback('');
     this.saveState();
     this.ui.showToast(`✅ ${data.name} updated`, 'success');
     return true;
@@ -863,15 +936,16 @@ class App {
   async _handlePlayerImageFile(file) {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      this.ui.showToast('Image must be under 5MB', 'error');
+      this._showPlayerModalFeedback('Image must be under 5MB', 'error');
       return;
     }
     if (!file.type.startsWith('image/')) {
-      this.ui.showToast('Please select an image file', 'error');
+      this._showPlayerModalFeedback('Please select an image file', 'error');
       return;
     }
 
     const taskId = ++this._playerImageTaskId;
+    this._showPlayerModalFeedback('');
     this._setPlayerImageBusy(true, 'Optimizing image...');
 
     try {
@@ -890,17 +964,17 @@ class App {
       if (taskId !== this._playerImageTaskId) return;
       this._setPlayerImageBusy(false);
       console.warn('Player image processing failed:', error);
-      this.ui.showToast('Could not process that image. Please try another file.', 'error');
+      this._showPlayerModalFeedback('Could not process that image. Please try another file.', 'error');
     }
   }
 
   /** Re-render the player select view after a CRUD operation */
   _refreshPlayerView() {
     if (this.currentView === 'player-select') {
-      this.ui.renderPlayerSelect(this.allPlayers, this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
+      this.ui.renderPlayerSelect(this._getPlayerCatalog(), this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
       this.bindPlayerSelectEvents();
     } else if (this.currentView === 'players') {
-      this.ui.renderPlayerPool(this.allPlayers, this.poolFilter, this.poolSearch);
+      this.ui.renderPlayerPool(this._getPlayerCatalog(), this.poolFilter, this.poolSearch);
       this.bindPoolEvents();
     }
   }
@@ -941,15 +1015,18 @@ class App {
     // Save button
     const form = document.getElementById('player-modal-form');
     if (form) {
+      form.addEventListener('input', () => this._showPlayerModalFeedback(''));
+      form.addEventListener('change', () => this._showPlayerModalFeedback(''));
       form.addEventListener('submit', (e) => {
         e.preventDefault();
         e.stopPropagation();
 
         if (this._playerImageBusy) {
-          this.ui.showToast('Please wait for the image to finish processing', 'info');
+          this._showPlayerModalFeedback('Please wait for the image to finish processing', 'info');
           return;
         }
 
+        this._showPlayerModalFeedback('');
         const saveBtn = document.getElementById('player-modal-save');
         const data = this._getPlayerFormData();
         const editId = saveBtn?.dataset.playerId ? parseInt(saveBtn.dataset.playerId) : null;
@@ -974,6 +1051,7 @@ class App {
       e.stopPropagation();
       this._playerImageTaskId++;
       this._setPlayerImageBusy(false);
+      this._showPlayerModalFeedback('');
       this._pendingPlayerImage = null;
       this.ui.closePlayerModal();
     });
@@ -984,6 +1062,7 @@ class App {
       e.stopPropagation();
       this._playerImageTaskId++;
       this._setPlayerImageBusy(false);
+      this._showPlayerModalFeedback('');
       this._pendingPlayerImage = null;
       this.ui.closePlayerModal();
     });
@@ -996,6 +1075,7 @@ class App {
           e.stopPropagation();
           this._playerImageTaskId++;
           this._setPlayerImageBusy(false);
+          this._showPlayerModalFeedback('');
           this._pendingPlayerImage = null;
           this.ui.closePlayerModal();
         }
@@ -1066,14 +1146,14 @@ class App {
         this.bindTimerSetting();
         break;
       case 'player-select':
-        this.ui.renderPlayerSelect(this.allPlayers, this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
+        this.ui.renderPlayerSelect(this._getPlayerCatalog(), this.selectedPlayerIds, this.playerSelectFilter, this.playerSelectSearch);
         this.bindPlayerSelectEvents();
         break;
       case 'rules':
         this.ui.renderRulesPremium();
         break;
       case 'players':
-        this.ui.renderPlayerPool(this.allPlayers, this.poolFilter, this.poolSearch);
+        this.ui.renderPlayerPool(this._getPlayerCatalog(), this.poolFilter, this.poolSearch);
         this.bindPoolEvents();
         break;
       case 'auction':
@@ -1323,18 +1403,8 @@ class App {
 
     // Save player (add or update)
     if (target.id === 'player-modal-save') {
-      const data = this._getPlayerFormData();
-      const editId = target.dataset.playerId ? parseInt(target.dataset.playerId) : null;
-      let success;
-      if (editId) {
-        success = this.updatePlayer(editId, data);
-      } else {
-        success = this.addPlayer(data);
-      }
-      if (success) {
-        this.ui.closePlayerModal();
-        this._refreshPlayerView();
-      }
+      // Handled by the modal form submit listener so validation, image-busy
+      // checks, and inline popup feedback all stay in one place.
       return;
     }
 
@@ -1895,9 +1965,7 @@ class App {
       this.fixturesLocked = !this.fixturesLocked;
       localStorage.setItem('npl_fixtures_locked', this.fixturesLocked ? '1' : '0');
       this.ui.showToast(this.fixturesLocked ? '🔒 Fixtures locked!' : '🔓 Fixtures unlocked!', 'info');
-      const st = this.engine.getState(); st.fixturesLocked = this.fixturesLocked;
-      this.ui.renderResults(st, 'fixtures');
-      setTimeout(() => this.initFixtureDragDrop(), 100);
+      this._renderResultsWithPremium();
       return;
     }
 
@@ -1914,12 +1982,13 @@ class App {
       this.ui.closeClearTokensModal();
       if (this.engine) {
         this.engine.groupDivision = null;
+        this.engine.fixtureSchedule = null;
         this._resetAllMatchData();
         this.saveState();
         this.broadcastState();
         this.ui.showToast('🗑️ Token draw cleared. All match data reset.', 'info');
-        const st2 = this.engine.getState(); st2.fixturesLocked = this.fixturesLocked;
-        this.ui.renderResults(st2, 'fixtures');
+        this.resultsTab = 'fixtures';
+        this._renderResultsWithPremium();
       }
       return;
     }
@@ -1931,6 +2000,14 @@ class App {
     // ── Download HD Fixtures ──
     if (target.id === 'download-fixtures-btn' || target.closest('#download-fixtures-btn')) {
       this.downloadFixturesHD();
+      return;
+    }
+
+    // ── Sync fixtures to live section ──
+    if (target.id === 'sync-live-fixtures-btn' || target.closest('#sync-live-fixtures-btn')) {
+      if (!this.syncFixturesToLive({ showToast: true })) {
+        this.ui.showToast('⚠️ Draw fixtures first before syncing live section.', 'warning');
+      }
       return;
     }
 
@@ -2212,15 +2289,9 @@ class App {
     const state = this.engine.getState();
     const gd = state.groupDivision;
 
-    // Auto-create scorecard entries from fixtures if they don't exist
-    if (gd && this.scorecardMgr.getAllMatches().length === 0) {
+    if (gd) {
       const fixtures = this._getFixtureMatchList(gd, state.teams);
-      const getTeam = (id) => state.teams.find(t => t.id === id) || { id, name: id, shortName: id, color: '#666', textColor: '#fff', logo: '', squad: [] };
-      fixtures.forEach(f => {
-        if (!this.scorecardMgr.getMatch(f.matchId)) {
-          this.scorecardMgr.createMatch(f.matchId, getTeam(f.teamAId), getTeam(f.teamBId), { venue: 'Nakre Ground', date: f.date, time: f.time });
-        }
-      });
+      this._syncFixtureMatchesToSchedule(fixtures, state.teams);
     }
 
     this.resultsTab = 'scorecard';
@@ -2228,29 +2299,161 @@ class App {
   }
 
   _ensureScorecardMatch(matchId) {
-    if (this.scorecardMgr.getMatch(matchId)) return;
     const state = this.engine.getState();
     const gd = state.groupDivision;
     if (!gd) return;
-    // Find the fixture info from the matchId
     const allTeams = state.teams;
-    const getTeam = (id) => {
-      const t = allTeams.find(t => t.id === id);
-      return t || { id, name: id, shortName: id, color: '#666', textColor: '#fff', logo: '', squad: [] };
-    };
-    // Build fixtures from groups
+    const getTeam = (id) => allTeams.find(t => t.id === id) || { id, name: id, shortName: id, color: '#666', textColor: '#fff', logo: '', squad: [] };
     const fixtures = this._getFixtureMatchList(gd, allTeams);
     const fix = fixtures.find(f => f.matchId === matchId);
     if (!fix) return;
     const tA = getTeam(fix.teamAId);
     const tB = getTeam(fix.teamBId);
-    this.scorecardMgr.createMatch(matchId, tA, tB, {
+    this.scorecardMgr.syncFixtureMatch(matchId, tA, tB, {
       venue: 'Nakre Ground', date: fix.date, time: fix.time,
     });
   }
 
+  _fixtureDateForDay(day) {
+    return day === 1 ? '25 April 2026' : '26 April 2026';
+  }
+
+  _formatFixtureClock(totalMinutes) {
+    const hours24 = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const hours12 = hours24 % 12 || 12;
+    return `${hours12}:${String(minutes).padStart(2, '0')}`;
+  }
+
+  _formatFixtureTime(slotIndex) {
+    const startMinutes = (8 * 60) + 30 + (slotIndex * 60);
+    const endMinutes = startMinutes + 60;
+    return `${this._formatFixtureClock(startMinutes)} – ${this._formatFixtureClock(endMinutes)}`;
+  }
+
+  _buildFixtureScheduleFromDays(...dayBuckets) {
+    let matchNum = 1;
+
+    return dayBuckets.flatMap((entries, dayIndex) => (
+      entries.map((entry, slotIndex) => ({
+        matchId: `match-${matchNum}`,
+        matchNum: matchNum++,
+        teamAId: entry.teamAId,
+        teamBId: entry.teamBId,
+        group: entry.group,
+        day: dayIndex + 1,
+        date: this._fixtureDateForDay(dayIndex + 1),
+        time: this._formatFixtureTime(slotIndex),
+      }))
+    ));
+  }
+
+  _buildDefaultFixtureSchedule(gd) {
+    if (!gd) return [];
+
+    const rrPairs = (group) => [
+      [group[0], group[1]], [group[2], group[3]],
+      [group[0], group[2]], [group[1], group[3]],
+      [group[0], group[3]], [group[1], group[2]],
+    ];
+
+    const pA = rrPairs(gd.groupA);
+    const pB = rrPairs(gd.groupB);
+
+    const day1 = [
+      { teamAId: pA[0][0], teamBId: pA[0][1], group: 'A' },
+      { teamAId: pB[0][0], teamBId: pB[0][1], group: 'B' },
+      { teamAId: pA[1][0], teamBId: pA[1][1], group: 'A' },
+      { teamAId: pB[1][0], teamBId: pB[1][1], group: 'B' },
+      { teamAId: pA[2][0], teamBId: pA[2][1], group: 'A' },
+      { teamAId: pB[2][0], teamBId: pB[2][1], group: 'B' },
+    ];
+    const day2 = [
+      { teamAId: pA[3][0], teamBId: pA[3][1], group: 'A' },
+      { teamAId: pB[3][0], teamBId: pB[3][1], group: 'B' },
+      { teamAId: pA[4][0], teamBId: pA[4][1], group: 'A' },
+      { teamAId: pB[4][0], teamBId: pB[4][1], group: 'B' },
+      { teamAId: pA[5][0], teamBId: pA[5][1], group: 'A' },
+      { teamAId: pB[5][0], teamBId: pB[5][1], group: 'B' },
+    ];
+
+    return this._buildFixtureScheduleFromDays(day1, day2);
+  }
+
+  _syncFixtureMatchesToSchedule(fixtures, teams) {
+    if (!Array.isArray(fixtures) || !fixtures.length) return;
+
+    const getTeam = (id) => teams.find(t => t.id === id) || {
+      id,
+      name: id,
+      shortName: id,
+      color: '#666',
+      textColor: '#fff',
+      logo: '',
+      squad: [],
+    };
+
+    fixtures.forEach((fixture) => {
+      this.scorecardMgr.syncFixtureMatch(
+        fixture.matchId,
+        getTeam(fixture.teamAId),
+        getTeam(fixture.teamBId),
+        { venue: 'Nakre Ground', date: fixture.date, time: fixture.time },
+      );
+    });
+  }
+
+  _applyFixtureSchedule(fixtures, { render = true, immediateSync = false } = {}) {
+    if (!this.engine || !Array.isArray(fixtures) || !fixtures.length) return;
+
+    this.engine.fixtureSchedule = fixtures.map(fixture => ({ ...fixture }));
+    const state = this.engine.getState();
+    this._syncFixtureMatchesToSchedule(this.engine.fixtureSchedule, state.teams);
+    this.saveState({ immediate: immediateSync });
+    this.broadcastState();
+
+    if (render && this.currentView === 'results' && this.resultsTab === 'fixtures') {
+      this._renderResultsWithPremium();
+    }
+  }
+
+  syncFixturesToLive({ showToast = false, renderCurrent = true } = {}) {
+    if (!this.engine) return false;
+
+    const state = this.engine.getState();
+    if (!state.groupDivision) return false;
+
+    const fixtures = this._getFixtureMatchList(state.groupDivision, state.teams);
+    if (!fixtures.length) return false;
+
+    this._syncFixtureMatchesToSchedule(fixtures, state.teams);
+    this.saveState({ immediate: true });
+    this.broadcastState();
+
+    if (renderCurrent) {
+      if (this.currentView === 'live-match' && !this.liveMatchEngine) {
+        this._renderLiveMatchView();
+      } else if (this.currentView === 'results' && this.resultsTab === 'fixtures') {
+        this._renderResultsWithPremium();
+      }
+    }
+
+    if (showToast) {
+      this.ui.showToast('🔄 Live fixtures synced with current schedule.', 'success');
+    }
+
+    return true;
+  }
+
   _getFixtureMatchList(gd, teams) {
     if (!gd) return [];
+
+    const schedule = Array.isArray(this.engine?.fixtureSchedule) && this.engine.fixtureSchedule.length
+      ? this.engine.fixtureSchedule
+      : this._buildDefaultFixtureSchedule(gd);
+    if (schedule.length) {
+      return schedule.map((fixture) => ({ ...fixture }));
+    }
 
     // Time slots: each match = 1 hour, starting 8:30 AM
     const day1Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30'];
@@ -2389,6 +2592,7 @@ class App {
     const groupB = [FIXED_B, tokenMap.token2, tokenMap.token4, tokenMap.token6];
 
     this.engine.groupDivision = { groupA, groupB, tokenMap };
+    this.engine.fixtureSchedule = this._buildDefaultFixtureSchedule(this.engine.groupDivision);
 
     // Reset all dependent match data on re-draw
     this._resetAllMatchData();
@@ -2396,10 +2600,8 @@ class App {
     this.saveState();
     this.broadcastState();
     this.ui.showToast('🎲 Tokens drawn! Groups assigned. Match data reset.', 'success');
-    const stDraw = this.engine.getState(); stDraw.fixturesLocked = this.fixturesLocked;
-    this.ui.renderResults(stDraw, 'fixtures');
-    // Init drag-drop after render
-    setTimeout(() => this.initFixtureDragDrop(), 100);
+    this.resultsTab = 'fixtures';
+    this._renderResultsWithPremium();
   }
 
   _resetAllMatchData() {
@@ -2476,35 +2678,48 @@ class App {
 
   // ── Fixture Drag-Drop ──
   initFixtureDragDrop() {
-    const grids = document.querySelectorAll('.fixtures-match-grid[data-day]');
+    const grids = [...document.querySelectorAll('.fixtures-match-grid[data-day]')];
     if (!grids.length) return;
+    if (this.fixturesLocked) return;
 
     let draggedEl = null;
 
+    const clearDragState = () => {
+      grids.forEach(g => g.classList.remove('drag-over'));
+      if (draggedEl) draggedEl.classList.remove('dragging');
+      draggedEl = null;
+    };
+
     grids.forEach(grid => {
       grid.addEventListener('dragstart', (e) => {
-        const card = e.target.closest('.fixture-match-card[draggable]');
+        const card = e.target.closest('.fixture-match-card[draggable="true"]');
         if (!card) return;
         draggedEl = card;
         card.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', card.dataset.matchNum);
+        e.dataTransfer.setData('text/plain', card.dataset.matchId || card.dataset.matchNum || 'fixture-match');
       });
 
-      grid.addEventListener('dragend', (e) => {
-        const card = e.target.closest('.fixture-match-card');
-        if (card) card.classList.remove('dragging');
-        grids.forEach(g => g.classList.remove('drag-over'));
-        draggedEl = null;
-      });
-
-      grid.addEventListener('dragover', (e) => {
+      grid.addEventListener('dragenter', (e) => {
+        if (!draggedEl) return;
         e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
         grid.classList.add('drag-over');
       });
 
-      grid.addEventListener('dragleave', () => {
+      grid.addEventListener('dragend', () => {
+        clearDragState();
+      });
+
+      grid.addEventListener('dragover', (e) => {
+        if (!draggedEl) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        grid.classList.add('drag-over');
+        this._previewFixtureCardPosition(grid, draggedEl, e.clientX, e.clientY);
+      });
+
+      grid.addEventListener('dragleave', (e) => {
+        if (this._isFixtureDragInsideGrid(grid, e.relatedTarget)) return;
         grid.classList.remove('drag-over');
       });
 
@@ -2513,36 +2728,111 @@ class App {
         grid.classList.remove('drag-over');
         if (!draggedEl) return;
 
-        // Move the card to the new grid
-        const closestCard = this._getClosestMatchCard(grid, e.clientY);
-        if (closestCard) {
-          grid.insertBefore(draggedEl, closestCard);
-        } else {
-          grid.appendChild(draggedEl);
-        }
+        this._previewFixtureCardPosition(grid, draggedEl, e.clientX, e.clientY);
 
-        // Update times based on new positions
-        this._updateFixtureTimes();
-        draggedEl.classList.remove('dragging');
-        draggedEl = null;
+        this._persistFixtureScheduleFromDom();
+        clearDragState();
       });
     });
   }
 
-  _getClosestMatchCard(grid, y) {
-    const cards = [...grid.querySelectorAll('.fixture-match-card:not(.dragging)')];
+  _isFixtureDragInsideGrid(grid, relatedTarget) {
+    return relatedTarget instanceof Element && grid.contains(relatedTarget);
+  }
+
+  _getClosestMatchCard(grid, x, y, excludeEl = null) {
+    const cards = [...grid.querySelectorAll('.fixture-match-card')].filter(
+      card => card !== excludeEl && !card.classList.contains('dragging'),
+    );
     let closest = null;
-    let closestOffset = Number.NEGATIVE_INFINITY;
+    let closestDistance = Number.POSITIVE_INFINITY;
 
     cards.forEach(card => {
       const box = card.getBoundingClientRect();
-      const offset = y - box.top - box.height / 2;
-      if (offset < 0 && offset > closestOffset) {
-        closestOffset = offset;
+      const centerX = box.left + (box.width / 2);
+      const centerY = box.top + (box.height / 2);
+      const distance = Math.hypot(x - centerX, y - centerY);
+      if (distance < closestDistance) {
+        closestDistance = distance;
         closest = card;
       }
     });
     return closest;
+  }
+
+  _fixtureLeagueSlotsPerDay() {
+    return 6;
+  }
+
+  _getCombinedFixtureCards(excludeEl = null) {
+    return ['fixtures-day1-grid', 'fixtures-day2-grid'].flatMap((gridId) => {
+      const grid = document.getElementById(gridId);
+      if (!grid) return [];
+      return [...grid.querySelectorAll('.fixture-match-card')].filter(card => card !== excludeEl);
+    });
+  }
+
+  _renderFixtureOrderPreview(orderedCards) {
+    const day1Grid = document.getElementById('fixtures-day1-grid');
+    const day2Grid = document.getElementById('fixtures-day2-grid');
+    if (!day1Grid || !day2Grid) return;
+
+    const day1Slots = this._fixtureLeagueSlotsPerDay();
+    orderedCards.slice(0, day1Slots).forEach((card) => day1Grid.appendChild(card));
+    orderedCards.slice(day1Slots).forEach((card) => day2Grid.appendChild(card));
+  }
+
+  _previewFixtureCardPosition(grid, draggedEl, x, y) {
+    const orderedCards = this._getCombinedFixtureCards(draggedEl);
+    const closestCard = this._getClosestMatchCard(grid, x, y, draggedEl);
+    const targetGridStart = grid.dataset.day === '1' ? 0 : this._fixtureLeagueSlotsPerDay();
+
+    let targetIndex = orderedCards.length;
+    if (closestCard) {
+      const closestIndex = orderedCards.indexOf(closestCard);
+      if (closestIndex !== -1) {
+        targetIndex = this._shouldInsertAfterFixtureCard(closestCard, x, y)
+          ? closestIndex + 1
+          : closestIndex;
+      }
+    } else if (grid.dataset.day === '1') {
+      targetIndex = Math.min(this._fixtureLeagueSlotsPerDay(), orderedCards.length);
+    }
+
+    targetIndex = Math.max(targetGridStart, Math.min(targetIndex, orderedCards.length));
+    orderedCards.splice(targetIndex, 0, draggedEl);
+    this._renderFixtureOrderPreview(orderedCards);
+  }
+
+  _shouldInsertAfterFixtureCard(card, x, y) {
+    const box = card.getBoundingClientRect();
+    const isBelowMidpoint = y > box.top + (box.height / 2);
+    const isRightOfMidpoint = x > box.left + (box.width / 2);
+    return isBelowMidpoint || isRightOfMidpoint;
+  }
+
+  _buildFixtureScheduleFromDom() {
+    const dayBuckets = ['fixtures-day1-grid', 'fixtures-day2-grid'].map((gridId) => {
+      const grid = document.getElementById(gridId);
+      if (!grid) return [];
+
+      return [...grid.querySelectorAll('.fixture-match-card')].map((card) => ({
+        teamAId: card.dataset.teamA,
+        teamBId: card.dataset.teamB,
+        group: card.dataset.group || '',
+      })).filter((fixture) => fixture.teamAId && fixture.teamBId);
+    });
+
+    return dayBuckets.some((bucket) => bucket.length)
+      ? this._buildFixtureScheduleFromDays(...dayBuckets)
+      : [];
+  }
+
+  _persistFixtureScheduleFromDom() {
+    const fixtures = this._buildFixtureScheduleFromDom();
+    if (fixtures.length) {
+      this._applyFixtureSchedule(fixtures, { immediateSync: true });
+    }
   }
 
   _updateFixtureTimes() {
@@ -2933,6 +3223,7 @@ class App {
 
     // Fixtures opts — pass knockout match data so UI can show resolved teams
     if (this.resultsTab === 'fixtures') {
+      opts.fixtures = state?.groupDivision ? this._getFixtureMatchList(state.groupDivision, state.teams) : [];
       opts.knockoutMatches = [
         this.scorecardMgr.getMatch('match-13'),
         this.scorecardMgr.getMatch('match-14'),
@@ -2973,12 +3264,7 @@ class App {
     const gd = state.groupDivision;
     if (!gd) return;
     const fixtures = this._getFixtureMatchList(gd, state.teams);
-    const getTeam = (id) => state.teams.find(t => t.id === id) || { id, name: id, shortName: id, color: '#666', textColor: '#fff', logo: '', squad: [] };
-    fixtures.forEach(f => {
-      if (!this.scorecardMgr.getMatch(f.matchId)) {
-        this.scorecardMgr.createMatch(f.matchId, getTeam(f.teamAId), getTeam(f.teamBId), { venue: 'Nakre Ground', date: f.date, time: f.time });
-      }
-    });
+    this._syncFixtureMatchesToSchedule(fixtures, state.teams);
 
     // Also add knockout matches (match-13 through match-16) — always TBD until league is done
     const knockoutSlots = [
