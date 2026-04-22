@@ -2204,6 +2204,10 @@ class App {
       this.ui.showToast('Please enter a valid bid amount', 'warning');
       return;
     }
+    if (amount > AuctionEngine.MAX_BID) {
+      this.ui.showToast(`⚠️ Max bid is ${AuctionEngine.MAX_BID.toLocaleString('en-IN')} pts`, 'error');
+      return;
+    }
 
     const result = this.engine.placeDirectBid(teamId, amount);
     if (result.success) {
@@ -3536,6 +3540,9 @@ class App {
       this.liveMatchEngine._swapStrike();
       this._saveLiveMatch();
       this._renderLiveMatchView();
+      // Play strike change sound and show animation
+      this.sounds.playStrikeChange();
+      this._showStrikeChangedToast();
       return true;
     }
 
@@ -3959,7 +3966,22 @@ class App {
     if (btn) {
       btn.style.borderColor = this._runOutSwapped ? 'rgba(245,158,11,0.4)' : 'rgba(99,102,241,0.3)';
       btn.style.color = this._runOutSwapped ? 'var(--accent-gold)' : 'var(--accent-indigo)';
-      btn.textContent = this._runOutSwapped ? '🔄 Strike Swapped' : '🔄 Swap Strike';
+      btn.textContent = this._runOutSwapped ? '⚡ Strike Swapped' : '🔄 Swap Strike';
+    }
+    // Play sound and show "Strike Changed" animation
+    this.sounds.playStrikeChange();
+    this._showStrikeChangedToast();
+  }
+
+  _showStrikeChangedToast() {
+    const toast = document.getElementById('strike-changed-toast');
+    if (toast) {
+      // Reset animation
+      toast.classList.remove('active');
+      void toast.offsetWidth; // force reflow
+      toast.classList.add('active');
+      // Auto-remove after animation
+      setTimeout(() => toast.classList.remove('active'), 1800);
     }
   }
 

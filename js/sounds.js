@@ -240,4 +240,48 @@ export class AuctionSounds {
       osc.stop(now + i * 0.2 + 0.15);
     }
   }
+
+  // ── Sound: Strike Change — Swoosh swap tone ──
+
+  playStrikeChange() {
+    if (this.muted) return;
+    const ctx = this._ensureCtx();
+    const now = ctx.currentTime;
+    const g = this._gain();
+
+    // Swoosh up
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(400, now);
+    osc1.frequency.linearRampToValueAtTime(900, now + 0.12);
+    gain1.gain.setValueAtTime(g * 0.3, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    osc1.connect(gain1).connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.2);
+
+    // Swoosh down
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(900, now + 0.12);
+    osc2.frequency.linearRampToValueAtTime(500, now + 0.25);
+    gain2.gain.setValueAtTime(g * 0.25, now + 0.12);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc2.connect(gain2).connect(ctx.destination);
+    osc2.start(now + 0.12);
+    osc2.stop(now + 0.35);
+
+    // Confirmation ding
+    const osc3 = ctx.createOscillator();
+    const gain3 = ctx.createGain();
+    osc3.type = 'sine';
+    osc3.frequency.setValueAtTime(1046.5, now + 0.25); // C6
+    gain3.gain.setValueAtTime(g * 0.2, now + 0.25);
+    gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    osc3.connect(gain3).connect(ctx.destination);
+    osc3.start(now + 0.25);
+    osc3.stop(now + 0.55);
+  }
 }

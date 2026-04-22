@@ -278,6 +278,11 @@ export class AuctionEngine {
     if (!team) return { success: false, error: 'Team not found' };
     if (team.squad.length >= 13) return { success: false, error: 'Squad full' };
 
+    // Max bid cap
+    if (amount > AuctionEngine.MAX_BID) {
+      return { success: false, error: `Bid exceeds max limit (${AuctionEngine.MAX_BID.toLocaleString('en-IN')} pts)` };
+    }
+
     // Amount must be >= base price
     if (amount < this.currentPlayer.basePrice) {
       return { success: false, error: 'Bid below base price' };
