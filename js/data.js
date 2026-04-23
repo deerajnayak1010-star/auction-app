@@ -119,6 +119,7 @@ export const PLAYERS_DATA = [
   { id: 98,  name: 'Ashwath Nakre',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Ashwath Nakre.png', basePrice: 1000 },
   { id: 99,  name: 'Arush Shetty',         role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Arush Shetty.png', basePrice: 1000 },
   { id: 100, name: 'Sam Nakre',            role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sam Nakre.png', basePrice: 1000 },
+  { id: 101, name: 'Dinesh Shetty',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Dinesh Shetty.png', basePrice: 1000 },
 ];
 
 export const ROLE_CONFIG = {
