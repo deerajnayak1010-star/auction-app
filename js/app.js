@@ -2,9 +2,9 @@
 // app.js — Main Controller, Routing & Events
 // ─────────────────────────────────────────────
 
-import { TEAMS_DATA, PLAYERS_DATA } from './data.js?v=2';
+import { TEAMS_DATA, PLAYERS_DATA, normalizePlayerCatalog } from './data.js?v=3';
 import { AuctionEngine } from './auction.js';
-import { UI } from './ui.js?v=4';
+import { UI } from './ui.js?v=5';
 import { WSClient } from './ws-client.js';
 import { AuctionSounds } from './sounds.js';
 import { CommentaryEngine } from './commentary.js';
@@ -110,23 +110,12 @@ class App {
     // Try to restore saved state
     await this.loadState();
 
-    // If no persisted player data was found, fall back to hardcoded defaults
-    if (!this.allPlayers || this.allPlayers.length === 0) {
-      this.allPlayers = PLAYERS_DATA.map(player => ({ ...player }));
-    } else {
-      // Merge any NEW players from PLAYERS_DATA that aren't in the persisted list.
-      // This ensures new entries added to data.js appear even when the server DB
-      // has a stale snapshot.
-      const existingNames = new Set(this.allPlayers.map(p => p.name.toLowerCase()));
-      const newPlayers = PLAYERS_DATA.filter(p => !existingNames.has(p.name.toLowerCase()));
-      if (newPlayers.length > 0) {
-        const maxId = this.allPlayers.reduce((max, p) => Math.max(max, p.id), 0);
-        newPlayers.forEach((p, i) => {
-          this.allPlayers.push({ ...p, id: maxId + 1 + i });
-        });
-        console.log(`[App] Merged ${newPlayers.length} new player(s) from PLAYERS_DATA`);
-        this.saveState({ immediate: true });
-      }
+    const normalizedPlayers = normalizePlayerCatalog(this.allPlayers);
+    const playerCatalogChanged = JSON.stringify(normalizedPlayers) !== JSON.stringify(this.allPlayers || []);
+    this.allPlayers = normalizedPlayers;
+    if (playerCatalogChanged) {
+      console.log(`[App] Player catalog synchronized (${this.allPlayers.length} players)`);
+      this.saveState({ immediate: this.isLoggedIn });
     }
 
     await this.backgroundMedia.init();
@@ -713,7 +702,7 @@ class App {
   _getPlayerCatalog() {
     return Array.isArray(this.allPlayers) && this.allPlayers.length
       ? this.allPlayers
-      : PLAYERS_DATA.map(player => ({ ...player }));
+      : normalizePlayerCatalog(PLAYERS_DATA);
   }
 
   _normalizePlayerRecord(player = {}) {
@@ -727,6 +716,8 @@ class App {
       basePrice: Number(player?.basePrice) || 0,
       isWK: !!player?.isWK,
       image: player?.image || '',
+      detailImage: player?.detailImage || player?.image || '',
+      imageDisplay: player?.imageDisplay || '',
     };
   }
 
@@ -761,6 +752,7 @@ class App {
       return false;
     }
     const maxId = this.allPlayers.reduce((max, p) => Math.max(max, p.id), 0);
+    const uploadedImage = this._pendingPlayerImage || '';
     const newPlayer = {
       id: maxId + 1,
       name: data.name,
@@ -770,7 +762,8 @@ class App {
       bowling: data.bowling,
       basePrice: data.basePrice,
       isWK: data.isWK,
-      image: this._pendingPlayerImage || '',
+      image: uploadedImage,
+      detailImage: uploadedImage,
     };
     this.allPlayers.push(newPlayer);
     this._pendingPlayerImage = null;
@@ -808,6 +801,7 @@ class App {
     player.isWK = data.isWK;
     if (this._pendingPlayerImage) {
       player.image = this._pendingPlayerImage;
+      player.detailImage = this._pendingPlayerImage;
     }
     this._pendingPlayerImage = null;
 
@@ -1426,8 +1420,7 @@ class App {
     // Open Add Player modal
     // Copy public player pool link
     if (target.id === 'copy-player-pool-link-btn') {
-      const baseUrl = 'https://deerajnayak1010-star.github.io/auction-app/';
-      const publicUrl = baseUrl + 'players.html';
+      const publicUrl = new URL('players.html', window.location.href).toString();
       navigator.clipboard.writeText(publicUrl).then(() => {
         this.ui.showToast('✅ Public player pool link copied!', 'success');
         target.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!`;
@@ -2450,10 +2443,10 @@ class App {
       { teamAId: pB[1][0], teamBId: pB[1][1], group: 'B' },
       { teamAId: pA[2][0], teamBId: pA[2][1], group: 'A' },
       { teamAId: pB[2][0], teamBId: pB[2][1], group: 'B' },
-    ];
-    const day2 = [
       { teamAId: pA[3][0], teamBId: pA[3][1], group: 'A' },
       { teamAId: pB[3][0], teamBId: pB[3][1], group: 'B' },
+    ];
+    const day2 = [
       { teamAId: pA[4][0], teamBId: pA[4][1], group: 'A' },
       { teamAId: pB[4][0], teamBId: pB[4][1], group: 'B' },
       { teamAId: pA[5][0], teamBId: pA[5][1], group: 'A' },
@@ -2539,8 +2532,8 @@ class App {
     }
 
     // Time slots: each match = 1 hour, starting 8:30 AM
-    const day1Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30'];
-    const day2Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30'];
+    const day1Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30','2:30 – 3:30','3:30 – 4:30'];
+    const day2Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30'];
 
     // Round-robin pairs for 4 teams [0,1,2,3]
     // Round 1: 0v1, 2v3  |  Round 2: 0v2, 1v3  |  Round 3: 0v3, 1v2
@@ -2553,9 +2546,8 @@ class App {
     const pA = rrPairs(gd.groupA);
     const pB = rrPairs(gd.groupB);
 
-    // Day 1 (6 matches): Interleave A,B from Round 1 & 2
-    // Day 2 (6 matches): Interleave A,B from Round 2 & 3
-    // Ordering ensures no team plays back-to-back (groups alternate)
+    // Day 1 (8 matches): Interleave A,B from Round 1, 2 & start of 3
+    // Day 2 (4 matches): Remaining league + Knockouts after
     const day1 = [
       { pair: pA[0], group: 'A' }, // R1-M1
       { pair: pB[0], group: 'B' }, // R1-M1
@@ -2563,10 +2555,10 @@ class App {
       { pair: pB[1], group: 'B' }, // R1-M2
       { pair: pA[2], group: 'A' }, // R2-M1
       { pair: pB[2], group: 'B' }, // R2-M1
-    ];
-    const day2 = [
       { pair: pA[3], group: 'A' }, // R2-M2
       { pair: pB[3], group: 'B' }, // R2-M2
+    ];
+    const day2 = [
       { pair: pA[4], group: 'A' }, // R3-M1
       { pair: pB[4], group: 'B' }, // R3-M1
       { pair: pA[5], group: 'A' }, // R3-M2
@@ -2576,8 +2568,8 @@ class App {
     const scheduled = [...day1, ...day2];
 
     return scheduled.map((s, i) => {
-      const dayIdx = i < 6 ? 0 : 1;
-      const slotIdx = dayIdx === 0 ? i : i - 6;
+      const dayIdx = i < 8 ? 0 : 1;
+      const slotIdx = dayIdx === 0 ? i : i - 8;
       const times = dayIdx === 0 ? day1Times : day2Times;
       return {
         matchId: `match-${i + 1}`,
@@ -3380,10 +3372,10 @@ class App {
 
     // Also add knockout matches (match-13 through match-16) — always TBD until league is done
     const knockoutSlots = [
-      { id: 'match-13', label: 'Qualifier 1', desc: 'A1 vs B1', time: '2:30 – 3:30' },
-      { id: 'match-14', label: 'Eliminator', desc: 'A2 vs B2', time: '3:30 – 4:30' },
-      { id: 'match-15', label: 'Qualifier 2', desc: 'Loser Q1 vs Winner Elim', time: '4:30 – 5:30' },
-      { id: 'match-16', label: 'Final', desc: 'Winner Q1 vs Winner Q2', time: '5:30 – 6:30' },
+      { id: 'match-13', label: 'Qualifier 1', desc: 'A1 vs B1', time: '12:30 – 1:30' },
+      { id: 'match-14', label: 'Eliminator', desc: 'A2 vs B2', time: '1:30 – 2:30' },
+      { id: 'match-15', label: 'Qualifier 2', desc: 'Loser Q1 vs Winner Elim', time: '2:30 – 3:30' },
+      { id: 'match-16', label: 'Final', desc: 'Winner Q1 vs Winner Q2', time: '3:30 – 4:30' },
     ];
 
     // TBD placeholder team

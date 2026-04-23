@@ -1765,6 +1765,22 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
   box-shadow: var(--shadow-md);
 }
 
+.player-pool-card--poster {
+  padding: 12px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.player-pool-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.player-pool-card--poster .player-pool-card-body {
+  padding-top: 12px;
+}
+
 .player-initials {
   width: 48px;
   height: 48px;
@@ -1801,6 +1817,60 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
   font-size: 0.7rem;
   color: var(--accent-gold);
   font-weight: 600;
+}
+
+.player-pool-card--poster .player-name {
+  white-space: normal;
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.player-pool-card--poster .player-meta {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.player-poster-note {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--text-3);
+}
+
+.player-pool-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 10 / 16;
+  border-radius: calc(var(--radius-md) - 2px);
+  overflow: hidden;
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  background:
+    radial-gradient(circle at top, rgba(99, 102, 241, 0.16), transparent 48%),
+    rgba(5, 10, 27, 0.95);
+  cursor: pointer;
+}
+
+.player-pool-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center top;
+  display: block;
+}
+
+.player-pool-media-overlay {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 14px 12px 12px;
+  background: linear-gradient(180deg, transparent, rgba(2, 6, 23, 0.92));
+  color: #e2e8f0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.player-pool-media:hover .player-pool-media-overlay {
+  opacity: 1;
 }
 
 .pool-footer {
@@ -3416,9 +3486,12 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; font-weight: 700; }
 .player-img-modal-content img {
   width: 100%;
   max-height: 480px;
-  object-fit: cover;
-  object-position: top;
+  object-fit: contain;
+  object-position: center top;
   display: block;
+  background:
+    radial-gradient(circle at top, rgba(99, 102, 241, 0.16), transparent 42%),
+    rgba(5, 10, 27, 0.98);
 }
 
 .player-img-modal-x {

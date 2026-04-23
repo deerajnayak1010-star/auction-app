@@ -2,7 +2,7 @@
 // ui.js — UI Rendering for all views
 // ─────────────────────────────────────────────
 
-import { ROLE_CONFIG, LOCATION_CONFIG } from './data.js?v=2';
+import { ROLE_CONFIG, LOCATION_CONFIG, getPlayerDetailImage, isPlayerDetailPoster } from './data.js?v=3';
 import { AuctionEngine } from './auction.js';
 
 /** Get player initials (first letter of first + last name) */
@@ -10,6 +10,17 @@ function getInitials(name) {
   const parts = name.split(' ');
   if (parts.length === 1) return parts[0][0].toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function inferImageExtension(src = '') {
+  if (src.startsWith('data:image/png')) return '.png';
+  if (src.startsWith('data:image/webp')) return '.webp';
+  if (src.startsWith('data:image/gif')) return '.gif';
+  if (src.startsWith('data:image/jpeg') || src.startsWith('data:image/jpg')) return '.jpg';
+  if (src.toLowerCase().includes('.png')) return '.png';
+  if (src.toLowerCase().includes('.webp')) return '.webp';
+  if (src.toLowerCase().includes('.gif')) return '.gif';
+  return '.jpg';
 }
 
 function renderRulesPremiumView() {
@@ -1130,8 +1141,11 @@ export class UI {
         <div class="players-grid player-select-grid">
           ${filtered.map((player, index) => {
             const role = ROLE_CONFIG[player.role] || {};
+            const detailImage = getPlayerDetailImage(player);
+            const previewImage = player.image || detailImage;
+            const isPosterCard = isPlayerDetailPoster(player);
             const isSelected = selectedPlayerIds.has(player.name);
-            const serialNo = sorted.findIndex(p => p.name === player.name) + 1;
+            const serialNo = sorted.findIndex((entry) => entry.name === player.name) + 1;
             return `
               <div class="player-pool-card player-select-item ${isSelected ? 'ps-selected' : ''}" data-player-name="${player.name}">
                 <div class="player-select-card-toolbar">
@@ -1145,7 +1159,7 @@ export class UI {
                   </div>
                 </div>
                 <div class="player-initials" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}88); overflow: hidden; width:56px; height:56px;">
-                  ${player.image ? `<img src="${player.image}" alt="${player.name}" style="width:100%;height:100%;object-fit:cover;object-position:top;">` : getInitials(player.name)}
+                  ${previewImage ? `<img src="${previewImage}" alt="${player.name}" style="width:100%;height:100%;object-fit:cover;object-position:top;">` : getInitials(player.name)}
                 </div>
                 <div class="player-name">${player.name}</div>
                 <div class="player-meta">
@@ -1558,15 +1572,18 @@ export class UI {
         <div class="players-grid">
           ${filtered.map((player, index) => {
             const role = ROLE_CONFIG[player.role] || {};
+            const detailImage = getPlayerDetailImage(player);
+            const previewImage = player.image || detailImage;
+            const isPosterCard = isPlayerDetailPoster(player);
             // Get original serial number from sorted full list
-            const serialNo = sorted.findIndex(p => p.name === player.name) + 1;
+            const serialNo = sorted.findIndex((entry) => entry.name === player.name) + 1;
             return `
               <div class="player-pool-card" style="position:relative;">
                 <button class="player-edit-btn" type="button" data-player-edit-id="${player.id}" title="Edit player">✏️</button>
                 <div class="player-serial-no">${serialNo}</div>
-                <div class="player-initials player-img-trigger" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}88); overflow: hidden; width:64px; height:64px; cursor:pointer;" data-player-img="${player.image || ''}" data-player-name="${player.name}" title="View Image">
+                <div class="player-initials player-img-trigger" style="background: linear-gradient(135deg, ${role.color || '#6366f1'}, ${role.color || '#6366f1'}88); overflow: hidden; width:64px; height:64px; cursor:${detailImage ? 'pointer' : 'default'};" data-player-img="${detailImage}" data-player-name="${player.name}" title="${detailImage ? 'View Image' : ''}">
                   ${player.image ? `<img src="${player.image}" alt="${player.name}" style="width:100%;height:100%;object-fit:cover;object-position:top;">` : getInitials(player.name)}
-                  ${player.image ? '<div class="player-img-overlay">🔍</div>' : ''}
+                  ${detailImage ? '<div class="player-img-overlay">🔍</div>' : ''}
                 </div>
                 <div class="player-name">${player.name}</div>
                 <div class="player-meta">
@@ -1600,8 +1617,45 @@ export class UI {
       </div>
     `;
 
+    // All cards use uniform circular avatar layout; poster images viewable via click popup
+
     // Bind image popup events
     this._bindImagePopup();
+  }
+
+  _enhancePosterPlayerCards(players = []) {
+    const playerMap = new Map(players.map((player) => [player.id, player]));
+
+    document.querySelectorAll('.player-pool-card--poster').forEach((card) => {
+      const editBtn = card.querySelector('[data-player-edit-id]');
+      const playerId = Number(editBtn?.dataset.playerEditId);
+      const player = playerMap.get(playerId);
+      if (!player) return;
+
+      const role = ROLE_CONFIG[player.role] || {};
+      const detailImage = getPlayerDetailImage(player);
+      if (!detailImage) return;
+
+      card.innerHTML = `
+        ${editBtn ? editBtn.outerHTML : ''}
+        <div class="player-serial-no">${card.querySelector('.player-serial-no')?.textContent || ''}</div>
+        <div class="player-pool-media player-img-trigger" data-player-img="${detailImage}" data-player-name="${player.name}" title="View full player card">
+          <img src="${detailImage}" alt="${player.name}">
+          <div class="player-pool-media-overlay">
+            <span>Tap to view full player card</span>
+          </div>
+        </div>
+        <div class="player-pool-card-body">
+          <div class="player-name">${player.name}</div>
+          <div class="player-meta">
+            <span class="badge badge-role" style="background: ${role.color}22; color: ${role.color}">${role.icon || ''} ${player.role}</span>
+            ${player.isWK ? '<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;">🧤 WK</span>' : ''}
+          </div>
+          <div class="player-poster-note">Player details are shown in the uploaded poster image.</div>
+          <div class="player-base">Base: ${fmt(player.basePrice)}</div>
+        </div>
+      `;
+    });
   }
 
   /** Bind click events for player image popup */
@@ -1644,7 +1698,7 @@ export class UI {
       if (!currentImgSrc) return;
       const a = document.createElement('a');
       a.href = currentImgSrc;
-      a.download = (currentImgName || 'player') + '_photo' + (currentImgSrc.includes('.png') ? '.png' : '.jpg');
+      a.download = (currentImgName || 'player') + '_photo' + inferImageExtension(currentImgSrc);
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -3461,19 +3515,19 @@ export class UI {
         { pair: pA[0], group: 'A' }, { pair: pB[0], group: 'B' },
         { pair: pA[1], group: 'A' }, { pair: pB[1], group: 'B' },
         { pair: pA[2], group: 'A' }, { pair: pB[2], group: 'B' },
+        { pair: pA[3], group: 'A' }, { pair: pB[3], group: 'B' },
       ];
       const day2 = [
-        { pair: pA[3], group: 'A' }, { pair: pB[3], group: 'B' },
         { pair: pA[4], group: 'A' }, { pair: pB[4], group: 'B' },
         { pair: pA[5], group: 'A' }, { pair: pB[5], group: 'B' },
       ];
       const scheduled = [...day1, ...day2];
-      const day1Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30'];
-      const day2Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30'];
+      const day1Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30','2:30 – 3:30','3:30 – 4:30'];
+      const day2Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30'];
 
       allFixtures = scheduled.map((s, i) => {
-        const dayIdx = i < 6 ? 0 : 1;
-        const slotIdx = dayIdx === 0 ? i : i - 6;
+        const dayIdx = i < 8 ? 0 : 1;
+        const slotIdx = dayIdx === 0 ? i : i - 8;
         const times = dayIdx === 0 ? day1Times : day2Times;
         return { matchNum: i + 1, teamA: getTeam(s.pair[0]), teamB: getTeam(s.pair[1]), group: s.group, day: dayIdx + 1, date: dayIdx === 0 ? '25 April 2026' : '26 April 2026', time: times[slotIdx] || '' };
       });
@@ -3483,10 +3537,10 @@ export class UI {
 
       const koData = opts.knockoutMatches || [];
       const koMeta = [
-        { label: 'Qualifier 1', desc: 'A1 vs B1 — Winner → Final', matchId: 'match-13', time: '2:30 – 3:30', accent: '#f59e0b' },
-        { label: 'Eliminator', desc: 'A2 vs B2 — Loser eliminated', matchId: 'match-14', time: '3:30 – 4:30', accent: '#ef4444' },
-        { label: 'Qualifier 2', desc: 'Loser Q1 vs Winner Eliminator', matchId: 'match-15', time: '4:30 – 5:30', accent: '#6366f1' },
-        { label: '🏆 FINAL', desc: 'Winner Q1 vs Winner Q2', matchId: 'match-16', time: '5:30 – 6:30', accent: '#f59e0b' },
+        { label: 'Qualifier 1', desc: 'A1 vs B1 — Winner → Final', matchId: 'match-13', time: '12:30 – 1:30', accent: '#f59e0b' },
+        { label: 'Eliminator', desc: 'A2 vs B2 — Loser eliminated', matchId: 'match-14', time: '1:30 – 2:30', accent: '#ef4444' },
+        { label: 'Qualifier 2', desc: 'Loser Q1 vs Winner Eliminator', matchId: 'match-15', time: '2:30 – 3:30', accent: '#6366f1' },
+        { label: '🏆 FINAL', desc: 'Winner Q1 vs Winner Q2', matchId: 'match-16', time: '3:30 – 4:30', accent: '#f59e0b' },
       ];
       knockouts = koMeta.map(ko => {
         const resolved = koData.find(m => m.matchId === ko.matchId);
@@ -3623,7 +3677,7 @@ export class UI {
 
           <div class="fixtures-day-section">
             <h3 class="fixtures-day-label">🗓️ Day 2 — 26 April 2026 (League + Knockouts) <span style="font-size:0.7rem; color:var(--text-4); font-weight:500; margin-left:8px;">↕ insert and shift the full schedule</span></h3>
-            <div style="font-size:0.8rem;color:var(--text-3);text-align:center;margin-bottom:12px;">🏏 League: 8:30 AM – 2:30 PM &nbsp;•&nbsp; 🔥 Knockouts: 2:30 – 6:30 PM</div>
+            <div style="font-size:0.8rem;color:var(--text-3);text-align:center;margin-bottom:12px;">🏏 League: 8:30 AM – 12:30 PM &nbsp;•&nbsp; 🔥 Knockouts: 12:30 – 4:30 PM</div>
             <div class="fixtures-match-grid" id="fixtures-day2-grid" data-day="2">
               ${day2Fixtures.map(renderMatch).join('')}
             </div>
@@ -3631,7 +3685,7 @@ export class UI {
 
           <!-- Knockout Stage -->
           <div class="fixtures-day-section">
-            <h3 class="fixtures-day-label">🔥 Knockout Stage — 26 April 2026 (2:30 – 6:30 PM)</h3>
+            <h3 class="fixtures-day-label">🔥 Knockout Stage — 26 April 2026 (12:30 – 4:30 PM)</h3>
             <div class="fixtures-match-grid">
               ${knockouts.map((ko, idx) => {
                 const tA = ko.teamA;

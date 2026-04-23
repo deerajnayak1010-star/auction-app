@@ -248,6 +248,59 @@
     .pp-avatar img {
       width: 100%; height: 100%; object-fit: cover; object-position: top;
     }
+    .pp-card-poster {
+      text-align: left;
+      padding: 14px;
+    }
+    .pp-poster {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 10 / 16;
+      margin-bottom: 14px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(99,102,241,0.22);
+      background:
+        radial-gradient(circle at top, rgba(59,130,246,0.16), transparent 45%),
+        rgba(4, 8, 22, 0.96);
+      cursor: pointer;
+    }
+    .pp-poster img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center top;
+      display: block;
+    }
+    .pp-poster-overlay {
+      position: absolute;
+      inset: auto 0 0;
+      padding: 14px 12px 12px;
+      background: linear-gradient(180deg, transparent, rgba(2,6,23,0.92));
+      color: #e2e8f0;
+      font-size: 0.72rem;
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .pp-poster:hover .pp-poster-overlay { opacity: 1; }
+    .pp-card-poster .pp-name {
+      margin-bottom: 10px;
+      font-size: 1.02rem;
+      line-height: 1.2;
+    }
+    .pp-card-poster .pp-badges {
+      justify-content: flex-start;
+      margin-bottom: 10px;
+    }
+    .pp-card-poster .pp-base {
+      margin-top: 10px;
+    }
+    .pp-poster-note {
+      font-size: 0.76rem;
+      line-height: 1.45;
+      color: var(--text-2);
+    }
     .pp-name {
       font-family: 'Outfit', sans-serif;
       font-size: 1rem;
@@ -500,7 +553,7 @@
   <div class="pp-instructions-card">
     <span class="pp-instructions-icon">💡</span>
     <div class="pp-instructions-text">
-      <strong>How to view & download player photos:</strong> Tap on any player's profile picture to open a full-size view. Use the <strong>📥 Download</strong> button to save the image to your device. You can also filter by role or search by name.
+      <strong>How to view & download player images:</strong> Tap on any player's profile picture or poster card to open a full-size view. Use the <strong>📥 Download</strong> button to save the image to your device. You can also filter by role or search by name.
     </div>
   </div>
 </div>
@@ -522,9 +575,9 @@
   <p style="margin-top:6px; font-size:0.7rem;">This is a read-only public view of the player pool</p>
 </div>
 
-<div class="pp-readonly-badge">🔒 <span>Read-Only</span> · Public View</div>
+<div class="pp-readonly-badge" id="pp-readonly-badge">🔒 <span>Read-Only</span> · Public View</div>
 
-<script type="module">
+<script type="text/plain" id="pp-legacy-script">
   import { PLAYERS_DATA } from './js/data.js?v=2';
 
   const ROLE_CONFIG = {
@@ -662,5 +715,234 @@
   });
 </script>
 
+<script type="module">
+  import {
+    PLAYERS_DATA,
+    normalizePlayerCatalog,
+    getPlayerDetailImage,
+    isPlayerDetailPoster
+  } from './js/data.js?v=3';
+
+  const ROLE_CONFIG = {
+    Batsman: { icon: '🏏', color: '#3b82f6' },
+    Bowler: { icon: '🎯', color: '#ef4444' },
+    'All-Rounder': { icon: '⭐', color: '#8b5cf6' },
+    'Wicket-Keeper': { icon: '🧤', color: '#10b981' },
+  };
+
+  const roles = ['All', 'Batsman', 'Bowler', 'All-Rounder', 'Wicket-Keeper'];
+  const syncBadge = document.getElementById('pp-readonly-badge');
+  const gridEl = document.getElementById('pp-grid');
+  const statsEl = document.getElementById('pp-stats');
+  const filtersEl = document.getElementById('pp-filters');
+  const searchEl = document.getElementById('pp-search');
+
+  const imgModal = document.getElementById('pp-img-modal');
+  const imgFull = document.getElementById('pp-img-full');
+  const imgName = document.getElementById('pp-img-name');
+  const imgDownload = document.getElementById('pp-img-download');
+  const imgClose = document.getElementById('pp-img-close');
+
+  let currentFilter = 'All';
+  let searchQuery = '';
+  let allPlayers = [];
+  let lastUpdatedAt = 0;
+
+  function getInitials(name) {
+    return name.split(' ').map((word) => word[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  function fmt(n) {
+    return n >= 1000 ? (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'K' : n;
+  }
+
+  function getImageExtension(src = '') {
+    if (src.startsWith('data:image/png')) return '.png';
+    if (src.startsWith('data:image/webp')) return '.webp';
+    if (src.startsWith('data:image/gif')) return '.gif';
+    if (src.startsWith('data:image/jpeg') || src.startsWith('data:image/jpg')) return '.jpg';
+    if (src.toLowerCase().includes('.png')) return '.png';
+    if (src.toLowerCase().includes('.webp')) return '.webp';
+    if (src.toLowerCase().includes('.gif')) return '.gif';
+    return '.jpg';
+  }
+
+  function sortPlayers(players) {
+    return [...players].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  }
+
+  function updateBadge(mode) {
+    if (!syncBadge) return;
+
+    if (mode === 'live') {
+      syncBadge.innerHTML = '🔒 <span>Read-Only</span> · Live Saved State';
+      return;
+    }
+
+    if (mode === 'fallback') {
+      syncBadge.innerHTML = '🔒 <span>Read-Only</span> · Seed + Saved Merge';
+      return;
+    }
+
+    syncBadge.innerHTML = '🔒 <span>Read-Only</span> · Static Fallback';
+  }
+
+  function renderStats() {
+    const batsmen = allPlayers.filter((player) => player.role === 'Batsman').length;
+    const bowlers = allPlayers.filter((player) => player.role === 'Bowler').length;
+    const allRounders = allPlayers.filter((player) => player.role === 'All-Rounder').length;
+    const wicketKeepers = allPlayers.filter((player) => player.isWK).length;
+
+    statsEl.innerHTML = `
+      <div class="pp-stat"><span class="pp-stat-num">${allPlayers.length}</span><span class="pp-stat-label">Total</span></div>
+      <div class="pp-stat"><span class="pp-stat-num">${batsmen}</span><span class="pp-stat-label">Batsmen</span></div>
+      <div class="pp-stat"><span class="pp-stat-num">${bowlers}</span><span class="pp-stat-label">Bowlers</span></div>
+      <div class="pp-stat"><span class="pp-stat-num">${allRounders}</span><span class="pp-stat-label">All-Rounders</span></div>
+      <div class="pp-stat"><span class="pp-stat-num">${wicketKeepers}</span><span class="pp-stat-label">Keepers</span></div>
+    `;
+  }
+
+  function renderFilters() {
+    filtersEl.innerHTML = roles.map((role) => `
+      <button class="pp-filter-btn ${currentFilter === role ? 'active' : ''}" data-role="${role}">
+        ${role === 'All' ? '📋 All' : role === 'Wicket-Keeper' ? '🧤 WK' : `${ROLE_CONFIG[role]?.icon || ''} ${role}`}
+      </button>
+    `).join('');
+  }
+
+  function renderGrid() {
+    let filtered = [...allPlayers];
+
+    if (currentFilter === 'Wicket-Keeper') {
+      filtered = filtered.filter((player) => player.isWK);
+    } else if (currentFilter !== 'All') {
+      filtered = filtered.filter((player) => player.role === currentFilter);
+    }
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((player) =>
+        player.name.toLowerCase().includes(query) ||
+        player.location.toLowerCase().includes(query)
+      );
+    }
+
+    if (filtered.length === 0) {
+      gridEl.innerHTML = '<div class="pp-empty">No players found matching your criteria</div>';
+      return;
+    }
+
+    gridEl.innerHTML = filtered.map((player) => {
+      const role = ROLE_CONFIG[player.role] || { icon: '', color: '#6366f1' };
+      const detailImage = getPlayerDetailImage(player);
+      const previewImage = player.image || detailImage;
+      const isPosterCard = isPlayerDetailPoster(player);
+      const serialNo = allPlayers.findIndex((entry) => entry.name === player.name) + 1;
+      const abbr = (value) => !value || value === 'N/A'
+        ? '—'
+        : value.replace('Right ', 'R-').replace('Left ', 'L-').replace('Hand', 'H').replace('Arm', 'A');
+
+      return `
+        <div class="pp-card ${isPosterCard ? 'pp-card-poster' : ''}">
+          <div class="pp-serial">${serialNo}</div>
+          ${isPosterCard ? `
+            <div class="pp-poster" data-pp-img="${detailImage}" data-pp-name="${player.name}">
+              <img src="${detailImage}" alt="${player.name}">
+              <div class="pp-poster-overlay">Tap to view full player card</div>
+            </div>
+          ` : `
+            <div class="pp-avatar ${detailImage ? 'has-image' : ''}" style="background: linear-gradient(135deg, ${role.color}, ${role.color}88);" ${detailImage ? `data-pp-img="${detailImage}" data-pp-name="${player.name}"` : ''}>
+              ${previewImage ? `<img src="${previewImage}" alt="${player.name}">` : getInitials(player.name)}
+            </div>
+          `}
+          <div class="pp-name">${player.name}</div>
+          <div class="pp-badges">
+            <span class="pp-badge" style="background:${role.color}22;color:${role.color};">${role.icon} ${player.role}</span>
+            ${player.isWK ? '<span class="pp-badge" style="background:rgba(16,185,129,0.15);color:#10b981;">🧤 WK</span>' : ''}
+          </div>
+          ${isPosterCard
+            ? '<div class="pp-poster-note">Player details are shown in the uploaded poster image.</div>'
+            : `<div class="pp-meta">📍 ${player.location} · ${abbr(player.batting)} / ${abbr(player.bowling)}</div>`}
+          <div class="pp-base">Base: ${fmt(player.basePrice)} pts</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderAll() {
+    renderStats();
+    renderFilters();
+    renderGrid();
+  }
+
+  async function loadPlayers({ silent = false } = {}) {
+    try {
+      const response = await fetch('./api/state', { cache: 'no-store' });
+      const contentType = response.headers.get('content-type') || '';
+      const raw = response.ok && contentType.includes('application/json')
+        ? await response.text()
+        : null;
+      const state = raw && raw !== 'null' ? JSON.parse(raw) : null;
+
+      if (state?.updatedAt && state.updatedAt === lastUpdatedAt && allPlayers.length > 0) {
+        updateBadge('live');
+        return;
+      }
+
+      const sourcePlayers = state?.allPlayers?.length ? state.allPlayers : PLAYERS_DATA;
+      allPlayers = sortPlayers(normalizePlayerCatalog(sourcePlayers));
+      lastUpdatedAt = Number(state?.updatedAt) || lastUpdatedAt;
+      renderAll();
+      updateBadge(state?.allPlayers?.length ? 'live' : 'fallback');
+    } catch (error) {
+      if (!allPlayers.length) {
+        allPlayers = sortPlayers(normalizePlayerCatalog(PLAYERS_DATA));
+        renderAll();
+      }
+      updateBadge('static');
+      if (!silent) console.warn('Player Pool fallback mode:', error);
+    }
+  }
+
+  filtersEl.addEventListener('click', (event) => {
+    const button = event.target.closest('.pp-filter-btn');
+    if (!button) return;
+    currentFilter = button.dataset.role;
+    renderFilters();
+    renderGrid();
+  });
+
+  searchEl.addEventListener('input', (event) => {
+    searchQuery = event.target.value;
+    renderGrid();
+  });
+
+  gridEl.addEventListener('click', (event) => {
+    const trigger = event.target.closest('[data-pp-img]');
+    if (!trigger) return;
+    const src = trigger.dataset.ppImg;
+    const name = trigger.dataset.ppName;
+    imgFull.src = src;
+    imgFull.alt = name;
+    imgName.textContent = name;
+    imgDownload.href = src;
+    imgDownload.download = name.replace(/\s+/g, '_') + getImageExtension(src);
+    imgModal.classList.add('active');
+  });
+
+  imgClose.addEventListener('click', () => imgModal.classList.remove('active'));
+  imgModal.addEventListener('click', (event) => {
+    if (event.target === imgModal) imgModal.classList.remove('active');
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') imgModal.classList.remove('active');
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) loadPlayers({ silent: true });
+  });
+
+  await loadPlayers();
+  window.setInterval(() => loadPlayers({ silent: true }), 10000);
+</script>
 </body>
 </html>

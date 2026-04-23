@@ -1,137 +1,177 @@
-// ─────────────────────────────────────────────
-// data.js — Local Cricket Teams & Players
-// ─────────────────────────────────────────────
+// data.js - Local Cricket Teams & Players
 
 export const TEAMS_DATA = [
-  { id: 'aj',   name: 'Addalu Javaner',             shortName: 'AJ',   color: '#004BA0', textColor: '#ffffff', purse: 100000, owner: 'Prashanth Acharya',  iconPlayer: 'Akshay Acharya',      logo: 'images/teams/ADDALU_JAVANER_Logo.png',              ownerImage: 'images/teams/PRASHANTH ACHARYA_Owner.png', iconPlayerImage: 'images/teams/Akshay Acharya.png' },
-  { id: 'bfcl', name: 'B.F.C Legends',              shortName: 'BFCL', color: '#FFCB05', textColor: '#1a1a1a', purse: 100000, owner: 'Suraj Shetty',       iconPlayer: 'Deepak Hegde',        logo: 'images/teams/B.F.C LEGENDS_Logo.png',               ownerImage: 'images/teams/Suraj Shetty_Owner.png',      iconPlayerImage: 'images/teams/Deepak Hegde.png' },
-  { id: 'bfc',  name: 'B.F.C',                      shortName: 'BFC',  color: '#D4213D', textColor: '#ffffff', purse: 100000, owner: 'Deekshith Hegde',    iconPlayer: 'Sunil Shetty',        logo: 'images/teams/B.F.C_logo.png',                      ownerImage: 'images/teams/DEEKSHITH HEGDE_Owner.png',   iconPlayerImage: 'images/teams/SUNIL SHETTY.png' },
-  { id: 'ysc',  name: 'Yuva Sanghama Cricketers',   shortName: 'YSC',  color: '#3A225D', textColor: '#ffffff', purse: 100000, owner: 'Suresh',             iconPlayer: 'Santhosh',            logo: 'images/teams/YUVA SANGHAMA CRICKETERS_logo.png',    ownerImage: 'images/teams/SURESH_Owner.png',            iconPlayerImage: 'images/teams/SANTHOSH.png' },
-  { id: 'dfc',  name: 'D.F.C Nakre',                shortName: 'DFC',  color: '#10b981', textColor: '#ffffff', purse: 100000, owner: 'Nitesh',             iconPlayer: 'Rakesh',              logo: 'images/teams/D.F.C NAKRE_Logo.png',                 ownerImage: 'images/teams/NITESH_Owner.png',            iconPlayerImage: 'images/teams/RAKESH.png' },
-  { id: 'nen',  name: 'New Eleven Nakre',            shortName: 'NEN',  color: '#FF822A', textColor: '#ffffff', purse: 100000, owner: 'Ajay',               iconPlayer: 'Prajwal',             logo: 'images/teams/NEW ELEVEN NAKRE_logo.png',            ownerImage: 'images/teams/AJAY_Owner.png',              iconPlayerImage: 'images/teams/PRAJWAL.png' },
-  { id: 'smcn', name: 'S.M.C.N',                    shortName: 'SMCN', color: '#EA1A85', textColor: '#ffffff', purse: 100000, owner: 'Suresh',             iconPlayer: 'Sri Ram',             logo: 'images/teams/S.M.C.N_logo.png',                    ownerImage: 'images/teams/SURESH _S.M.C.N_owner.png',   iconPlayerImage: 'images/teams/SRI RAM.png' },
-  { id: 'mc',   name: 'Maheshwara Cricketers',      shortName: 'MC',   color: '#0078BC', textColor: '#ffffff', purse: 100000, owner: 'Rakshan',            iconPlayer: 'Rakshith (Chippi)',   logo: 'images/teams/MAHESHWARA CRICKETERS_Logo.png',       ownerImage: 'images/teams/RAKSHAN_Owner.png',           iconPlayerImage: 'images/teams/RAKSHITH (CHIPPI).png' },
+  { id: 'aj',   name: 'Addalu Javaner',           shortName: 'AJ',   color: '#004BA0', textColor: '#ffffff', purse: 100000, owner: 'Prashanth Acharya', iconPlayer: 'Akshay Acharya',      logo: 'images/teams/ADDALU_JAVANER_Logo.png',           ownerImage: 'images/teams/PRASHANTH ACHARYA_Owner.png', iconPlayerImage: 'images/teams/Akshay Acharya.png' },
+  { id: 'bfcl', name: 'B.F.C Legends',            shortName: 'BFCL', color: '#FFCB05', textColor: '#1a1a1a', purse: 100000, owner: 'Suraj Shetty',      iconPlayer: 'Deepak Hegde',        logo: 'images/teams/B.F.C LEGENDS_Logo.png',            ownerImage: 'images/teams/Suraj Shetty_Owner.png',      iconPlayerImage: 'images/teams/Deepak Hegde.png' },
+  { id: 'bfc',  name: 'B.F.C',                    shortName: 'BFC',  color: '#D4213D', textColor: '#ffffff', purse: 100000, owner: 'Deekshith Hegde',   iconPlayer: 'Sunil Shetty',        logo: 'images/teams/B.F.C_logo.png',                   ownerImage: 'images/teams/DEEKSHITH HEGDE_Owner.png',   iconPlayerImage: 'images/teams/SUNIL SHETTY.png' },
+  { id: 'ysc',  name: 'Yuva Sanghama Cricketers', shortName: 'YSC',  color: '#3A225D', textColor: '#ffffff', purse: 100000, owner: 'Suresh',            iconPlayer: 'Santhosh',            logo: 'images/teams/YUVA SANGHAMA CRICKETERS_logo.png', ownerImage: 'images/teams/SURESH_Owner.png',            iconPlayerImage: 'images/teams/SANTHOSH.png' },
+  { id: 'dfc',  name: 'D.F.C Nakre',              shortName: 'DFC',  color: '#10b981', textColor: '#ffffff', purse: 100000, owner: 'Nitesh',            iconPlayer: 'Rakesh',              logo: 'images/teams/D.F.C NAKRE_Logo.png',              ownerImage: 'images/teams/NITESH_Owner.png',            iconPlayerImage: 'images/teams/RAKESH.png' },
+  { id: 'nen',  name: 'New Eleven Nakre',         shortName: 'NEN',  color: '#FF822A', textColor: '#ffffff', purse: 100000, owner: 'Ajay',              iconPlayer: 'Prajwal',             logo: 'images/teams/NEW ELEVEN NAKRE_logo.png',         ownerImage: 'images/teams/AJAY_Owner.png',              iconPlayerImage: 'images/teams/PRAJWAL.png' },
+  { id: 'smcn', name: 'S.M.C.N',                  shortName: 'SMCN', color: '#EA1A85', textColor: '#ffffff', purse: 100000, owner: 'Suresh',            iconPlayer: 'Sri Ram',             logo: 'images/teams/S.M.C.N_logo.png',                 ownerImage: 'images/teams/SURESH _S.M.C.N_owner.png',   iconPlayerImage: 'images/teams/SRI RAM.png' },
+  { id: 'mc',   name: 'Maheshwara Cricketers',    shortName: 'MC',   color: '#0078BC', textColor: '#ffffff', purse: 100000, owner: 'Rakshan',           iconPlayer: 'Rakshith (Chippi)',   logo: 'images/teams/MAHESHWARA CRICKETERS_Logo.png',    ownerImage: 'images/teams/RAKSHAN_Owner.png',           iconPlayerImage: 'images/teams/RAKSHITH (CHIPPI).png' },
 ];
 
 export const PLAYERS_DATA = [
-  // ── Batsmen (17) ──────────────────────────────
-  { id: 1,  name: 'Adarsh Nakre',         role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Adarsh Nakre.jpg', basePrice: 1000 },
-  { id: 2,  name: 'Arjun Acharya',        role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Arjun Acharya.jpg', basePrice: 1000 },
-  { id: 3,  name: 'Atheeth Kumar',         role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Atheeth Kumar.jpg', basePrice: 1000 },
-  { id: 4,  name: 'Deekshith Acharya',    role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Deekshith Acharya.jpg', basePrice: 1000 },
-  { id: 5,  name: 'Dinesh Nakre',          role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Dinesh Nakre.jpg', basePrice: 1000 },
-  { id: 6,  name: 'Kaushik',              role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Kaushik.jpg', basePrice: 1000 },
-  { id: 7,  name: 'Keshava',              role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Keshava.jpg', basePrice: 1000 },
-  { id: 8,  name: 'Kiran IK',             role: 'Batsman',     location: 'Others',      batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Kiran Ik.jpg', basePrice: 1000 },
-  { id: 9,  name: 'Krapal Dsouza',        role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Krapal Dsouza.jpg', basePrice: 1000 },
-  { id: 10, name: 'Manish IK',            role: 'Batsman',     location: 'Others',      batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Manish IK.jpg', basePrice: 1000 },
-  { id: 11, name: 'Nithin IK',            role: 'Batsman',     location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Nithin IK.jpg', basePrice: 1000 },
-  { id: 12, name: 'Prashanth Putthu',     role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Prashanth Putthu.jpg', basePrice: 1000 },
-  { id: 13, name: 'Praveen Kumar',        role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Praveen Kumar.jpg', basePrice: 1000 },
-  { id: 14, name: 'Rajesh Pollu',         role: 'Batsman',     location: 'Parapu',      batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Rajesh Pollu.jpg', basePrice: 1000 },
-  { id: 15, name: 'Sandeep Bandary',      role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/SANDEEP BANDARY.jpg', basePrice: 1000 },
-  { id: 16, name: 'Shashi IK',            role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Shashi IK.jpg', basePrice: 1000 },
-  { id: 17, name: 'Vighnesh Kotian',      role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Vighnesh Kottian.jpg', basePrice: 1000 },
+  // Batsmen
+  { id: 1,   name: 'Adarsh Nakre',         role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Adarsh Nakre.jpg', detailImage: 'images/Adarsh Nakre Poster.png', imageDisplay: 'poster', basePrice: 1000 },
+  { id: 101, name: 'Chiraj Nakre',         role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Chiraj Nakre Poster.png', detailImage: 'images/Chiraj Nakre Poster.png', imageDisplay: 'poster', basePrice: 1000 },
+  { id: 2,   name: 'Arjun Acharya',        role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Arjun Acharya.jpg', basePrice: 1000 },
+  { id: 3,   name: 'Atheeth Kumar',        role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Atheeth Kumar.jpg', basePrice: 1000 },
+  { id: 4,   name: 'Deekshith Acharya',    role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Deekshith Acharya.jpg', basePrice: 1000 },
+  { id: 5,   name: 'Dinesh Nakre',         role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Dinesh Nakre.jpg', basePrice: 1000 },
+  { id: 6,   name: 'Kaushik',              role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Kaushik.jpg', basePrice: 1000 },
+  { id: 7,   name: 'Keshava',              role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Keshava.jpg', basePrice: 1000 },
+  { id: 8,   name: 'Kiran IK',             role: 'Batsman',     location: 'Others',      batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Kiran Ik.jpg', basePrice: 1000 },
+  { id: 9,   name: 'Krapal Dsouza',        role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Krapal Dsouza.jpg', basePrice: 1000 },
+  { id: 10,  name: 'Manish IK',            role: 'Batsman',     location: 'Others',      batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Manish IK.jpg', basePrice: 1000 },
+  { id: 11,  name: 'Nithin IK',            role: 'Batsman',     location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Nithin IK.jpg', basePrice: 1000 },
+  { id: 12,  name: 'Prashanth Putthu',     role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Prashanth Putthu.jpg', basePrice: 1000 },
+  { id: 13,  name: 'Praveen Kumar',        role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Praveen Kumar.jpg', basePrice: 1000 },
+  { id: 14,  name: 'Rajesh Pollu',         role: 'Batsman',     location: 'Parapu',      batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Rajesh Pollu.jpg', basePrice: 1000 },
+  { id: 15,  name: 'Sandeep Bandary',      role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/SANDEEP BANDARY.jpg', basePrice: 1000 },
+  { id: 16,  name: 'Shashi IK',            role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Shashi IK.jpg', basePrice: 1000 },
+  { id: 17,  name: 'Vighnesh Kotian',      role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Vighnesh Kottian.jpg', basePrice: 1000 },
 
-  // ── Bowlers (8) ───────────────────────────────
-  { id: 18, name: 'Manish',               role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Manish.jpg', basePrice: 1000 },
-  { id: 19, name: 'Manish DFC',           role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Manish Nakre.jpg', basePrice: 1000 },
-  { id: 20, name: 'Prakash Kenchal',      role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Prakash Kenchal.jpg', basePrice: 1000 },
-  { id: 21, name: 'Ranjan',               role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Ranjan.jpg', basePrice: 1000 },
-  { id: 22, name: 'Santhosh Kumar',       role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Santosh Kumar.jpg', basePrice: 1000 },
-  { id: 23, name: 'Sujith Manigudde',     role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sujith Manigudde.jpg', basePrice: 1000 },
-  { id: 25, name: 'Vasanth',              role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Vasanth.jpg', basePrice: 1000 },
+  // Bowlers
+  { id: 18,  name: 'Manish',               role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Manish.jpg', basePrice: 1000 },
+  { id: 19,  name: 'Manish DFC',           role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Manish Nakre.jpg', basePrice: 1000 },
+  { id: 20,  name: 'Prakash Kenchal',      role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Prakash Kenchal.jpg', basePrice: 1000 },
+  { id: 21,  name: 'Ranjan',               role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Ranjan.jpg', basePrice: 1000 },
+  { id: 22,  name: 'Santhosh Kumar',       role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Santosh Kumar.jpg', basePrice: 1000 },
+  { id: 23,  name: 'Sujith Manigudde',     role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sujith Manigudde.jpg', basePrice: 1000 },
+  { id: 25,  name: 'Vasanth',              role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Vasanth.jpg', basePrice: 1000 },
 
-  // ── All-Rounders (60) ─────────────────────────
-  { id: 26, name: 'Abhishek',             role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Abhishek.jpg', basePrice: 1000 },
-  { id: 27, name: 'Adarsh Acharya',       role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Adarsh Acharya.jpg', basePrice: 1000 },
-  { id: 29, name: 'Adithya MJ',           role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Adithya MJ.jpg', basePrice: 1000 },
-  { id: 30, name: 'Ajay',                 role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Ajay.jpg', basePrice: 1000 },
-  { id: 31, name: 'Ajith Acharya',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Ajith Acharya.jpg', basePrice: 1000 },
-  { id: 32, name: 'Ajith',                role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Ajith.jpg', basePrice: 1000 },
-  { id: 33, name: 'Akshath Acharya',      role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Aksasth Acharya.jpg', basePrice: 1000 },
-  { id: 34, name: 'Arun Shetty',          role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Arun Shetty.jpg', basePrice: 1000 },
-  { id: 35, name: 'Ashwath',              role: 'All-Rounder', location: 'Nakre Padav', batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Ashwath.jpg', basePrice: 1000 },
-  { id: 36, name: 'Charan IK',            role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Charan IK.jpg', basePrice: 1000 },
-  { id: 37, name: 'Deepu IK',             role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Deepu Ik.jpg', basePrice: 1000 },
-  { id: 38, name: 'Deeraj Hegde',         role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Deeraj Hegde.jpg', basePrice: 1000 },
-  { id: 39, name: 'Dinesh',               role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Dinesh.jpg', basePrice: 1000 },
-  { id: 40, name: 'Ganesh Acharya',       role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Ganesh Acharya.jpg', basePrice: 1000 },
-  { id: 41, name: 'Ganesh Ponnedaguri',   role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Ganesh.jpg', basePrice: 1000 },
-  { id: 42, name: 'Girish Posanottu',     role: 'All-Rounder', location: 'Nakre',       batting: 'Left Hand',  bowling: 'Left Arm',  isWK: false, image: 'images/Girish Posanottu.jpg', basePrice: 1000 },
-  { id: 43, name: 'Harish Shetty',        role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Harish Shetty.jpg', basePrice: 1000 },
-  { id: 44, name: 'Harshith',             role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Harshith.jpg', basePrice: 1000 },
-  { id: 45, name: 'Jags Shetty',          role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Jags Shetty.jpg', basePrice: 1000 },
-  { id: 46, name: 'Jais',                 role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Jais.jpg', basePrice: 1000 },
-  { id: 47, name: 'Jeevan Shetty',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Jeevan Shetty.jpg', basePrice: 1000 },
-  { id: 48, name: 'Karthik Rao',          role: 'All-Rounder', location: 'Nakre Padav', batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Karthik Rao.jpg', basePrice: 1000 },
-  { id: 49, name: 'Kishan',               role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Kishan.jpg', basePrice: 1000 },
-  { id: 50, name: 'Nagesh Posanottu',     role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Nagesh Posanottu.jpg', basePrice: 1000 },
-  { id: 51, name: 'Nagu Parapu',          role: 'All-Rounder', location: 'Parapu',      batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Nagu Parapu.jpg', basePrice: 1000 },
-  { id: 52, name: 'Nikil Shetty',         role: 'All-Rounder', location: 'Parapu',      batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Nikil Shetty.jpg', basePrice: 1000 },
-  { id: 53, name: 'Nithin Shetty',        role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Nithin Shetty.jpg', basePrice: 1000 },
-  { id: 54, name: 'Pradeep',              role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Pradeep.jpg', basePrice: 1000 },
-  { id: 55, name: 'Prashanth',            role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Prashanth.jpg', basePrice: 1000 },
-  { id: 56, name: 'Praveen',              role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Praveen.jpg', basePrice: 1000 },
-  { id: 57, name: 'Preetham',             role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Preetham.jpg', basePrice: 1000 },
-  { id: 58, name: 'Rakesh Pakku',         role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Rakesh Pakku.jpg', basePrice: 1000 },
-  { id: 59, name: 'Rakshith Poojary',     role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Rakshtih Poojary.jpg', basePrice: 1000 },
-  { id: 60, name: 'Rakshith',             role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Rakshith.jpg', basePrice: 1000 },
-  { id: 61, name: 'Ramesh',               role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Ramesh.jpg', basePrice: 1000 },
-  { id: 62, name: 'Royson IK',            role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Royson IK.jpg', basePrice: 1000 },
-  { id: 63, name: 'Samanth',              role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Samanth.jpg', basePrice: 1000 },
-  { id: 64, name: 'Samith',               role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Samith.jpg', basePrice: 1000 },
-  { id: 65, name: 'Sandeep Munna',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Sandeep Munna.jpg', basePrice: 1000 },
-  { id: 66, name: 'Sandesh IK',           role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sandesh Ik.jpg', basePrice: 1000 },
-  { id: 67, name: 'Sanjeeva Naik',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sanjeev Naik.jpg', basePrice: 1000 },
-  { id: 68, name: 'Santhosh IK',          role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Santhosh IK.jpg', basePrice: 1000 },
-  { id: 69, name: 'Santhosh Manigudde',   role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Santhosh Manigudde.jpg', basePrice: 1000 },
-  { id: 70, name: 'Santhosh Mendis',      role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Santhosh Mendis.jpg', basePrice: 1000 },
-  { id: 71, name: 'Sathish',              role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sathish.jpg', basePrice: 1000 },
-  { id: 72, name: 'Shailu',               role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Shailu.jpg', basePrice: 1000 },
-  { id: 73, name: 'Sharath',              role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sharath.jpg', basePrice: 1000 },
-  { id: 74, name: 'Shreyas B Acharya',    role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Shreayas B Acharaya.jpg', basePrice: 1000 },
-  { id: 75, name: 'Sudhakara Sacchu',     role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sudhakara Sacchu.jpg', basePrice: 1000 },
-  { id: 76, name: 'Sujith',               role: 'All-Rounder', location: 'Nakre',       batting: 'Left Hand',  bowling: 'Left Arm',  isWK: false, image: 'images/Sujith.jpg', basePrice: 1000 },
-  { id: 77, name: 'Sukesh Shetty',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sukesh Shetty.jpg', basePrice: 1000 },
-  { id: 78, name: 'Sukesh Padav',         role: 'All-Rounder', location: 'Nakre Padav', batting: 'Left Hand',  bowling: 'Left Arm',  isWK: false, image: 'images/Sukesh Padav.jpg', basePrice: 1000 },
-  { id: 79, name: 'Sukesh Posanottu',     role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Sukesh Posanottu.jpg', basePrice: 1000 },
-  { id: 80, name: 'Sunil IK',             role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sunil IK.jpg', basePrice: 1000 },
-  { id: 81, name: 'Suresh Chikka',        role: 'All-Rounder', location: 'Nakre',       batting: 'Left Hand',  bowling: 'Left Arm',  isWK: false, image: 'images/Suresh Chikka.jpg', basePrice: 1000 },
-  { id: 82, name: 'Swasthi IK',           role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Swasthi Ik.jpg', basePrice: 1000 },
-  { id: 83, name: 'Umesh',                role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Umesh.jpg', basePrice: 1000 },
-  { id: 84, name: 'Vijay',                role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Vijay.jpg', basePrice: 1000 },
-  { id: 85, name: 'Vittal Manigudde',     role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Vittal Manigudde.jpg', basePrice: 1000 },
+  // All-rounders
+  { id: 26,  name: 'Abhishek',             role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Abhishek.jpg', basePrice: 1000 },
+  { id: 27,  name: 'Adarsh Acharya',       role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Adarsh Acharya.jpg', basePrice: 1000 },
+  { id: 28,  name: 'Adarsh A',              role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Adarsh A.png', basePrice: 1000 },
+  { id: 29,  name: 'Adithya MJ',           role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Adithya MJ.jpg', basePrice: 1000 },
+  { id: 30,  name: 'Ajay',                 role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Ajay.jpg', basePrice: 1000 },
+  { id: 31,  name: 'Ajith Acharya',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Ajith Acharya.jpg', basePrice: 1000 },
+  { id: 32,  name: 'Ajith',                role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Ajith.jpg', basePrice: 1000 },
+  { id: 33,  name: 'Akshath Acharya',      role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Aksasth Acharya.jpg', basePrice: 1000 },
+  { id: 34,  name: 'Arun Shetty',          role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Arun Shetty.jpg', basePrice: 1000 },
+  { id: 35,  name: 'Ashwath',              role: 'All-Rounder', location: 'Nakre Padav', batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Ashwath.jpg', basePrice: 1000 },
+  { id: 36,  name: 'Charan IK',            role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Charan IK.jpg', basePrice: 1000 },
+  { id: 37,  name: 'Deepu IK',             role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Deepu Ik.jpg', basePrice: 1000 },
+  { id: 38,  name: 'Deeraj Hegde',         role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Deeraj Hegde.jpg', basePrice: 1000 },
+  { id: 39,  name: 'Dinesh',               role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Dinesh.jpg', basePrice: 1000 },
+  { id: 40,  name: 'Ganesh Acharya',       role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Ganesh Acharya.jpg', basePrice: 1000 },
+  { id: 41,  name: 'Ganesh Ponnedaguri',   role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Ganesh.jpg', basePrice: 1000 },
+  { id: 42,  name: 'Girish Posanottu',     role: 'All-Rounder', location: 'Nakre',       batting: 'Left Hand',  bowling: 'Left Arm',  isWK: false, image: 'images/Girish Posanottu.jpg', basePrice: 1000 },
+  { id: 43,  name: 'Harish Shetty',        role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Harish Shetty.jpg', basePrice: 1000 },
+  { id: 44,  name: 'Harshith',             role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Harshith.jpg', basePrice: 1000 },
+  { id: 45,  name: 'Jags Shetty',          role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Jags Shetty.jpg', basePrice: 1000 },
+  { id: 46,  name: 'Jais',                 role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Jais.jpg', basePrice: 1000 },
+  { id: 47,  name: 'Jeevan Shetty',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Jeevan Shetty.jpg', basePrice: 1000 },
+  { id: 48,  name: 'Karthik Rao',          role: 'All-Rounder', location: 'Nakre Padav', batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Karthik Rao.jpg', basePrice: 1000 },
+  { id: 49,  name: 'Kishan',               role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Kishan.jpg', basePrice: 1000 },
+  { id: 50,  name: 'Nagesh Posanottu',     role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Nagesh Posanottu.jpg', basePrice: 1000 },
+  { id: 51,  name: 'Nagu Parapu',          role: 'All-Rounder', location: 'Parapu',      batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Nagu Parapu.jpg', basePrice: 1000 },
+  { id: 52,  name: 'Nikil Shetty',         role: 'All-Rounder', location: 'Parapu',      batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Nikil Shetty.jpg', basePrice: 1000 },
+  { id: 53,  name: 'Nithin Shetty',        role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Nithin Shetty.jpg', basePrice: 1000 },
+  { id: 54,  name: 'Pradeep',              role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Pradeep.jpg', basePrice: 1000 },
+  { id: 55,  name: 'Prashanth',            role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Prashanth.jpg', basePrice: 1000 },
+  { id: 56,  name: 'Praveen',              role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Praveen.jpg', basePrice: 1000 },
+  { id: 57,  name: 'Preetham',             role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Preetham.jpg', basePrice: 1000 },
+  { id: 58,  name: 'Rakesh Pakku',         role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Rakesh Pakku.jpg', basePrice: 1000 },
+  { id: 59,  name: 'Rakshith Poojary',     role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Rakshtih Poojary.jpg', basePrice: 1000 },
+  { id: 60,  name: 'Rakshith',             role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Rakshith.jpg', basePrice: 1000 },
+  { id: 61,  name: 'Ramesh',               role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Ramesh.jpg', basePrice: 1000 },
+  { id: 62,  name: 'Royson IK',            role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Royson IK.jpg', basePrice: 1000 },
+  { id: 63,  name: 'Samanth',              role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Samanth.jpg', basePrice: 1000 },
+  { id: 64,  name: 'Samith',               role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Samith.jpg', basePrice: 1000 },
+  { id: 65,  name: 'Sandeep Munna',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Sandeep Munna.jpg', basePrice: 1000 },
+  { id: 66,  name: 'Sandesh IK',           role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sandesh Ik.jpg', basePrice: 1000 },
+  { id: 67,  name: 'Sanjeeva Naik',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sanjeev Naik.jpg', basePrice: 1000 },
+  { id: 68,  name: 'Santhosh IK',          role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Santhosh IK.jpg', basePrice: 1000 },
+  { id: 69,  name: 'Santhosh Manigudde',   role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Santhosh Manigudde.jpg', basePrice: 1000 },
+  { id: 70,  name: 'Santhosh Mendis',      role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Santhosh Mendis.jpg', basePrice: 1000 },
+  { id: 71,  name: 'Sathish',              role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sathish.jpg', basePrice: 1000 },
+  { id: 72,  name: 'Shailu',               role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Shailu.jpg', basePrice: 1000 },
+  { id: 73,  name: 'Sharath',              role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sharath.jpg', basePrice: 1000 },
+  { id: 74,  name: 'Shreyas B Acharya',    role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Shreayas B Acharaya.jpg', basePrice: 1000 },
+  { id: 75,  name: 'Sudhakara Sacchu',     role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sudhakara Sacchu.jpg', basePrice: 1000 },
+  { id: 76,  name: 'Sujith',               role: 'All-Rounder', location: 'Nakre',       batting: 'Left Hand',  bowling: 'Left Arm',  isWK: false, image: 'images/Sujith.jpg', basePrice: 1000 },
+  { id: 77,  name: 'Sukesh Shetty',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sukesh Shetty.jpg', basePrice: 1000 },
+  { id: 78,  name: 'Sukesh Padav',         role: 'All-Rounder', location: 'Nakre Padav', batting: 'Left Hand',  bowling: 'Left Arm',  isWK: false, image: 'images/Sukesh Padav.jpg', basePrice: 1000 },
+  { id: 79,  name: 'Sukesh Posanottu',     role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Sukesh Posanottu.jpg', basePrice: 1000 },
+  { id: 80,  name: 'Sunil IK',             role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sunil IK.jpg', basePrice: 1000 },
+  { id: 81,  name: 'Suresh Chikka',        role: 'All-Rounder', location: 'Nakre',       batting: 'Left Hand',  bowling: 'Left Arm',  isWK: false, image: 'images/Suresh Chikka.jpg', basePrice: 1000 },
+  { id: 82,  name: 'Swasthi IK',           role: 'All-Rounder', location: 'Others',      batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Swasthi Ik.jpg', basePrice: 1000 },
+  { id: 83,  name: 'Umesh',                role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Umesh.jpg', basePrice: 1000 },
+  { id: 84,  name: 'Vijay',                role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Vijay.jpg', basePrice: 1000 },
+  { id: 85,  name: 'Vittal Manigudde',     role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Vittal Manigudde.jpg', basePrice: 1000 },
 
-  // ── New Players (8) ────────────────────────────
-  { id: 86, name: 'Lokesh',               role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Lokesh.png', basePrice: 1000 },
-  { id: 87, name: 'Prajwith Shetty',      role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Prajwal Shetty.png', basePrice: 1000 },
-  { id: 88, name: 'Manvith Nakre',        role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Manvith Nakre.png', basePrice: 1000 },
-  { id: 89, name: 'Somesh DFC',           role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Somesh DFC.png', basePrice: 1000 },
-  { id: 90, name: 'Preethu',              role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Preethu Nakre.png', basePrice: 1000 },
-  { id: 91, name: 'Sanu Manigudde',       role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sanu Manigudde.png', basePrice: 1000 },
-  { id: 92, name: 'Pratheesh Reddy',      role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Pratheesh Reddy.png', basePrice: 1000 },
-  { id: 93, name: 'Amith Nakre',          role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Amith Nakre.png', basePrice: 1000 },
-  { id: 94, name: 'Shamith Shetty',       role: 'All-Rounder', location: 'Parapu',      batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Shamith Shetty.png', basePrice: 1000 },
-  { id: 95, name: 'Prajan Shetty',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Prajan Shetty.png', basePrice: 1000 },
-  { id: 96, name: 'Nithesh Kallamundkur', role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Nithesh Kallamundkur.png', basePrice: 1000 },
-  { id: 97, name: 'Akshath Manigudde',    role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Akshath Manigudde.png', basePrice: 1000 },
-  { id: 98, name: 'Ashwath Nakre',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Ashwath Nakre.png', basePrice: 1000 },
-  { id: 99, name: 'Arush Shetty',         role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Arush Shetty.png', basePrice: 1000 },
-  { id: 100, name: 'Sam Nakre',           role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sam Nakre.png', basePrice: 1000 },
+  // New players
+  { id: 86,  name: 'Lokesh',               role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Lokesh.png', basePrice: 1000 },
+  { id: 87,  name: 'Prajwith Shetty',      role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Prajwal Shetty.png', basePrice: 1000 },
+  { id: 88,  name: 'Manvith Nakre',        role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'N/A',       isWK: false, image: 'images/Manvith Nakre.png', basePrice: 1000 },
+  { id: 89,  name: 'Somesh DFC',           role: 'Batsman',     location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Somesh DFC.png', basePrice: 1000 },
+  { id: 90,  name: 'Preethu',              role: 'Bowler',      location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Preethu Nakre.png', basePrice: 1000 },
+  { id: 91,  name: 'Sanu Manigudde',       role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sanu Manigudde.png', basePrice: 1000 },
+  { id: 92,  name: 'Pratheesh Reddy',      role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Pratheesh Reddy.png', basePrice: 1000 },
+  { id: 93,  name: 'Amith Nakre',          role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Amith Nakre.png', basePrice: 1000 },
+  { id: 94,  name: 'Shamith Shetty',       role: 'All-Rounder', location: 'Parapu',      batting: 'Right Hand', bowling: 'Right Arm', isWK: true,  image: 'images/Shamith Shetty.png', basePrice: 1000 },
+  { id: 95,  name: 'Prajan Shetty',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Prajan Shetty.png', basePrice: 1000 },
+  { id: 96,  name: 'Nithesh Kallamundkur', role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Nithesh Kallamundkur.png', basePrice: 1000 },
+  { id: 97,  name: 'Akshath Manigudde',    role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Akshath Manigudde.png', basePrice: 1000 },
+  { id: 98,  name: 'Ashwath Nakre',        role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Ashwath Nakre.png', basePrice: 1000 },
+  { id: 99,  name: 'Arush Shetty',         role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Arush Shetty.png', basePrice: 1000 },
+  { id: 100, name: 'Sam Nakre',            role: 'All-Rounder', location: 'Nakre',       batting: 'Right Hand', bowling: 'Right Arm', isWK: false, image: 'images/Sam Nakre.png', basePrice: 1000 },
 ];
 
-// Role display config
 export const ROLE_CONFIG = {
-  'Batsman':     { icon: '🏏', color: '#3b82f6' },
-  'Bowler':      { icon: '🎯', color: '#ef4444' },
+  Batsman:     { icon: '🏏', color: '#3b82f6' },
+  Bowler:      { icon: '🎯', color: '#ef4444' },
   'All-Rounder': { icon: '⭐', color: '#f59e0b' },
 };
 
-// Location display config
 export const LOCATION_CONFIG = {
-  'Nakre':       { icon: '📍' },
+  Nakre:       { icon: '📍' },
   'Nakre Padav': { icon: '📍' },
-  'Parapu':      { icon: '📍' },
-  'Others':      { icon: '📍' },
+  Parapu:      { icon: '📍' },
+  Others:      { icon: '📍' },
 };
+
+function getPlayerKey(name = '') {
+  return String(name || '').trim().toLowerCase();
+}
+
+const PLAYER_SEED_BY_NAME = new Map(
+  PLAYERS_DATA.map((player) => [getPlayerKey(player.name), player])
+);
+
+export function normalizePlayerCatalog(players = []) {
+  const incoming = Array.isArray(players) ? players : [];
+  const normalized = incoming.map((player) => {
+    const seed = PLAYER_SEED_BY_NAME.get(getPlayerKey(player?.name));
+    if (!seed) return { ...player };
+    // Seed (data.js) is authoritative for core fields; preserve user-uploaded
+    // images (base64 data-URLs) that were added via the CRUD modal.
+    const merged = { ...player, ...seed };
+    // If the saved state has a user-uploaded image (data URL), keep it
+    if (player?.image && player.image.startsWith('data:')) {
+      merged.image = player.image;
+      merged.detailImage = player.detailImage || player.image;
+    }
+    return merged;
+  });
+
+  const existingKeys = new Set(normalized.map((player) => getPlayerKey(player?.name)));
+  PLAYERS_DATA.forEach((player) => {
+    if (!existingKeys.has(getPlayerKey(player.name))) {
+      normalized.push({ ...player });
+    }
+  });
+
+  return normalized;
+}
+
+export function getPlayerDetailImage(player = {}) {
+  return player?.detailImage || player?.image || '';
+}
+
+export function isPlayerDetailPoster(player = {}) {
+  return player?.imageDisplay === 'poster' && !!getPlayerDetailImage(player);
+}
