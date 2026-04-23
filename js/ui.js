@@ -3516,18 +3516,18 @@ export class UI {
         { pair: pA[1], group: 'A' }, { pair: pB[1], group: 'B' },
         { pair: pA[2], group: 'A' }, { pair: pB[2], group: 'B' },
         { pair: pA[3], group: 'A' }, { pair: pB[3], group: 'B' },
+        { pair: pA[4], group: 'A' }, { pair: pB[4], group: 'B' },
       ];
       const day2 = [
-        { pair: pA[4], group: 'A' }, { pair: pB[4], group: 'B' },
         { pair: pA[5], group: 'A' }, { pair: pB[5], group: 'B' },
       ];
       const scheduled = [...day1, ...day2];
-      const day1Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30','2:30 – 3:30','3:30 – 4:30'];
-      const day2Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30'];
+      const day1Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30','2:30 – 3:30','3:30 – 4:30','4:30 – 5:30','5:30 – 6:30'];
+      const day2Times = ['8:30 – 9:30','9:30 – 10:30'];
 
       allFixtures = scheduled.map((s, i) => {
-        const dayIdx = i < 8 ? 0 : 1;
-        const slotIdx = dayIdx === 0 ? i : i - 8;
+        const dayIdx = i < 10 ? 0 : 1;
+        const slotIdx = dayIdx === 0 ? i : i - 10;
         const times = dayIdx === 0 ? day1Times : day2Times;
         return { matchNum: i + 1, teamA: getTeam(s.pair[0]), teamB: getTeam(s.pair[1]), group: s.group, day: dayIdx + 1, date: dayIdx === 0 ? '25 April 2026' : '26 April 2026', time: times[slotIdx] || '' };
       });
@@ -3537,10 +3537,10 @@ export class UI {
 
       const koData = opts.knockoutMatches || [];
       const koMeta = [
-        { label: 'Qualifier 1', desc: 'A1 vs B1 — Winner → Final', matchId: 'match-13', time: '12:30 – 1:30', accent: '#f59e0b' },
-        { label: 'Eliminator', desc: 'A2 vs B2 — Loser eliminated', matchId: 'match-14', time: '1:30 – 2:30', accent: '#ef4444' },
-        { label: 'Qualifier 2', desc: 'Loser Q1 vs Winner Eliminator', matchId: 'match-15', time: '2:30 – 3:30', accent: '#6366f1' },
-        { label: '🏆 FINAL', desc: 'Winner Q1 vs Winner Q2', matchId: 'match-16', time: '3:30 – 4:30', accent: '#f59e0b' },
+        { label: 'Qualifier 1', desc: 'A1 vs B1 — Winner → Final', matchId: 'match-13', time: '10:30 – 11:30', accent: '#f59e0b' },
+        { label: 'Eliminator', desc: 'A2 vs B2 — Loser eliminated', matchId: 'match-14', time: '11:30 – 12:30', accent: '#ef4444' },
+        { label: 'Qualifier 2', desc: 'Loser Q1 vs Winner Eliminator', matchId: 'match-15', time: '12:30 – 1:30', accent: '#6366f1' },
+        { label: '🏆 FINAL', desc: 'Winner Q1 vs Winner Q2', matchId: 'match-16', time: '1:30 – 2:30', accent: '#f59e0b' },
       ];
       knockouts = koMeta.map(ko => {
         const resolved = koData.find(m => m.matchId === ko.matchId);
@@ -3668,7 +3668,7 @@ export class UI {
 
           <div class="fixtures-day-section">
             <h3 class="fixtures-day-label">🗓️ Day 1 — 25 April 2026 (6 League Matches) <span style="font-size:0.7rem; color:var(--text-4); font-weight:500; margin-left:8px;">↕ insert and shift the full schedule</span></h3>
-            <div style="font-size:0.8rem;color:var(--text-3);text-align:center;margin-bottom:12px;">🏏 8:30 AM – 2:30 PM &nbsp;•&nbsp; 1 hour per match</div>
+            <div style="font-size:0.8rem;color:var(--text-3);text-align:center;margin-bottom:12px;">🏏 8:30 AM – 6:30 PM &nbsp;•&nbsp; 1 hour per match</div>
             <div class="fixtures-match-grid" id="fixtures-day1-grid" data-day="1">
               ${day1Fixtures.map(renderMatch).join('')}
             </div>
@@ -3677,7 +3677,7 @@ export class UI {
 
           <div class="fixtures-day-section">
             <h3 class="fixtures-day-label">🗓️ Day 2 — 26 April 2026 (League + Knockouts) <span style="font-size:0.7rem; color:var(--text-4); font-weight:500; margin-left:8px;">↕ insert and shift the full schedule</span></h3>
-            <div style="font-size:0.8rem;color:var(--text-3);text-align:center;margin-bottom:12px;">🏏 League: 8:30 AM – 12:30 PM &nbsp;•&nbsp; 🔥 Knockouts: 12:30 – 4:30 PM</div>
+            <div style="font-size:0.8rem;color:var(--text-3);text-align:center;margin-bottom:12px;">🏏 League: 8:30 AM – 10:30 AM &nbsp;•&nbsp; 🔥 Knockouts: 10:30 AM – 2:30 PM</div>
             <div class="fixtures-match-grid" id="fixtures-day2-grid" data-day="2">
               ${day2Fixtures.map(renderMatch).join('')}
             </div>
@@ -3685,7 +3685,7 @@ export class UI {
 
           <!-- Knockout Stage -->
           <div class="fixtures-day-section">
-            <h3 class="fixtures-day-label">🔥 Knockout Stage — 26 April 2026 (12:30 – 4:30 PM)</h3>
+            <h3 class="fixtures-day-label">🔥 Knockout Stage — 26 April 2026 (10:30 AM – 2:30 PM)</h3>
             <div class="fixtures-match-grid">
               ${knockouts.map((ko, idx) => {
                 const tA = ko.teamA;
@@ -4145,7 +4145,7 @@ export class UI {
         return `<tr class="${isQ?'standings-qualified':''}"><td style="font-weight:700;color:var(--text-3);">${i+1}</td><td><div class="team-cell">${s.team.logo?`<img class="team-logo-sm" src="${s.team.logo}" alt="${s.team.shortName}">`:`<span class="team-logo-sm" style="background:${s.team.color};color:${s.team.textColor||'#fff'};display:flex;align-items:center;justify-content:center;font-size:0.55rem;font-weight:800;">${s.team.shortName}</span>`}<span class="team-name-cell" style="color:${s.team.color}">${s.team.shortName}</span></div></td><td>${s.played}</td><td style="color:var(--accent-green);font-weight:700;">${s.won}</td><td style="color:var(--accent-red);">${s.lost}</td><td style="color:var(--accent-gold);">${s.noResult}</td><td style="font-weight:800;font-size:1rem;">${s.points}</td><td><span class="standings-nrr ${s.nrr>=0?'positive':'negative'}">${s.nrr>=0?'+':''}${s.nrr.toFixed(3)}</span></td><td><div class="form-indicator">${s.form.map(f=>`<span class="form-dot ${f}">${f}</span>`).join('')}${s.form.length===0?'<span style="color:var(--text-4);font-size:0.7rem;">—</span>':''}</div></td><td>${isQ?'<span class="standings-q-badge">✅ Q</span>':''}</td></tr>`;
       }).join('')}</tbody></table></div>`;
     };
-    return `<div class="standings-section">${renderGroup(standings.groupA,'GROUP A','#3b82f6')}${renderGroup(standings.groupB,'GROUP B','#ef4444')}<p style="text-align:center;color:var(--text-4);font-size:0.8rem;margin-top:16px;">${standings.completedCount} matches completed • Top 2 from each group qualify for knockouts</p></div>`;
+    return `<div class="standings-section"><div class="standings-dashboard" id="standings-dashboard">${renderGroup(standings.groupA,'GROUP A','#3b82f6')}${renderGroup(standings.groupB,'GROUP B','#ef4444')}<p style="text-align:center;color:var(--text-4);font-size:0.8rem;margin-top:16px;">${standings.completedCount} matches completed • Top 2 from each group qualify for knockouts</p></div><div style="text-align:center;margin-top:20px;"><button class="btn btn-primary btn-sm" id="download-standings-btn" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);"><span style="margin-right:6px;">📥</span> Download Standings HD</button></div></div>`;
   }
 
   // ═══════════════════════════════════════════

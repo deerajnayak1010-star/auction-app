@@ -284,4 +284,202 @@ export class AuctionSounds {
     osc3.start(now + 0.25);
     osc3.stop(now + 0.55);
   }
+
+  // ── Sound: FOUR — Bat crack + medium crowd ──
+
+  playFour() {
+    if (this.muted) return;
+    const ctx = this._ensureCtx();
+    const now = ctx.currentTime;
+    const g = this._gain();
+
+    // Bat crack (short noise burst)
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 4);
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(g * 0.4, now);
+    ng.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    noise.connect(ng).connect(ctx.destination);
+    noise.start(now);
+
+    // Medium crowd cheer (filtered noise)
+    const crowdBuf = ctx.createBuffer(1, ctx.sampleRate * 0.4, ctx.sampleRate);
+    const cd = crowdBuf.getChannelData(0);
+    for (let i = 0; i < cd.length; i++) cd[i] = (Math.random() * 2 - 1) * 0.5;
+    const crowd = ctx.createBufferSource();
+    crowd.buffer = crowdBuf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 800; bp.Q.value = 0.5;
+    const cg = ctx.createGain();
+    cg.gain.setValueAtTime(0, now + 0.05);
+    cg.gain.linearRampToValueAtTime(g * 0.12, now + 0.1);
+    cg.gain.linearRampToValueAtTime(g * 0.08, now + 0.3);
+    cg.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+    crowd.connect(bp).connect(cg).connect(ctx.destination);
+    crowd.start(now + 0.05);
+    crowd.stop(now + 0.5);
+
+    // Bright accent tone
+    const osc = ctx.createOscillator();
+    const og = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.setValueAtTime(880, now);
+    og.gain.setValueAtTime(g * 0.15, now);
+    og.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    osc.connect(og).connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.2);
+  }
+
+  // ── Sound: SIX — Deep impact + crowd roar ──
+
+  playSix() {
+    if (this.muted) return;
+    const ctx = this._ensureCtx();
+    const now = ctx.currentTime;
+    const g = this._gain();
+
+    // Deep impact thud
+    const osc = ctx.createOscillator();
+    const og = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(120, now);
+    osc.frequency.exponentialRampToValueAtTime(50, now + 0.2);
+    og.gain.setValueAtTime(g * 0.5, now);
+    og.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc.connect(og).connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.3);
+
+    // Ascending "power" tone
+    const osc2 = ctx.createOscillator();
+    const og2 = ctx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(300, now + 0.05);
+    osc2.frequency.linearRampToValueAtTime(600, now + 0.2);
+    og2.gain.setValueAtTime(g * 0.2, now + 0.05);
+    og2.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    osc2.connect(og2).connect(ctx.destination);
+    osc2.start(now + 0.05); osc2.stop(now + 0.4);
+
+    // Crowd roar (longer)
+    const crowdBuf = ctx.createBuffer(1, ctx.sampleRate * 0.7, ctx.sampleRate);
+    const cd = crowdBuf.getChannelData(0);
+    for (let i = 0; i < cd.length; i++) cd[i] = (Math.random() * 2 - 1) * 0.6;
+    const crowd = ctx.createBufferSource();
+    crowd.buffer = crowdBuf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 600; bp.Q.value = 0.4;
+    const cg = ctx.createGain();
+    cg.gain.setValueAtTime(0, now + 0.1);
+    cg.gain.linearRampToValueAtTime(g * 0.18, now + 0.2);
+    cg.gain.setValueAtTime(g * 0.15, now + 0.5);
+    cg.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+    crowd.connect(bp).connect(cg).connect(ctx.destination);
+    crowd.start(now + 0.1); crowd.stop(now + 0.8);
+
+    // Shimmer high note
+    const sh = ctx.createOscillator();
+    const sg = ctx.createGain();
+    sh.type = 'sine'; sh.frequency.setValueAtTime(1568, now + 0.15); // G6
+    sg.gain.setValueAtTime(g * 0.08, now + 0.15);
+    sg.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    sh.connect(sg).connect(ctx.destination);
+    sh.start(now + 0.15); sh.stop(now + 0.6);
+  }
+
+  // ── Sound: WICKET — Stumps rattle + bass drop ──
+
+  playWicket() {
+    if (this.muted) return;
+    const ctx = this._ensureCtx();
+    const now = ctx.currentTime;
+    const g = this._gain();
+
+    // Stumps rattle (metallic noise)
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) {
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2) * Math.sin(i * 0.15);
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(g * 0.35, now);
+    ng.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    noise.connect(ng).connect(ctx.destination);
+    noise.start(now);
+
+    // Bass drop
+    const osc = ctx.createOscillator();
+    const og = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(200, now + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.4);
+    og.gain.setValueAtTime(g * 0.4, now + 0.05);
+    og.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+    osc.connect(og).connect(ctx.destination);
+    osc.start(now + 0.05); osc.stop(now + 0.5);
+
+    // Dramatic low buzz
+    const osc2 = ctx.createOscillator();
+    const og2 = ctx.createGain();
+    osc2.type = 'sawtooth';
+    osc2.frequency.setValueAtTime(100, now + 0.1);
+    osc2.frequency.linearRampToValueAtTime(60, now + 0.5);
+    og2.gain.setValueAtTime(g * 0.08, now + 0.1);
+    og2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    osc2.connect(og2).connect(ctx.destination);
+    osc2.start(now + 0.1); osc2.stop(now + 0.6);
+  }
+
+  // ── Sound: MILESTONE — Ascending chime cascade ──
+
+  playMilestone() {
+    if (this.muted) return;
+    const ctx = this._ensureCtx();
+    const now = ctx.currentTime;
+    const g = this._gain();
+
+    // Ascending chime notes: C5 → E5 → G5 → C6
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const og = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + i * 0.12);
+      og.gain.setValueAtTime(0, now + i * 0.12);
+      og.gain.linearRampToValueAtTime(g * 0.25, now + i * 0.12 + 0.03);
+      og.gain.setValueAtTime(g * 0.25, now + i * 0.12 + 0.15);
+      og.gain.exponentialRampToValueAtTime(0.001, now + 0.8 + i * 0.08);
+      osc.connect(og).connect(ctx.destination);
+      osc.start(now + i * 0.12);
+      osc.stop(now + 0.8 + i * 0.08);
+    });
+
+    // Sustained shimmer
+    const sh = ctx.createOscillator();
+    const sg = ctx.createGain();
+    sh.type = 'sine'; sh.frequency.setValueAtTime(2093, now + 0.4); // C7
+    sg.gain.setValueAtTime(g * 0.06, now + 0.4);
+    sg.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+    sh.connect(sg).connect(ctx.destination);
+    sh.start(now + 0.4); sh.stop(now + 1.2);
+
+    // Crowd swell
+    const crowdBuf = ctx.createBuffer(1, ctx.sampleRate * 1, ctx.sampleRate);
+    const cd = crowdBuf.getChannelData(0);
+    for (let i = 0; i < cd.length; i++) cd[i] = (Math.random() * 2 - 1) * 0.4;
+    const crowd = ctx.createBufferSource();
+    crowd.buffer = crowdBuf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 700; bp.Q.value = 0.3;
+    const cg = ctx.createGain();
+    cg.gain.setValueAtTime(0, now + 0.3);
+    cg.gain.linearRampToValueAtTime(g * 0.1, now + 0.5);
+    cg.gain.setValueAtTime(g * 0.1, now + 0.8);
+    cg.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+    crowd.connect(bp).connect(cg).connect(ctx.destination);
+    crowd.start(now + 0.3); crowd.stop(now + 1.2);
+  }
 }

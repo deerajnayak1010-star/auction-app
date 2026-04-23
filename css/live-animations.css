@@ -1,0 +1,509 @@
+/* ══════════════════════════════════════════════
+   LIVE SCORING ANIMATIONS
+   Premium ball outcome effects, milestones,
+   score transitions & micro-interactions
+   ══════════════════════════════════════════════ */
+
+/* ── Overlay Container ─────────────────────── */
+.lm-anim-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* ══════════════════════════════════════════════
+   1. FOUR — Blue Streak
+   ══════════════════════════════════════════════ */
+.lm-overlay-four {
+  background: linear-gradient(90deg, transparent 0%, rgba(59,130,246,0.08) 40%, rgba(59,130,246,0.04) 60%, transparent 100%);
+}
+
+.lm-four-streak {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 120px;
+  background: linear-gradient(90deg, transparent, rgba(59,130,246,0.5), rgba(96,165,250,0.7), rgba(59,130,246,0.5), transparent);
+  animation: fourStreak 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  filter: blur(8px);
+}
+@keyframes fourStreak {
+  0%   { left: -120px; opacity: 0.8; }
+  100% { left: calc(100% + 120px); opacity: 0; }
+}
+
+.lm-four-text {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(3rem, 10vw, 5rem);
+  font-weight: 900;
+  color: #60a5fa;
+  text-shadow: 0 0 40px rgba(59,130,246,0.6), 0 0 80px rgba(59,130,246,0.3);
+  letter-spacing: 8px;
+  animation: fourTextPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 0;
+}
+@keyframes fourTextPop {
+  0%   { transform: scale(0.3); opacity: 0; }
+  50%  { transform: scale(1.15); opacity: 1; }
+  70%  { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* Boundary line flash */
+.lm-four-boundary {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #3b82f6, #60a5fa, #3b82f6, transparent);
+  animation: boundaryFlash 0.5s ease-out forwards;
+}
+@keyframes boundaryFlash {
+  0%   { opacity: 0; transform: scaleX(0); }
+  30%  { opacity: 1; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(1); }
+}
+
+/* ══════════════════════════════════════════════
+   2. SIX — Gold Burst
+   ══════════════════════════════════════════════ */
+.lm-overlay-six {
+  background: radial-gradient(circle at center, rgba(245,158,11,0.1) 0%, transparent 70%);
+  animation: sixVignette 0.8s ease-out forwards;
+}
+@keyframes sixVignette {
+  0%   { transform: scale(1); }
+  20%  { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+.lm-six-text {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(3.5rem, 12vw, 6rem);
+  font-weight: 900;
+  color: #f59e0b;
+  text-shadow: 0 0 40px rgba(245,158,11,0.7), 0 0 80px rgba(245,158,11,0.3), 0 4px 12px rgba(0,0,0,0.4);
+  letter-spacing: 10px;
+  animation: sixBounce 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 0;
+}
+@keyframes sixBounce {
+  0%   { transform: scale(0.2) translateY(60px); opacity: 0; }
+  40%  { transform: scale(1.25) translateY(-10px); opacity: 1; }
+  60%  { transform: scale(0.9) translateY(5px); }
+  80%  { transform: scale(1.05) translateY(-2px); }
+  100% { transform: scale(1) translateY(0); opacity: 0; }
+}
+
+/* Gold particles */
+.lm-six-particle {
+  position: absolute;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245,158,11,0.8);
+  animation: sixParticleBurst 0.8s ease-out forwards;
+  opacity: 0;
+}
+@keyframes sixParticleBurst {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Ball arc */
+.lm-six-ball {
+  position: absolute;
+  bottom: 30%;
+  left: 50%;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fff, #dc2626);
+  box-shadow: 0 0 10px rgba(220,38,38,0.5);
+  animation: sixBallArc 0.7s cubic-bezier(0.33, 1, 0.68, 1) forwards;
+  opacity: 0;
+}
+@keyframes sixBallArc {
+  0%   { transform: translate(-50%, 0) scale(1); opacity: 1; }
+  50%  { transform: translate(-50%, -200px) scale(0.8); opacity: 0.8; }
+  100% { transform: translate(-50%, -400px) scale(0.3); opacity: 0; }
+}
+
+/* ══════════════════════════════════════════════
+   3. WICKET — Red Flash + Shake
+   ══════════════════════════════════════════════ */
+.lm-overlay-wicket {
+  background: rgba(239,68,68,0.12);
+  animation: wicketFlash 0.8s ease-out forwards;
+}
+@keyframes wicketFlash {
+  0%   { background: rgba(239,68,68,0.2); }
+  15%  { background: rgba(239,68,68,0.08); }
+  30%  { background: rgba(239,68,68,0.15); }
+  100% { background: transparent; }
+}
+
+.lm-wicket-text {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(2.5rem, 9vw, 4.5rem);
+  font-weight: 900;
+  color: #ef4444;
+  text-shadow: 0 0 30px rgba(239,68,68,0.6), 0 0 60px rgba(239,68,68,0.2);
+  letter-spacing: 6px;
+  animation: wicketGlitch 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+  position: relative;
+}
+@keyframes wicketGlitch {
+  0%   { transform: translateX(-40px) skewX(-5deg); opacity: 0; clip-path: inset(0 100% 0 0); }
+  20%  { transform: translateX(5px) skewX(2deg); opacity: 1; clip-path: inset(0 0 0 0); }
+  25%  { transform: translateX(-3px) skewX(-1deg); }
+  30%  { transform: translateX(2px) skewX(0); }
+  40%  { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(0); opacity: 0; }
+}
+
+/* Stumps breaking */
+.lm-wicket-stumps {
+  position: absolute;
+  bottom: 25%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  animation: stumpsAppear 0.6s 0.1s ease-out forwards;
+}
+.lm-wicket-stump {
+  width: 3px;
+  height: 40px;
+  background: linear-gradient(180deg, #fbbf24, #b45309);
+  border-radius: 1px;
+  transform-origin: bottom center;
+}
+.lm-wicket-stump:nth-child(1) { animation: stumpFlyLeft 0.5s 0.2s ease-out forwards; }
+.lm-wicket-stump:nth-child(2) { animation: stumpFlyUp 0.5s 0.25s ease-out forwards; }
+.lm-wicket-stump:nth-child(3) { animation: stumpFlyRight 0.5s 0.2s ease-out forwards; }
+@keyframes stumpsAppear { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes stumpFlyLeft { to { transform: rotate(-35deg) translateY(-20px) translateX(-15px); opacity: 0; } }
+@keyframes stumpFlyUp { to { transform: translateY(-30px); opacity: 0; } }
+@keyframes stumpFlyRight { to { transform: rotate(35deg) translateY(-20px) translateX(15px); opacity: 0; } }
+
+/* Bails */
+.lm-wicket-bail {
+  width: 10px; height: 2px;
+  background: #fbbf24;
+  border-radius: 1px;
+  position: absolute;
+  top: -2px;
+}
+.lm-wicket-bail:nth-child(4) { left: 0; animation: bailFly1 0.5s 0.2s ease-out forwards; }
+.lm-wicket-bail:nth-child(5) { right: 0; animation: bailFly2 0.5s 0.22s ease-out forwards; }
+@keyframes bailFly1 { to { transform: rotate(-60deg) translate(-20px, -35px); opacity: 0; } }
+@keyframes bailFly2 { to { transform: rotate(50deg) translate(20px, -30px); opacity: 0; } }
+
+/* Screen shake class applied to container */
+.lm-shake {
+  animation: screenShake 0.5s ease-out;
+}
+@keyframes screenShake {
+  0%, 100% { transform: translate(0); }
+  10%  { transform: translate(-3px, 1px); }
+  20%  { transform: translate(3px, -1px); }
+  30%  { transform: translate(-2px, 2px); }
+  40%  { transform: translate(2px, -1px); }
+  50%  { transform: translate(-1px, 1px); }
+  60%  { transform: translate(1px, 0); }
+}
+
+/* ══════════════════════════════════════════════
+   4. MOMENTUM MODE — Consecutive Boundaries
+   ══════════════════════════════════════════════ */
+.lm-momentum-active .live-match-header {
+  box-shadow: 0 0 30px rgba(245,158,11,0.3), inset 0 0 0 1px rgba(245,158,11,0.15);
+  animation: momentumPulse 2s ease-in-out infinite;
+}
+@keyframes momentumPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(245,158,11,0.2), inset 0 0 0 1px rgba(245,158,11,0.1); }
+  50%      { box-shadow: 0 0 40px rgba(245,158,11,0.4), inset 0 0 0 1px rgba(245,158,11,0.25); }
+}
+
+.lm-momentum-badge {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9998;
+  pointer-events: none;
+  padding: 8px 24px;
+  border-radius: 100px;
+  background: linear-gradient(135deg, rgba(245,158,11,0.9), rgba(217,119,6,0.9));
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 20px rgba(245,158,11,0.4);
+  animation: momentumBadgeIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+             momentumBadgeOut 0.4s 1.8s ease-in forwards;
+}
+@keyframes momentumBadgeIn {
+  0%   { transform: translateX(-50%) translateY(-20px) scale(0.7); opacity: 0; }
+  100% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+}
+@keyframes momentumBadgeOut {
+  100% { transform: translateX(-50%) translateY(-15px); opacity: 0; }
+}
+
+/* ══════════════════════════════════════════════
+   5. MILESTONES — 50 / 100
+   ══════════════════════════════════════════════ */
+
+/* Half Century Ring */
+.lm-milestone-50 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: milestoneIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+@keyframes milestoneIn {
+  0%   { transform: scale(0.5); opacity: 0; }
+  40%  { transform: scale(1.1); opacity: 1; }
+  60%  { transform: scale(0.95); }
+  80%  { transform: scale(1.02); }
+  90%  { opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+.lm-milestone-ring {
+  width: 100px; height: 100px;
+  position: relative;
+}
+.lm-milestone-ring svg {
+  width: 100%; height: 100%;
+  transform: rotate(-90deg);
+}
+.lm-milestone-ring-bg {
+  fill: none;
+  stroke: rgba(255,255,255,0.1);
+  stroke-width: 4;
+}
+.lm-milestone-ring-fill {
+  fill: none;
+  stroke: #10b981;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 283;
+  stroke-dashoffset: 283;
+  animation: ringFill 1s 0.2s ease-out forwards;
+}
+@keyframes ringFill {
+  to { stroke-dashoffset: 0; }
+}
+.lm-milestone-ring-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #10b981;
+  text-shadow: 0 0 20px rgba(16,185,129,0.5);
+}
+
+.lm-milestone-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  letter-spacing: 2px;
+}
+.lm-milestone-name {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.7);
+  font-weight: 600;
+}
+
+/* Century — Full-screen gold */
+.lm-milestone-100 {
+  background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(217,119,6,0.08));
+}
+.lm-milestone-100 .lm-milestone-ring-fill {
+  stroke: #f59e0b;
+}
+.lm-milestone-100 .lm-milestone-ring-text {
+  color: #f59e0b;
+  font-size: 1.5rem;
+  text-shadow: 0 0 30px rgba(245,158,11,0.6);
+}
+.lm-milestone-100 .lm-milestone-label {
+  font-size: 1.3rem;
+  color: #fbbf24;
+}
+
+/* Confetti particles */
+.lm-confetti {
+  position: absolute;
+  width: 8px; height: 8px;
+  border-radius: 1px;
+  opacity: 0;
+  animation: confettiFall 1.2s ease-out forwards;
+}
+@keyframes confettiFall {
+  0%   { opacity: 1; transform: translateY(0) rotate(0deg); }
+  100% { opacity: 0; transform: translateY(300px) rotate(720deg); }
+}
+
+/* ══════════════════════════════════════════════
+   6. DUCK — Out for 0
+   ══════════════════════════════════════════════ */
+.lm-overlay-duck {
+  background: rgba(0,0,0,0.15);
+  animation: duckFade 1.5s ease-out forwards;
+}
+@keyframes duckFade {
+  0%   { opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.lm-duck-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: duckSlideIn 1.5s ease-out forwards;
+  opacity: 0;
+}
+@keyframes duckSlideIn {
+  0%   { transform: translateY(15px); opacity: 0; }
+  20%  { transform: translateY(0); opacity: 0.8; }
+  80%  { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+.lm-duck-icon {
+  font-size: 2rem;
+  filter: grayscale(1);
+}
+.lm-duck-text {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 2px;
+}
+.lm-duck-name {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* ══════════════════════════════════════════════
+   7. SCORE FLIP ANIMATION
+   ══════════════════════════════════════════════ */
+.lm-score-flip-wrapper {
+  display: inline-flex;
+  perspective: 400px;
+}
+.lm-score-digit {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  height: 1.2em;
+  line-height: 1.2em;
+}
+.lm-score-digit-inner {
+  display: inline-block;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.lm-score-digit-inner.flipping {
+  animation: digitFlip 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes digitFlip {
+  0%   { transform: rotateX(0); }
+  50%  { transform: rotateX(-90deg); }
+  51%  { transform: rotateX(90deg); }
+  100% { transform: rotateX(0); }
+}
+
+/* Score highlight flash */
+.lm-score-highlight {
+  animation: scoreHighlight 0.6s ease-out;
+}
+@keyframes scoreHighlight {
+  0%   { color: #fbbf24; text-shadow: 0 0 20px rgba(245,158,11,0.6); }
+  100% { color: inherit; text-shadow: none; }
+}
+
+/* ══════════════════════════════════════════════
+   8. OVER DOTS — Pulse & Animate
+   ══════════════════════════════════════════════ */
+.lm-dot-new {
+  animation: dotPulse 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes dotPulse {
+  0%   { transform: scale(0.3); opacity: 0; }
+  50%  { transform: scale(1.4); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ══════════════════════════════════════════════
+   9. BUTTON RIPPLE EFFECT
+   ══════════════════════════════════════════════ */
+.score-btn {
+  position: relative;
+  overflow: hidden;
+}
+.score-btn .ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  transform: scale(0);
+  animation: btnRipple 0.4s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes btnRipple {
+  to { transform: scale(3); opacity: 0; }
+}
+
+/* Active glow per button type */
+.score-btn.btn-4:active {
+  box-shadow: 0 0 20px rgba(59,130,246,0.5);
+}
+.score-btn.btn-6:active {
+  box-shadow: 0 0 20px rgba(245,158,11,0.5);
+}
+.score-btn.btn-w:active {
+  box-shadow: 0 0 20px rgba(239,68,68,0.5);
+}
+
+/* ══════════════════════════════════════════════
+   10. BACKGROUND LIVE EFFECT
+   ══════════════════════════════════════════════ */
+.live-match-board-view {
+  position: relative;
+}
+.live-match-board-view::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 20% 50%, rgba(59,130,246,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 50%, rgba(245,158,11,0.03) 0%, transparent 50%);
+  background-size: 200% 200%;
+  animation: bgLiveShift 20s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes bgLiveShift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}

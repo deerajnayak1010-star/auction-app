@@ -13,6 +13,7 @@ import { StandingsEngine } from './standings.js';
 import { PlayerCardsEngine } from './player-cards.js';
 import { GalleryManager } from './gallery.js';
 import { BackgroundMediaManager } from './background-media.js';
+import { LiveAnimations } from './live-animations.js';
 
 class App {
   constructor() {
@@ -55,6 +56,8 @@ class App {
 
     // Premium Features State
     this.liveMatchEngine = null;
+    this.liveAnims = new LiveAnimations(this.sounds);
+    this._lastLiveState = null;
     this.galleryMgr = new GalleryManager();
     this.galleryFilter = 'all';
     this.awardsData = [];
@@ -1408,7 +1411,7 @@ class App {
   }
 
   async onClick(e) {
-    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], [data-player-edit-id], [data-ball], [data-live-match], [data-lm-new-batsman], [data-lm-next-bowler], [data-lm-coin-flip], [data-lm-dismissal], [data-lm-runout], [data-ro-runs], [data-gallery-filter], [data-delete-photo], [data-generate-card], #login-btn, #login-eye-toggle, #login-forgot-link, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #recall-bid-btn, #recall-confirm-yes, #recall-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #video-bg-toggle-btn, #results-tab-squads, #results-tab-analytics, #results-tab-standings, #results-tab-stats, #results-tab-scorecard, #results-tab-fixtures, #draw-tokens-btn, #clear-tokens-btn, #clear-tokens-yes, #clear-tokens-no, #download-fixtures-btn, #lock-fixtures-btn, #create-knockout-btn, #sc-back-btn, #sc-back-btn2, #sc-save-btn, .sc-open-btn, #commentary-toggle-btn, #commentary-header, #open-projector-btn, #hamburger-toggle, #nav-more-toggle, .nav-more-item, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn, #live-undo-btn, #live-back-btn, #live-save-scorecard-btn, #lm-start-toss-btn, #lm-confirm-openers-btn, #lm-wd-toggle, #lm-nb-toggle, #lm-bye-toggle, #lm-lb-toggle, #lm-wicket-btn, #lm-modal-close-btn, #lm-save-yes-btn, #lm-save-no-btn, #lm-save-dismiss-btn, #lm-edit-score-btn, #live-edit-score-btn, #ro-swap-strike-btn, #lm-swap-strike-btn, #share-app-btn, #share-copy-wa-btn, #share-copy-ig-btn, #share-tab-wa, #share-tab-ig, #share-modal-close, #awards-reveal-next-btn, #awards-reset-btn, #awards-back-btn, #add-player-btn, #player-modal-save, #player-modal-cancel, #player-modal-close, #player-modal-delete, #player-modal-overlay, #player-delete-yes, #player-delete-no, #copy-player-pool-link-btn, .player-edit-btn, .score-btn, .lm-sub-btn, .lm-modal-option, .lm-modal-close');
+    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], [data-player-edit-id], [data-ball], [data-live-match], [data-lm-new-batsman], [data-lm-next-bowler], [data-lm-coin-flip], [data-lm-dismissal], [data-lm-runout], [data-ro-runs], [data-gallery-filter], [data-delete-photo], [data-generate-card], #login-btn, #login-eye-toggle, #login-forgot-link, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #recall-bid-btn, #recall-confirm-yes, #recall-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #video-bg-toggle-btn, #results-tab-squads, #results-tab-analytics, #results-tab-standings, #results-tab-stats, #results-tab-scorecard, #results-tab-fixtures, #draw-tokens-btn, #clear-tokens-btn, #clear-tokens-yes, #clear-tokens-no, #download-fixtures-btn, #download-standings-btn, #lock-fixtures-btn, #create-knockout-btn, #sc-back-btn, #sc-back-btn2, #sc-save-btn, .sc-open-btn, #commentary-toggle-btn, #commentary-header, #open-projector-btn, #hamburger-toggle, #nav-more-toggle, .nav-more-item, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn, #live-undo-btn, #live-back-btn, #live-save-scorecard-btn, #lm-start-toss-btn, #lm-confirm-openers-btn, #lm-wd-toggle, #lm-nb-toggle, #lm-bye-toggle, #lm-lb-toggle, #lm-wicket-btn, #lm-modal-close-btn, #lm-save-yes-btn, #lm-save-no-btn, #lm-save-dismiss-btn, #lm-edit-score-btn, #live-edit-score-btn, #ro-swap-strike-btn, #lm-swap-strike-btn, #share-app-btn, #share-copy-wa-btn, #share-copy-ig-btn, #share-tab-wa, #share-tab-ig, #share-modal-close, #awards-reveal-next-btn, #awards-reset-btn, #awards-back-btn, #add-player-btn, #player-modal-save, #player-modal-cancel, #player-modal-close, #player-modal-delete, #player-modal-overlay, #player-delete-yes, #player-delete-no, #copy-player-pool-link-btn, .player-edit-btn, .score-btn, .lm-sub-btn, .lm-modal-option, .lm-modal-close');
     if (!target) return;
 
     // ── Premium Features Click Routing ──
@@ -2075,6 +2078,12 @@ class App {
       return;
     }
 
+    // ── Download HD Standings ──
+    if (target.id === 'download-standings-btn' || target.closest('#download-standings-btn')) {
+      this.downloadStandingsHD();
+      return;
+    }
+
     // ── Sync fixtures to live section ──
     if (target.id === 'sync-live-fixtures-btn' || target.closest('#sync-live-fixtures-btn')) {
       if (!this.syncFixturesToLive({ showToast: true })) {
@@ -2445,10 +2454,10 @@ class App {
       { teamAId: pB[2][0], teamBId: pB[2][1], group: 'B' },
       { teamAId: pA[3][0], teamBId: pA[3][1], group: 'A' },
       { teamAId: pB[3][0], teamBId: pB[3][1], group: 'B' },
-    ];
-    const day2 = [
       { teamAId: pA[4][0], teamBId: pA[4][1], group: 'A' },
       { teamAId: pB[4][0], teamBId: pB[4][1], group: 'B' },
+    ];
+    const day2 = [
       { teamAId: pA[5][0], teamBId: pA[5][1], group: 'A' },
       { teamAId: pB[5][0], teamBId: pB[5][1], group: 'B' },
     ];
@@ -2532,8 +2541,8 @@ class App {
     }
 
     // Time slots: each match = 1 hour, starting 8:30 AM
-    const day1Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30','2:30 – 3:30','3:30 – 4:30'];
-    const day2Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30'];
+    const day1Times = ['8:30 – 9:30','9:30 – 10:30','10:30 – 11:30','11:30 – 12:30','12:30 – 1:30','1:30 – 2:30','2:30 – 3:30','3:30 – 4:30','4:30 – 5:30','5:30 – 6:30'];
+    const day2Times = ['8:30 – 9:30','9:30 – 10:30'];
 
     // Round-robin pairs for 4 teams [0,1,2,3]
     // Round 1: 0v1, 2v3  |  Round 2: 0v2, 1v3  |  Round 3: 0v3, 1v2
@@ -2546,8 +2555,8 @@ class App {
     const pA = rrPairs(gd.groupA);
     const pB = rrPairs(gd.groupB);
 
-    // Day 1 (8 matches): Interleave A,B from Round 1, 2 & start of 3
-    // Day 2 (4 matches): Remaining league + Knockouts after
+    // Day 1 (10 matches): All of Round 1, 2 & most of 3
+    // Day 2 (2 matches): Remaining league + Knockouts after
     const day1 = [
       { pair: pA[0], group: 'A' }, // R1-M1
       { pair: pB[0], group: 'B' }, // R1-M1
@@ -2557,10 +2566,10 @@ class App {
       { pair: pB[2], group: 'B' }, // R2-M1
       { pair: pA[3], group: 'A' }, // R2-M2
       { pair: pB[3], group: 'B' }, // R2-M2
-    ];
-    const day2 = [
       { pair: pA[4], group: 'A' }, // R3-M1
       { pair: pB[4], group: 'B' }, // R3-M1
+    ];
+    const day2 = [
       { pair: pA[5], group: 'A' }, // R3-M2
       { pair: pB[5], group: 'B' }, // R3-M2
     ];
@@ -2568,8 +2577,8 @@ class App {
     const scheduled = [...day1, ...day2];
 
     return scheduled.map((s, i) => {
-      const dayIdx = i < 8 ? 0 : 1;
-      const slotIdx = dayIdx === 0 ? i : i - 8;
+      const dayIdx = i < 10 ? 0 : 1;
+      const slotIdx = dayIdx === 0 ? i : i - 10;
       const times = dayIdx === 0 ? day1Times : day2Times;
       return {
         matchId: `match-${i + 1}`,
@@ -2747,6 +2756,64 @@ class App {
       this.ui.showToast('✅ HD fixtures downloaded!', 'success');
     } catch (err) {
       console.error('Fixtures download failed:', err);
+      this.ui.showToast('❌ Download failed', 'error');
+    }
+  }
+  // ── Download HD Standings as PNG ──
+  async downloadStandingsHD() {
+    const dashboard = document.getElementById('standings-dashboard');
+    if (!dashboard) {
+      this.ui.showToast('⚠️ No standings data to download.', 'warning');
+      return;
+    }
+
+    this.ui.showToast('📸 Generating HD standings image...', 'info');
+
+    try {
+      // Dynamically load html2canvas if not available
+      if (typeof html2canvas === 'undefined') {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+
+      const canvas = await html2canvas(dashboard, {
+        scale: 3,
+        backgroundColor: null,
+        useCORS: true,
+        logging: false,
+        onclone: (clonedDoc) => {
+          const clonedDash = clonedDoc.getElementById('standings-dashboard');
+          if (clonedDash) {
+            clonedDash.style.background = '#0a0e27';
+            clonedDash.style.padding = '32px';
+            clonedDash.style.borderRadius = '0';
+          }
+          // Force opaque backgrounds
+          clonedDoc.querySelectorAll('.standings-group, .standings-table, .standings-group-title').forEach(el => {
+            const cs = getComputedStyle(el);
+            if (cs.backgroundColor === 'rgba(0, 0, 0, 0)' || cs.backgroundColor.includes('rgba')) {
+              el.style.backgroundColor = '#131836';
+            }
+          });
+          // Hide download button in export
+          const btn = clonedDoc.getElementById('download-standings-btn');
+          if (btn) btn.style.display = 'none';
+        },
+      });
+
+      const link = document.createElement('a');
+      link.download = 'NPL_3.0_Standings_HD.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+
+      this.ui.showToast('✅ HD standings downloaded!', 'success');
+    } catch (err) {
+      console.error('Standings download failed:', err);
       this.ui.showToast('❌ Download failed', 'error');
     }
   }
@@ -3372,10 +3439,10 @@ class App {
 
     // Also add knockout matches (match-13 through match-16) — always TBD until league is done
     const knockoutSlots = [
-      { id: 'match-13', label: 'Qualifier 1', desc: 'A1 vs B1', time: '12:30 – 1:30' },
-      { id: 'match-14', label: 'Eliminator', desc: 'A2 vs B2', time: '1:30 – 2:30' },
-      { id: 'match-15', label: 'Qualifier 2', desc: 'Loser Q1 vs Winner Elim', time: '2:30 – 3:30' },
-      { id: 'match-16', label: 'Final', desc: 'Winner Q1 vs Winner Q2', time: '3:30 – 4:30' },
+      { id: 'match-13', label: 'Qualifier 1', desc: 'A1 vs B1', time: '10:30 – 11:30' },
+      { id: 'match-14', label: 'Eliminator', desc: 'A2 vs B2', time: '11:30 – 12:30' },
+      { id: 'match-15', label: 'Qualifier 2', desc: 'Loser Q1 vs Winner Elim', time: '12:30 – 1:30' },
+      { id: 'match-16', label: 'Final', desc: 'Winner Q1 vs Winner Q2', time: '1:30 – 2:30' },
     ];
 
     // TBD placeholder team
@@ -3525,6 +3592,7 @@ class App {
       if (type === 'WD+RO' || type === 'NB+RO') {
         this._showRunOutModal(type);
       } else {
+        this._lastLiveState = JSON.parse(JSON.stringify(this.liveMatchEngine.getState()));
         this.liveMatchEngine.recordBall(type);
         this._afterBallRecorded();
       }
@@ -3538,6 +3606,7 @@ class App {
       if (type === 'W') {
         this._showDismissalModal();
       } else {
+        this._lastLiveState = JSON.parse(JSON.stringify(this.liveMatchEngine.getState()));
         this.liveMatchEngine.recordBall(type);
         this._afterBallRecorded();
       }
@@ -3594,6 +3663,7 @@ class App {
         this._closeModal();
         this._showRunOutModal('W');
       } else {
+        this._lastLiveState = JSON.parse(JSON.stringify(this.liveMatchEngine.getState()));
         this.liveMatchEngine.recordBall('W', { dismissalType: dtype, whoOut: 'striker' });
         this._closeModal();
         this._afterBallRecorded();
@@ -3624,6 +3694,7 @@ class App {
       const pendingType = this._pendingRunOutType || 'W';
       const runsCompleted = this._pendingRunOutRuns || 0;
       const manualStrikeSwap = this._runOutSwapped || false;
+      this._lastLiveState = JSON.parse(JSON.stringify(this.liveMatchEngine.getState()));
       if (pendingType === 'W') {
         this.liveMatchEngine.recordBall('W', { dismissalType: 'run out', whoOut, runsCompleted, manualStrikeSwap });
       } else {
@@ -3708,11 +3779,25 @@ class App {
     this._syncLiveToScorecard();
     // Check if match just ended or innings just ended — show save prompt
     const st = this.liveMatchEngine.getState();
+
+    // Trigger ball outcome animations
+    const allBalls = this.liveMatchEngine._balls;
+    const lastBall = allBalls.length > 0 ? allBalls[allBalls.length - 1] : null;
+    if (lastBall && this.liveAnims) {
+      this.liveAnims.trigger(lastBall, this._lastLiveState, st);
+    }
+    this._lastLiveState = JSON.parse(JSON.stringify(st));
+
     if (st.phase === 'result' || st.phase === 'innings-break') {
       this._renderLiveMatchView();
       this._showSaveConfirmModal(st.phase === 'result' ? 'Match Complete!' : 'Innings Complete!');
     } else {
       this._renderLiveMatchView();
+    }
+
+    // Pulse the latest ball dot after DOM update
+    if (this.liveAnims) {
+      setTimeout(() => this.liveAnims.pulseLatestDot(), 60);
     }
   }
 
