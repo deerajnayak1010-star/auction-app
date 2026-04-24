@@ -841,8 +841,74 @@ export class UI {
   // SETUP PAGE
   // ═══════════════════════════════════════════
 
-  renderSetup(teams, selectedTeamIds, timerDuration = 30) {
+  renderSetup(teams, selectedTeamIds, timerDuration = 30, preloadOpts = {}) {
     const allSelected = teams.length > 0 && teams.every(t => selectedTeamIds.has(t.id));
+
+    const {
+      hasCompletedSnapshot = false,
+      globalPreloadEnabled = false,
+      isAuctionNew = true,
+      engineExists = false,
+      preloadLabel = 'NPL 3.0 Auction',
+    } = preloadOpts;
+
+    // Build preload section HTML
+    const preloadSectionHtml = `
+      <div class="preload-section-card">
+        <div class="preload-section-header">
+          <span class="preload-section-icon">📦</span>
+          <h3>Squad Preload System</h3>
+        </div>
+        <p class="preload-section-desc">Preload squads from a previous auction or set permanent global preload data.</p>
+
+        ${globalPreloadEnabled ? `
+          <div class="preload-badge-active">
+            <span class="preload-badge-dot"></span>
+            <span>Preloaded from ${preloadLabel}</span>
+          </div>
+        ` : ''}
+
+        <div class="preload-actions-grid">
+          <!-- Manual Preload -->
+          <div class="preload-action-card">
+            <div class="preload-action-header">
+              <span class="preload-action-icon">🔄</span>
+              <span class="preload-action-title">Manual Preload</span>
+            </div>
+            <p class="preload-action-desc">Load squads from the last completed auction</p>
+            <button class="btn preload-btn preload-btn-manual" id="preload-squads-btn"
+              ${!hasCompletedSnapshot || !isAuctionNew ? 'disabled' : ''}>
+              🔄 Preload Previous Squads
+            </button>
+            ${!hasCompletedSnapshot ? '<span class="preload-hint">No completed auction available</span>' : ''}
+            ${!isAuctionNew && hasCompletedSnapshot ? '<span class="preload-hint">⚠️ Auction already has data</span>' : ''}
+          </div>
+
+          <!-- Global Preload Admin -->
+          <div class="preload-action-card preload-action-card-global">
+            <div class="preload-action-header">
+              <span class="preload-action-icon">🌐</span>
+              <span class="preload-action-title">Permanent Preload</span>
+            </div>
+            <p class="preload-action-desc">Auto-load squads from ${preloadLabel} on every new auction</p>
+            <div class="preload-admin-actions">
+              ${globalPreloadEnabled ? `
+                <button class="btn preload-btn preload-btn-remove" id="remove-global-preload-btn">
+                  ⚪ Remove Global Preload
+                </button>
+              ` : `
+                <button class="btn preload-btn preload-btn-global" id="set-global-preload-btn">
+                  🟢 Set as Global Preload
+                </button>
+              `}
+              <button class="btn preload-btn preload-btn-preview" id="preview-preload-btn">
+                👁️ Preview Squads
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
 
     this.mainEl.innerHTML = `
       <div class="setup-page">
@@ -927,6 +993,9 @@ export class UI {
             </select>
           </div>
         </div>
+
+        <!-- Squad Preload System -->
+        ${preloadSectionHtml}
 
         <div class="setup-footer">
           <p>${selectedTeamIds.size} team${selectedTeamIds.size !== 1 ? 's' : ''} selected (minimum 2 required)</p>
@@ -1753,6 +1822,106 @@ export class UI {
 
   closeResetConfirmModal() {
     const existing = document.getElementById('reset-confirm-modal');
+    if (existing) existing.remove();
+  }
+
+  // ── Preload Modals ──────────────────────────
+
+  /** Show preload confirmation modal */
+  showPreloadConfirmModal(type = 'manual') {
+    this.closePreloadConfirmModal();
+    const modal = document.createElement('div');
+    modal.id = 'preload-confirm-modal';
+    modal.className = 'reset-confirm-overlay';
+    modal.innerHTML = `
+      <div class="reset-confirm-card preload-confirm-card">
+        <div class="reset-confirm-icon" style="color:#f59e0b;">📦</div>
+        <h3>Preload Squads?</h3>
+        <p>This will <strong>overwrite current squads</strong> with data from the ${type === 'manual' ? 'last completed auction' : 'permanent preload data'}.</p>
+        <p style="font-size:0.82rem; color:var(--text-3); margin-top:4px;">Teams, players, prices, and budgets will be pre-populated. You can still continue auctioning remaining players.</p>
+        <div class="reset-confirm-actions">
+          <button class="btn btn-primary btn-lg" id="preload-confirm-yes" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">✅ Yes, Preload</button>
+          <button class="btn btn-ghost btn-lg" id="preload-confirm-no">No, Cancel</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('app').appendChild(modal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) this.closePreloadConfirmModal();
+    });
+  }
+
+  closePreloadConfirmModal() {
+    const existing = document.getElementById('preload-confirm-modal');
+    if (existing) existing.remove();
+  }
+
+  /** Show preload preview modal with squad details */
+  showPreloadPreviewModal(snapshot) {
+    this.closePreloadPreviewModal();
+    const modal = document.createElement('div');
+    modal.id = 'preload-preview-modal';
+    modal.className = 'preload-preview-overlay';
+
+    const totalPlayers = snapshot.teams.reduce((sum, t) => sum + t.squad.length, 0);
+    const totalSpent = snapshot.teams.reduce((sum, t) => sum + t.totalSpent, 0);
+
+    modal.innerHTML = `
+      <div class="preload-preview-card">
+        <div class="preload-preview-header">
+          <div>
+            <h3>📦 Preload Preview</h3>
+            <p class="preload-preview-meta">${snapshot.teams.length} teams • ${totalPlayers} players • ${fmt(totalSpent)} total spent</p>
+          </div>
+          <button class="preload-preview-close-btn" id="preview-preload-close">✕</button>
+        </div>
+        ${snapshot.errors.length > 0 ? `
+          <div class="preload-preview-warnings">
+            ${snapshot.errors.map(e => `<div class="preload-preview-warning">⚠️ ${e}</div>`).join('')}
+          </div>
+        ` : ''}
+        ${snapshot.autoCreatedPlayers.length > 0 ? `
+          <div class="preload-preview-info">
+            <strong>New players to be created:</strong> ${snapshot.autoCreatedPlayers.map(p => p.name).join(', ')}
+          </div>
+        ` : ''}
+        <div class="preload-preview-teams">
+          ${snapshot.teams.map(team => `
+            <div class="preload-preview-team">
+              <div class="preload-preview-team-header" style="--team-color: ${team.teamDef.color}">
+                <div class="preload-preview-team-logo" style="background: ${team.teamDef.color}; color: ${team.teamDef.textColor};">
+                  ${team.teamDef.logo ? `<img src="${team.teamDef.logo}" alt="${team.teamDef.shortName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : team.teamDef.shortName}
+                </div>
+                <div>
+                  <div class="preload-preview-team-name">${team.teamDef.name}</div>
+                  <div class="preload-preview-team-meta">
+                    ${team.squad.length} players • Spent: ${fmt(team.totalSpent)} • Remaining: ${fmt(team.purse)}
+                  </div>
+                </div>
+              </div>
+              <div class="preload-preview-squad">
+                ${team.squad.map((p, i) => `
+                  <div class="preload-preview-player ${p.name === team.iconPlayer ? 'is-icon-player' : ''}">
+                    <span class="preload-preview-player-num">${i + 1}</span>
+                    <span class="preload-preview-player-name">${p.name}${p.name === team.iconPlayer ? ' ⭐' : ''}</span>
+                    <span class="preload-preview-player-role">${p.role}</span>
+                    <span class="preload-preview-player-price">${fmt(p.soldPrice || p.basePrice)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    document.getElementById('app').appendChild(modal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) this.closePreloadPreviewModal();
+    });
+  }
+
+  closePreloadPreviewModal() {
+    const existing = document.getElementById('preload-preview-modal');
     if (existing) existing.remove();
   }
 

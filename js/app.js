@@ -14,6 +14,7 @@ import { PlayerCardsEngine } from './player-cards.js';
 import { GalleryManager } from './gallery.js';
 import { BackgroundMediaManager } from './background-media.js';
 import { LiveAnimations } from './live-animations.js';
+import { PERMANENT_PRELOAD_DATA, DEFAULT_FIXTURES_DATA, buildPreloadSnapshot, buildPreloadDataFromEngine } from './preload-data.js';
 
 class App {
   constructor() {
@@ -74,6 +75,10 @@ class App {
     this._pendingPlayerImage = null;
     this._playerImageBusy = false;
     this._playerImageTaskId = 0;
+
+    // Preload System
+    this.globalPreloadEnabled = false;
+    this._preloadAppliedThisSession = false;
   }
 
   async init() {
@@ -120,6 +125,9 @@ class App {
       console.log(`[App] Player catalog synchronized (${this.allPlayers.length} players)`);
       this.saveState({ immediate: this.isLoggedIn });
     }
+
+    // Check and apply global preload if applicable
+    this._checkAndApplyGlobalPreload();
 
     await this.backgroundMedia.init();
 
@@ -417,6 +425,15 @@ class App {
     // Always include player catalog so CRUD changes persist across sessions/browsers
     state.allPlayers = this._getPlayerCatalog();
 
+    // Preload system state
+    state.globalPreloadEnabled = this.globalPreloadEnabled || false;
+
+    // Preserve last completed auction snapshot for manual preload
+    const savedSnapshot = localStorage.getItem('npl_last_completed_auction');
+    if (savedSnapshot) {
+      try { state.lastCompletedAuction = JSON.parse(savedSnapshot); } catch(e) {}
+    }
+
     return state;
   }
 
@@ -650,6 +667,18 @@ class App {
     if (state.fixturesLocked !== undefined) {
       this.fixturesLocked = state.fixturesLocked;
     }
+
+    // Restore preload state
+    if (state.globalPreloadEnabled !== undefined) {
+      this.globalPreloadEnabled = state.globalPreloadEnabled;
+    }
+
+    // Restore last completed auction snapshot
+    if (state.lastCompletedAuction) {
+      try {
+        localStorage.setItem('npl_last_completed_auction', JSON.stringify(state.lastCompletedAuction));
+      } catch(e) {}
+    }
   }
 
   /** Clear saved state and reset everything */
@@ -658,10 +687,243 @@ class App {
     this.engine = null;
     this.selectedTeamIds = new Set();
     this.selectedPlayerIds = new Set();
+    this._preloadAppliedThisSession = false;
     // Keep login state when resetting auction data
     this.saveState(); 
     this.ui.showToast('🔄 Auction reset. Starting fresh!', 'info');
     this.navigate('setup');
+  }
+
+  // ═══════════════════════════════════════════
+  // SQUAD PRELOAD SYSTEM
+  // ═══════════════════════════════════════════
+
+  /**
+   * Check if the current auction is in a "NEW" state (no bids placed yet).
+   * A NEW auction means either no engine exists, or the engine has no sold
+   * players and no active bidding.
+   */
+  _isAuctionNew() {
+    if (!this.engine) return true;
+    const state = this.engine.getState();
+    return state.soldCount === 0 && state.phase !== 'bidding' && state.bidHistory.length === 0;
+  }
+
+  /**
+   * Check if a completed auction snapshot exists for manual preload.
+   */
+  _hasCompletedAuctionSnapshot() {
+    try {
+      const raw = localStorage.getItem('npl_last_completed_auction');
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      return data && data.teams && data.teams.length > 0;
+    } catch(e) {
+      return false;
+    }
+  }
+
+  /**
+   * Save the current completed auction as a snapshot for future preloads.
+   * Called when the auction pool is exhausted (all players auctioned).
+   */
+  _saveCompletedAuctionSnapshot() {
+    if (!this.engine) return;
+    const engineData = this.engine.serialize();
+    // Only save if there are sold players (i.e., auction actually happened)
+    if (!engineData.soldPlayers || engineData.soldPlayers.length === 0) return;
+    
+    const preloadData = buildPreloadDataFromEngine(engineData);
+    if (preloadData && preloadData.teams.length > 0) {
+      try {
+        localStorage.setItem('npl_last_completed_auction', JSON.stringify(preloadData));
+        console.log('[Preload] Saved completed auction snapshot for future preload');
+      } catch(e) {
+        console.warn('[Preload] Failed to save auction snapshot:', e);
+      }
+    }
+  }
+
+  /**
+   * FEATURE A: Manual Preload — preload squads from the last completed auction.
+   */
+  _executeManualPreload() {
+    try {
+      const raw = localStorage.getItem('npl_last_completed_auction');
+      if (!raw) {
+        this.ui.showToast('❌ No completed auction data found', 'error');
+        return;
+      }
+      const preloadData = JSON.parse(raw);
+      this._executePreload(preloadData, 'manual');
+    } catch(e) {
+      console.error('[Preload] Manual preload failed:', e);
+      this.ui.showToast('❌ Preload failed: ' + (e.message || 'Unknown error'), 'error');
+    }
+  }
+
+  /**
+   * FEATURE B: Global Preload — auto-preload from permanent data.
+   * Called on init, page refresh, after login.
+   */
+  _checkAndApplyGlobalPreload() {
+    if (!this.globalPreloadEnabled) return;
+    if (this._preloadAppliedThisSession) return;
+    if (!this._isAuctionNew()) return;
+
+    console.log('[Preload] Auto-applying global preload...');
+    this._preloadAppliedThisSession = true;
+    this._executePreload(PERMANENT_PRELOAD_DATA, 'global');
+  }
+
+  /**
+   * Core preload execution logic — shared by manual and global preload.
+   * @param {object} preloadData — preload data in standard format
+   * @param {string} source — 'manual' or 'global'
+   */
+  _executePreload(preloadData, source = 'manual') {
+    if (!preloadData || !preloadData.teams || preloadData.teams.length === 0) {
+      this.ui.showToast('❌ Invalid preload data', 'error');
+      return;
+    }
+
+    // Build snapshot
+    const playerCatalog = this._getPlayerCatalog();
+    const snapshot = buildPreloadSnapshot(preloadData, TEAMS_DATA, playerCatalog);
+
+    if (snapshot.teams.length === 0) {
+      this.ui.showToast('❌ No matching teams found for preload', 'error');
+      return;
+    }
+
+    // Auto-create missing players in the catalog
+    if (snapshot.autoCreatedPlayers.length > 0) {
+      for (const newPlayer of snapshot.autoCreatedPlayers) {
+        // Check if already exists (race condition guard)
+        if (!this.allPlayers.some(p => p.name.toLowerCase() === newPlayer.name.toLowerCase())) {
+          this.allPlayers.push(newPlayer);
+          console.log(`[Preload] Auto-created player: ${newPlayer.name} (${newPlayer.role})`);
+        }
+      }
+    }
+
+    // Select all teams that have preload data
+    const preloadTeamIds = new Set(snapshot.teams.map(t => t.teamId));
+    // Also select any previously selected teams
+    for (const id of this.selectedTeamIds) {
+      preloadTeamIds.add(id);
+    }
+    // Ensure all 8 teams are selected for a full preloaded auction
+    TEAMS_DATA.forEach(t => preloadTeamIds.add(t.id));
+    this.selectedTeamIds = preloadTeamIds;
+
+    // Select all players
+    this.selectedPlayerIds = new Set(this._getPlayerCatalog().map(p => p.name));
+
+    // Create the preloaded engine
+    const selectedTeams = TEAMS_DATA.filter(t => this.selectedTeamIds.has(t.id));
+    const allPlayersForPool = this._getPlayerCatalog().filter(p => this.selectedPlayerIds.has(p.name));
+
+    this.engine = AuctionEngine.createPreloaded(
+      selectedTeams,
+      allPlayersForPool,
+      snapshot,
+      { timerDuration: this.timerDuration }
+    );
+
+    // Auto-apply default fixtures (pool division + match schedule) from Excel data
+    if (DEFAULT_FIXTURES_DATA && DEFAULT_FIXTURES_DATA.pools) {
+      const fd = DEFAULT_FIXTURES_DATA;
+      this.engine.groupDivision = {
+        groupA: [...fd.pools.A],
+        groupB: [...fd.pools.B],
+        tokenMap: {},  // no random tokens — preset pools
+      };
+
+      // Build fixture schedule from the hardcoded match list
+      this.engine.fixtureSchedule = fd.matches.map(m => ({
+        matchId: `match-${m.matchNum}`,
+        matchNum: m.matchNum,
+        teamAId: m.team1,
+        teamBId: m.team2,
+        group: m.pool,
+        day: m.date.includes('25') ? 1 : 2,
+        date: m.date,
+        time: m.time,
+      }));
+
+      console.log(`[Preload] Applied default fixtures: Pool A [${fd.pools.A.join(',')}], Pool B [${fd.pools.B.join(',')}], ${fd.matches.length} matches`);
+    }
+
+    // Log errors/warnings
+    if (snapshot.errors.length > 0) {
+      console.warn('[Preload] Warnings:', snapshot.errors);
+    }
+
+    // Count stats
+    const teamCount = snapshot.teams.length;
+    const playerCount = snapshot.teams.reduce((sum, t) => sum + t.squad.length, 0);
+
+    this.saveState({ immediate: true });
+    this.broadcastPersistentState();
+
+    if (source === 'global') {
+      this.ui.showToast(
+        `🟢 Preloaded from ${preloadData.label || 'NPL 3.0 Auction'} — ${teamCount} teams, ${playerCount} players`,
+        'success',
+        5000
+      );
+    } else {
+      this.ui.showToast(
+        `✅ Squads preloaded! ${teamCount} teams, ${playerCount} players loaded`,
+        'success',
+        4000
+      );
+    }
+
+    this.render();
+  }
+
+  /**
+   * Get a preview of the preload data for the preview modal.
+   * @param {string} type — 'manual' or 'global'
+   */
+  _getPreloadPreview(type = 'global') {
+    let preloadData;
+    if (type === 'manual') {
+      try {
+        const raw = localStorage.getItem('npl_last_completed_auction');
+        preloadData = raw ? JSON.parse(raw) : null;
+      } catch(e) { preloadData = null; }
+    } else {
+      preloadData = PERMANENT_PRELOAD_DATA;
+    }
+
+    if (!preloadData) return null;
+
+    const playerCatalog = this._getPlayerCatalog();
+    return buildPreloadSnapshot(preloadData, TEAMS_DATA, playerCatalog);
+  }
+
+  /**
+   * Toggle global preload on/off.
+   */
+  _setGlobalPreload(enabled) {
+    this.globalPreloadEnabled = enabled;
+    this.saveState({ immediate: true });
+    this.broadcastPersistentState();
+
+    if (enabled) {
+      this.ui.showToast('🟢 Global preload enabled — squads will auto-load on new auctions', 'success');
+      // Apply immediately if auction is new
+      if (this._isAuctionNew()) {
+        this._checkAndApplyGlobalPreload();
+      }
+    } else {
+      this.ui.showToast('⚪ Global preload disabled', 'info');
+      this._preloadAppliedThisSession = false;
+    }
+    this.render();
   }
 
   /** Update only the sync status chip in the header without a full re-render */
@@ -1186,7 +1448,13 @@ class App {
         this.ui.renderLogin();
         break;
       case 'setup':
-        this.ui.renderSetup(TEAMS_DATA, this.selectedTeamIds, this.timerDuration);
+        this.ui.renderSetup(TEAMS_DATA, this.selectedTeamIds, this.timerDuration, {
+          hasCompletedSnapshot: this._hasCompletedAuctionSnapshot(),
+          globalPreloadEnabled: this.globalPreloadEnabled,
+          isAuctionNew: this._isAuctionNew(),
+          engineExists: !!this.engine,
+          preloadLabel: PERMANENT_PRELOAD_DATA.label || 'NPL 3.0 Auction',
+        });
         this.bindTimerSetting();
         break;
       case 'player-select':
@@ -1411,7 +1679,7 @@ class App {
   }
 
   async onClick(e) {
-    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], [data-player-edit-id], [data-ball], [data-live-match], [data-lm-new-batsman], [data-lm-next-bowler], [data-lm-coin-flip], [data-lm-dismissal], [data-lm-runout], [data-ro-runs], [data-gallery-filter], [data-delete-photo], [data-generate-card], #login-btn, #login-eye-toggle, #login-forgot-link, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #recall-bid-btn, #recall-confirm-yes, #recall-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #video-bg-toggle-btn, #results-tab-squads, #results-tab-analytics, #results-tab-standings, #results-tab-stats, #results-tab-scorecard, #results-tab-fixtures, #draw-tokens-btn, #clear-tokens-btn, #clear-tokens-yes, #clear-tokens-no, #download-fixtures-btn, #download-standings-btn, #lock-fixtures-btn, #create-knockout-btn, #sc-back-btn, #sc-back-btn2, #sc-save-btn, .sc-open-btn, #commentary-toggle-btn, #commentary-header, #open-projector-btn, #hamburger-toggle, #nav-more-toggle, .nav-more-item, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn, #live-undo-btn, #live-back-btn, #live-save-scorecard-btn, #lm-start-toss-btn, #lm-confirm-openers-btn, #lm-wd-toggle, #lm-nb-toggle, #lm-bye-toggle, #lm-lb-toggle, #lm-wicket-btn, #lm-modal-close-btn, #lm-save-yes-btn, #lm-save-no-btn, #lm-save-dismiss-btn, #lm-edit-score-btn, #live-edit-score-btn, #ro-swap-strike-btn, #lm-swap-strike-btn, #share-app-btn, #share-copy-wa-btn, #share-copy-ig-btn, #share-tab-wa, #share-tab-ig, #share-modal-close, #awards-reveal-next-btn, #awards-reset-btn, #awards-back-btn, #add-player-btn, #player-modal-save, #player-modal-cancel, #player-modal-close, #player-modal-delete, #player-modal-overlay, #player-delete-yes, #player-delete-no, #copy-player-pool-link-btn, .player-edit-btn, .score-btn, .lm-sub-btn, .lm-modal-option, .lm-modal-close');
+    const target = e.target.closest('[data-team-id], [data-view], [data-role], [data-player-name], [data-player-edit-id], [data-ball], [data-live-match], [data-lm-new-batsman], [data-lm-next-bowler], [data-lm-coin-flip], [data-lm-dismissal], [data-lm-runout], [data-ro-runs], [data-gallery-filter], [data-delete-photo], [data-generate-card], #login-btn, #login-eye-toggle, #login-forgot-link, #logout-btn, #start-auction-btn, #nominate-btn, #sold-btn, #unsold-btn, #goto-auction-btn, #view-results-btn, #goto-setup-btn, #reauction-btn, #reauction-yes-btn, #reauction-no-btn, #download-all-posters-btn, #select-all-players-btn, #confirm-players-btn, #quick-bid-btn, #undo-bid-btn, #redo-bid-btn, #fullscreen-btn, #generate-qr-btn, #close-qr-modal, #copy-link-btn, #proceed-rules-btn, #reset-auction-btn, #reset-confirm-yes, #reset-confirm-no, #recall-bid-btn, #recall-confirm-yes, #recall-confirm-no, #select-all-teams-btn, #download-rules-pdf-btn, #sound-toggle-btn, #video-bg-toggle-btn, #results-tab-squads, #results-tab-analytics, #results-tab-standings, #results-tab-stats, #results-tab-scorecard, #results-tab-fixtures, #draw-tokens-btn, #clear-tokens-btn, #clear-tokens-yes, #clear-tokens-no, #download-fixtures-btn, #download-standings-btn, #lock-fixtures-btn, #create-knockout-btn, #sc-back-btn, #sc-back-btn2, #sc-save-btn, .sc-open-btn, #commentary-toggle-btn, #commentary-header, #open-projector-btn, #hamburger-toggle, #nav-more-toggle, .nav-more-item, .qr-modal-overlay, .filter-btn, .team-bid-btn, .poster-preview-btn, .poster-download-btn, #live-undo-btn, #live-back-btn, #live-save-scorecard-btn, #lm-start-toss-btn, #lm-confirm-openers-btn, #lm-wd-toggle, #lm-nb-toggle, #lm-bye-toggle, #lm-lb-toggle, #lm-wicket-btn, #lm-modal-close-btn, #lm-save-yes-btn, #lm-save-no-btn, #lm-save-dismiss-btn, #lm-edit-score-btn, #live-edit-score-btn, #ro-swap-strike-btn, #lm-swap-strike-btn, #share-app-btn, #share-copy-wa-btn, #share-copy-ig-btn, #share-tab-wa, #share-tab-ig, #share-modal-close, #awards-reveal-next-btn, #awards-reset-btn, #awards-back-btn, #add-player-btn, #player-modal-save, #player-modal-cancel, #player-modal-close, #player-modal-delete, #player-modal-overlay, #player-delete-yes, #player-delete-no, #copy-player-pool-link-btn, #preload-squads-btn, #preload-confirm-yes, #preload-confirm-no, #set-global-preload-btn, #remove-global-preload-btn, #preview-preload-btn, #preview-preload-close, .player-edit-btn, .score-btn, .lm-sub-btn, .lm-modal-option, .lm-modal-close');
     if (!target) return;
 
     // ── Premium Features Click Routing ──
@@ -1617,6 +1885,58 @@ class App {
     if (target.closest('.team-select-card')) {
       const teamId = target.closest('.team-select-card').dataset.teamId;
       if (teamId) this.toggleTeam(teamId);
+      return;
+    }
+
+    // ── Preload: manual preload button ──
+    if (target.id === 'preload-squads-btn' || target.closest('#preload-squads-btn')) {
+      if (!this._isAuctionNew()) {
+        this.ui.showToast('⚠️ Cannot preload — auction already has bids/sold players', 'warning');
+        return;
+      }
+      this.ui.showPreloadConfirmModal('manual');
+      return;
+    }
+
+    // ── Preload: confirm yes ──
+    if (target.id === 'preload-confirm-yes') {
+      this.ui.closePreloadConfirmModal();
+      this._executeManualPreload();
+      return;
+    }
+
+    // ── Preload: confirm no ──
+    if (target.id === 'preload-confirm-no') {
+      this.ui.closePreloadConfirmModal();
+      return;
+    }
+
+    // ── Preload: set global preload ──
+    if (target.id === 'set-global-preload-btn' || target.closest('#set-global-preload-btn')) {
+      this._setGlobalPreload(true);
+      return;
+    }
+
+    // ── Preload: remove global preload ──
+    if (target.id === 'remove-global-preload-btn' || target.closest('#remove-global-preload-btn')) {
+      this._setGlobalPreload(false);
+      return;
+    }
+
+    // ── Preload: preview squads ──
+    if (target.id === 'preview-preload-btn' || target.closest('#preview-preload-btn')) {
+      const preview = this._getPreloadPreview('global');
+      if (preview) {
+        this.ui.showPreloadPreviewModal(preview);
+      } else {
+        this.ui.showToast('⚠️ No preload data available to preview', 'warning');
+      }
+      return;
+    }
+
+    // ── Preload: close preview ──
+    if (target.id === 'preview-preload-close' || target.classList.contains('preload-preview-overlay')) {
+      this.ui.closePreloadPreviewModal();
       return;
     }
 
@@ -2306,6 +2626,9 @@ class App {
     if (!player) {
       this.ui.showToast('All players have been auctioned!', 'info');
       this.stopTimerTick();
+
+      // Save completed auction snapshot for future preloads
+      this._saveCompletedAuctionSnapshot();
 
       // Commentary: auction complete
       const state = this.engine.getState();

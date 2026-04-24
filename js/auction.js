@@ -666,4 +666,81 @@ export class AuctionEngine {
     engine.fixtureSchedule = data.fixtureSchedule || null;
     return engine;
   }
+
+  /**
+   * Create a pre-populated AuctionEngine from a preload snapshot.
+   * Squads are pre-filled, budgets adjusted, and preloaded players
+   * are removed from the auction pool.
+   *
+   * @param {Array}  teams          — Team definitions (TEAMS_DATA entries)
+   * @param {Array}  allPlayers     — Full player catalog
+   * @param {object} preloadSnapshot — Output from buildPreloadSnapshot()
+   * @param {object} options        — { timerDuration }
+   * @returns {AuctionEngine}
+   */
+  static createPreloaded(teams, allPlayers, preloadSnapshot, options = {}) {
+    // Build a set of preloaded player names (lowercase) to exclude from pool
+    const preloadedPlayerNames = new Set();
+    const preloadTeamMap = new Map(); // teamId → snapshot team data
+
+    for (const snapTeam of (preloadSnapshot.teams || [])) {
+      preloadTeamMap.set(snapTeam.teamId, snapTeam);
+      for (const p of snapTeam.squad) {
+        preloadedPlayerNames.add(String(p.name).trim().toLowerCase());
+      }
+    }
+
+    // Filter out preloaded players from the auction pool
+    const poolPlayers = allPlayers.filter(
+      p => !preloadedPlayerNames.has(String(p.name).trim().toLowerCase())
+    );
+
+    // Create engine with remaining players
+    const engine = new AuctionEngine(teams, poolPlayers, options);
+
+    // Pre-populate each team
+    for (const [teamId, snapTeam] of preloadTeamMap) {
+      const team = engine.teams.get(teamId);
+      if (!team) continue;
+
+      let totalSpent = 0;
+      for (const player of snapTeam.squad) {
+        const soldPrice = player.soldPrice || player.basePrice || 1000;
+        totalSpent += soldPrice;
+
+        team.squad.push({
+          ...player,
+          soldPrice,
+        });
+
+        // Add to sold players list
+        engine.soldPlayers.push({
+          player: { ...player },
+          teamId,
+          teamName: team.name,
+          teamShortName: team.shortName,
+          teamColor: team.color,
+          price: soldPrice,
+          bidCount: 0, // preloaded — no bids
+        });
+      }
+
+      team.totalSpent = totalSpent;
+      team.purse = (team.purse ?? 100000) - totalSpent;
+      // Ensure purse doesn't go negative
+      if (team.purse < 0) team.purse = 0;
+    }
+
+    // Update player index to reflect preloaded players
+    engine.playerIndex = preloadedPlayerNames.size;
+
+    // Log the preload
+    engine._log('preload', {
+      teamsPreloaded: preloadSnapshot.teams.length,
+      playersPreloaded: preloadedPlayerNames.size,
+      label: preloadSnapshot.label || 'Preload',
+    });
+
+    return engine;
+  }
 }
