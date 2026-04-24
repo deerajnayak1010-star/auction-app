@@ -38,7 +38,7 @@ export const PERMANENT_PRELOAD_DATA = {
       players: [
         { name: 'Deekshith Acharya',  role: 'Batsman',     price: 3500 },
         { name: 'Manish IK',          role: 'Batsman',     price: 5500 },
-        { name: 'Shamith Shetty',     role: 'All-Rounder', price: 2500 },
+        { name: 'Sameeth Shetty',     role: 'All-Rounder', price: 2500 },
         { name: 'Girish Posanottu',   role: 'All-Rounder', price: 6500 },
         { name: 'Arun Shetty',        role: 'All-Rounder', price: 1000 },
         { name: 'Jeevan Shetty',      role: 'All-Rounder', price: 28000 },
