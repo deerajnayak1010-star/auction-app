@@ -202,7 +202,9 @@ export class LiveMatchEngine {
       else if(sub.endsWith('B')){const r=parseInt(sub);ball.extraRuns=1;ball.byeRuns=r;ball.isByeBoundary=(r===4);ball.isBye=true;}
       else{const r=parseInt(sub);ball.extraRuns=1;ball.batRuns=r;ball.isBatBoundary=(r>=4);}
     }
+    else if(type==='B+RO'){ball.isBye=true;ball.extraRuns=opts.runsCompleted||0;ball.wicket=true;ball.dismissalType='run out';ball.whoOut=opts.whoOut||'striker';}
     else if(type.startsWith('B')){const r=parseInt(type.slice(1));ball.isBye=true;ball.extraRuns=r;ball.isBoundary=(r===4);}
+    else if(type==='LB+RO'){ball.isLegBye=true;ball.extraRuns=opts.runsCompleted||0;ball.wicket=true;ball.dismissalType='run out';ball.whoOut=opts.whoOut||'striker';}
     else if(type.startsWith('LB')){const r=parseInt(type.slice(2));ball.isLegBye=true;ball.extraRuns=r;ball.isBoundary=(r===4);}
 
     // Total runs

@@ -3933,7 +3933,7 @@ class App {
     const subBtn = target.closest('.lm-sub-btn');
     if (subBtn && this.liveMatchEngine) {
       const type = subBtn.dataset.ball;
-      if (type === 'WD+RO' || type === 'NB+RO') {
+      if (type === 'WD+RO' || type === 'NB+RO' || type === 'B+RO' || type === 'LB+RO') {
         this._showRunOutModal(type);
       } else {
         this._lastLiveState = JSON.parse(JSON.stringify(this.liveMatchEngine.getState()));
