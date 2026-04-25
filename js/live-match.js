@@ -34,8 +34,8 @@ export class LiveMatchEngine {
   get _fow() { return this.currentInnings===1 ? this.fallOfWickets : this.fallOfWickets2; }
   _getBattingTeam() { return this.battingTeamId===this.teamA.id ? this.teamA : this.teamB; }
   _getBowlingTeam() { return this.bowlingTeamId===this.teamA.id ? this.teamA : this.teamB; }
-  _getStriker() { return this._bc.find(b=>b.isStriker&&!b.isOut&&b.onCrease!==false); }
-  _getNonStriker() { return this._bc.find(b=>!b.isStriker&&!b.isOut&&b.onCrease!==false); }
+  _getStriker() { return this._bc.find(b=>b.isStriker&&!b.isOut); }
+  _getNonStriker() { return this._bc.find(b=>!b.isStriker&&!b.isOut); }
   _getCurrentBowler() { return this._bwc.find(b=>b.isCurrent); }
   _getLegalBallCount() { return this._balls.filter(b=>!b.isWide&&!b.isNoBall).length; }
   _getCurrentOverNum() { return Math.floor(this._getLegalBallCount()/6); }
@@ -53,8 +53,8 @@ export class LiveMatchEngine {
   setOpeners(strikerName, nonStrikerName, bowlerName) {
     const bc = this.currentInnings===1?this.battingCard:this.battingCard2;
     bc.length = 0;
-    bc.push({name:strikerName,runs:0,balls:0,fours:0,sixes:0,isStriker:true,isOut:false,dismissal:'',didBat:true,onCrease:true});
-    bc.push({name:nonStrikerName,runs:0,balls:0,fours:0,sixes:0,isStriker:false,isOut:false,dismissal:'',didBat:true,onCrease:true});
+    bc.push({name:strikerName,runs:0,balls:0,fours:0,sixes:0,isStriker:true,isOut:false,dismissal:'',didBat:true});
+    bc.push({name:nonStrikerName,runs:0,balls:0,fours:0,sixes:0,isStriker:false,isOut:false,dismissal:'',didBat:true});
     const bwc = this.currentInnings===1?this.bowlingCard:this.bowlingCard2;
     bwc.length = 0;
     bwc.push({name:bowlerName,overs:'0',maidens:0,runs:0,wickets:0,balls:0,isCurrent:true});
@@ -66,7 +66,7 @@ export class LiveMatchEngine {
     // If there's already a non-out striker, new batsman comes as non-striker
     const existingStriker = this._bc.find(b => !b.isOut && b.isStriker);
     const isNewStriker = !existingStriker;
-    this._bc.push({name,runs:0,balls:0,fours:0,sixes:0,isStriker:isNewStriker,isOut:false,dismissal:'',didBat:true,onCrease:true});
+    this._bc.push({name,runs:0,balls:0,fours:0,sixes:0,isStriker:isNewStriker,isOut:false,dismissal:'',didBat:true});
     this.partnershipRuns = 0; this.partnershipBalls = 0;
     // If wicket fell on last ball of over, transition to bowler-select next
     if (this.phase === 'new-batsman-then-bowler') {
@@ -98,33 +98,44 @@ export class LiveMatchEngine {
   getAvailableNonStrikers() {
     const striker = this._getStriker();
     const strikerName = striker ? striker.name : null;
-    const currentNS = this._getNonStriker();
-    const currentNSName = currentNS ? currentNS.name : null;
-    // Get benched players (onCrease=false, not out, not striker) — they can be brought back
-    const benchedFromCard = this._bc.filter(b => !b.isOut && b.name !== strikerName && b.name !== currentNSName && b.onCrease === false)
-      .map(b => ({ name: b.name, inCard: true }));
-    // Squad players not yet in batting card
+    // Get players from batting card who are not out (excluding current striker)
+    const notOutFromCard = this._bc.filter(b => !b.isOut && b.name !== strikerName).map(b => ({ name: b.name, inCard: true }));
+    // Also include squad players not yet in batting card and not already out
     const usedNames = new Set(this._bc.map(b => b.name));
     const fromSquad = this._getBattingTeam().squad.filter(p => !usedNames.has(p.name)).map(p => ({ name: p.name, inCard: false }));
-    return [...benchedFromCard, ...fromSquad];
+    return [...notOutFromCard, ...fromSquad];
   }
 
   // Manually set non-striker to a different player
   manualSetNonStriker(name) {
     const currentNS = this._getNonStriker();
     if (currentNS && currentNS.name === name) return; // already non-striker
-    // Bench the old non-striker (take off crease but keep in batting card)
-    if (currentNS) {
-      currentNS.onCrease = false;
-    }
-    // If the player is already in batting card and not out, put them on crease
+    // If the player is already in batting card and not out, make them non-striker
     const existing = this._bc.find(b => b.name === name && !b.isOut);
     if (existing) {
-      existing.isStriker = false;
-      existing.onCrease = true;
+      // Remove isStriker from all non-out batters, set striker flag correctly
+      if (currentNS) currentNS.isStriker = false; // will be unused
+      // Mark the existing player as non-striker (isStriker=false)
+      // Keep current striker as striker
+      const striker = this._getStriker();
+      this._bc.forEach(b => {
+        if (b.isOut) return;
+        if (striker && b.name === striker.name) b.isStriker = true;
+        else if (b.name === name) b.isStriker = false;
+        else if (!b.isOut) b.isStriker = false; // bench the old non-striker (keep in card)
+      });
     } else {
-      // New player from squad — add to batting card as non-striker on crease
-      this._bc.push({name,runs:0,balls:0,fours:0,sixes:0,isStriker:false,isOut:false,dismissal:'',didBat:true,onCrease:true});
+      // New player from squad — add to batting card as non-striker
+      if (currentNS) currentNS.isStriker = false; // bench old non-striker
+      this._bc.push({name,runs:0,balls:0,fours:0,sixes:0,isStriker:false,isOut:false,dismissal:'',didBat:true});
+      // Ensure only one non-striker: mark old non-striker as neither
+      const striker = this._getStriker();
+      this._bc.forEach(b => {
+        if (b.isOut) return;
+        if (striker && b.name === striker.name) b.isStriker = true;
+        else if (b.name === name) b.isStriker = false;
+        else b.isStriker = false;
+      });
     }
     this.partnershipRuns = 0; this.partnershipBalls = 0;
   }
