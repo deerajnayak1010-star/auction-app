@@ -4397,7 +4397,10 @@ export class UI {
                   <div class="match-select-card-label">Match ${m.matchId.replace('match-','')}</div>
                   <div class="match-select-time">${m.time || m.date || 'Schedule pending'}</div>
                 </div>
-                ${statusBadge(m)}
+                <div class="match-select-card-actions">
+                  ${statusBadge(m)}
+                  ${(m.status === 'live' || m.status === 'completed') ? `<button class="match-reset-btn" data-reset-match="${m.matchId}" title="Reset this match">🔄</button>` : ''}
+                </div>
               </div>
               <div class="match-select-teams-row">
                 ${renderTeamPill(m.teamAShort, m.teamAColor, m.teamATextColor, m.teamALogo)}
@@ -4425,7 +4428,10 @@ export class UI {
                   <div class="match-select-series-tag">${koLabels[m.matchId] || 'KO'}</div>
                   <div class="match-select-time">${m.time || m.date || 'Schedule pending'}</div>
                 </div>
-                ${statusBadge(m, isTBD(m))}
+                <div class="match-select-card-actions">
+                  ${statusBadge(m, isTBD(m))}
+                  ${(!isTBD(m) && (m.status === 'live' || m.status === 'completed')) ? `<button class="match-reset-btn" data-reset-match="${m.matchId}" title="Reset this match">🔄</button>` : ''}
+                </div>
               </div>
               <div class="match-select-teams-row">
                 ${renderTeamPill(m.teamAShort, m.teamAColor, m.teamATextColor, m.teamALogo)}

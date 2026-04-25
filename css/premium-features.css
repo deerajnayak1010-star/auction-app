@@ -1688,6 +1688,44 @@
   gap: 16px;
 }
 
+.match-select-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.match-reset-btn {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.08);
+  color: rgba(239, 68, 68, 0.7);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(6px);
+}
+
+.match-reset-btn:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ffd2cf;
+  transform: rotate(90deg) scale(1.1);
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.2);
+}
+
+.match-reset-btn:active {
+  transform: rotate(180deg) scale(0.95);
+}
+
 .match-select-card-label,
 .match-select-series-tag {
   font-size: 0.72rem;

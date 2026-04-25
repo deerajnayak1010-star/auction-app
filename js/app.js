@@ -3848,6 +3848,41 @@ class App {
       return true;
     }
 
+    // Reset a specific match (only affects that match, keeps all other data safe)
+    const resetBtn = target.closest('[data-reset-match]');
+    if (resetBtn) {
+      const matchId = resetBtn.dataset.resetMatch;
+      const match = this.scorecardMgr.getMatch(matchId);
+      const matchLabel = match ? `${match.teamAShort} vs ${match.teamBShort} (Match ${matchId.replace('match-','')})` : matchId;
+      if (!confirm(`🔄 Reset "${matchLabel}"?\n\nThis will clear all live scoring data for this match only.\nAll other matches will remain unaffected.`)) {
+        return true;
+      }
+      // 1. Remove this match's live engine from localStorage
+      localStorage.removeItem('npl_live_match_' + matchId);
+      // 2. If the active live engine is this match, clear it
+      if (this.liveMatchEngine && this.liveMatchEngine.matchId === matchId) {
+        this.liveMatchEngine = null;
+      }
+      // 3. Reset the scorecard entry for this match (clear innings data but keep teams)
+      if (match) {
+        const emptyInnings = {
+          totalRuns: 0, wickets: 0, overs: '0.0', runRate: '0.00',
+          batting: [], bowling: [], extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0, total: 0 }
+        };
+        match.innings1 = { ...emptyInnings };
+        match.innings2 = { ...emptyInnings, target: 0 };
+        match.status = 'upcoming';
+        match.result = { winner: '', margin: '', playerOfMatch: '' };
+        match.tossWinner = null;
+        match.tossDecision = null;
+      }
+      this.saveState();
+      this.broadcastPersistentState();
+      this.ui.showToast(`🔄 "${matchLabel}" has been reset. Ready for fresh scoring!`, 'success');
+      this._renderLiveMatchView();
+      return true;
+    }
+
     // Select a match to score
     const matchCard = target.closest('[data-live-match]');
     if (matchCard) {
