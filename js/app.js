@@ -2179,7 +2179,7 @@ class App {
       // If we're in new-batsman or bowler-select phase, undo to go back to scoring
       if (this.liveMatchEngine) {
         const phase = this.liveMatchEngine.phase;
-        if (phase === 'new-batsman' || phase === 'bowler-select') {
+        if (phase === 'new-batsman' || phase === 'bowler-select' || phase === 'new-batsman-then-bowler') {
           this.liveMatchEngine.undoLastBall();
           this._saveLiveMatch();
           this._renderLiveMatchView();
@@ -3744,11 +3744,32 @@ class App {
   _renderLiveMatchView() {
     if (this.liveMatchEngine) {
       this.ui.renderLiveMatch(this.liveMatchEngine.getState());
+      // Bind non-striker manual select after render
+      this._bindNonStrikerSelect();
     } else {
       // Ensure all fixture matches exist in scorecard
       this._ensureAllFixtureMatches();
       const matches = this.scorecardMgr.getAllMatches();
       this.ui.renderLiveMatch(null, matches);
+    }
+  }
+
+  // Bind the non-striker manual select dropdown change event
+  _bindNonStrikerSelect() {
+    const nsSelect = document.getElementById('lm-ns-manual-select');
+    if (nsSelect && this.liveMatchEngine) {
+      nsSelect.addEventListener('change', (e) => {
+        const name = e.target.value;
+        if (!name || !this.liveMatchEngine) return;
+        // Push undo snapshot
+        this.liveMatchEngine.undoStack.push(this.liveMatchEngine._snapshot());
+        if (this.liveMatchEngine.undoStack.length > 50) this.liveMatchEngine.undoStack.shift();
+        this.liveMatchEngine.manualSetNonStriker(name);
+        this._saveLiveMatch();
+        this._syncLiveToScorecard();
+        this._renderLiveMatchView();
+        this.ui.showToast(`🏃 Non-striker changed to ${name}`, 'info', 1500);
+      });
     }
   }
 
@@ -4117,6 +4138,9 @@ class App {
     } else {
       this._renderLiveMatchView();
     }
+
+    // Bind non-striker manual select after DOM update
+    this._bindNonStrikerSelect();
 
     // Pulse the latest ball dot after DOM update
     if (this.liveAnims) {

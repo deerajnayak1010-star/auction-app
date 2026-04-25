@@ -8,7 +8,7 @@ export class LiveMatchEngine {
     this.matchId = match.matchId;
     this.teamA = { id: match.teamAId, name: match.teamAName, short: match.teamAShort, color: match.teamAColor, logo: match.teamALogo, squad: match.teamASquad || [] };
     this.teamB = { id: match.teamBId, name: match.teamBName, short: match.teamBShort, color: match.teamBColor, logo: match.teamBLogo, squad: match.teamBSquad || [] };
-    this.oversLimit = 5;
+    this.oversLimit = 6;
     this.phase = 'setup';
     this.tossWinner = null; this.tossDecision = null;
     this.currentInnings = 1;
@@ -68,7 +68,12 @@ export class LiveMatchEngine {
     const isNewStriker = !existingStriker;
     this._bc.push({name,runs:0,balls:0,fours:0,sixes:0,isStriker:isNewStriker,isOut:false,dismissal:'',didBat:true});
     this.partnershipRuns = 0; this.partnershipBalls = 0;
-    this.phase='scoring';
+    // If wicket fell on last ball of over, transition to bowler-select next
+    if (this.phase === 'new-batsman-then-bowler') {
+      this.phase = 'bowler-select';
+    } else {
+      this.phase = 'scoring';
+    }
   }
 
   selectNextBowler(name) {
@@ -87,6 +92,52 @@ export class LiveMatchEngine {
   getAvailableBowlers() {
     const last = this._getCurrentBowler()?.name;
     return this._getBowlingTeam().squad.filter(p=>p.name!==last);
+  }
+
+  // Get available players for manual non-striker selection (not out, not current striker)
+  getAvailableNonStrikers() {
+    const striker = this._getStriker();
+    const strikerName = striker ? striker.name : null;
+    // Get players from batting card who are not out (excluding current striker)
+    const notOutFromCard = this._bc.filter(b => !b.isOut && b.name !== strikerName).map(b => ({ name: b.name, inCard: true }));
+    // Also include squad players not yet in batting card and not already out
+    const usedNames = new Set(this._bc.map(b => b.name));
+    const fromSquad = this._getBattingTeam().squad.filter(p => !usedNames.has(p.name)).map(p => ({ name: p.name, inCard: false }));
+    return [...notOutFromCard, ...fromSquad];
+  }
+
+  // Manually set non-striker to a different player
+  manualSetNonStriker(name) {
+    const currentNS = this._getNonStriker();
+    if (currentNS && currentNS.name === name) return; // already non-striker
+    // If the player is already in batting card and not out, make them non-striker
+    const existing = this._bc.find(b => b.name === name && !b.isOut);
+    if (existing) {
+      // Remove isStriker from all non-out batters, set striker flag correctly
+      if (currentNS) currentNS.isStriker = false; // will be unused
+      // Mark the existing player as non-striker (isStriker=false)
+      // Keep current striker as striker
+      const striker = this._getStriker();
+      this._bc.forEach(b => {
+        if (b.isOut) return;
+        if (striker && b.name === striker.name) b.isStriker = true;
+        else if (b.name === name) b.isStriker = false;
+        else if (!b.isOut) b.isStriker = false; // bench the old non-striker (keep in card)
+      });
+    } else {
+      // New player from squad — add to batting card as non-striker
+      if (currentNS) currentNS.isStriker = false; // bench old non-striker
+      this._bc.push({name,runs:0,balls:0,fours:0,sixes:0,isStriker:false,isOut:false,dismissal:'',didBat:true});
+      // Ensure only one non-striker: mark old non-striker as neither
+      const striker = this._getStriker();
+      this._bc.forEach(b => {
+        if (b.isOut) return;
+        if (striker && b.name === striker.name) b.isStriker = true;
+        else if (b.name === name) b.isStriker = false;
+        else b.isStriker = false;
+      });
+    }
+    this.partnershipRuns = 0; this.partnershipBalls = 0;
   }
 
   _shouldSwapStrike(ball) {
@@ -221,7 +272,9 @@ export class LiveMatchEngine {
     const allOut=total.wickets>=maxWk;
     const oversComplete=this._getLegalBallCount()>=this.oversLimit*6;
 
-    if(ball.wicket&&!allOut&&!oversComplete&&this.phase==='scoring') this.phase='new-batsman';
+    // Wicket on last ball of over: need batsman popup first, then bowler popup
+    if(ball.wicket&&!allOut&&!oversComplete&&this.phase==='bowler-select') this.phase='new-batsman-then-bowler';
+    else if(ball.wicket&&!allOut&&!oversComplete&&this.phase==='scoring') this.phase='new-batsman';
 
     if(allOut||oversComplete){ this._handleInningsEnd(); return this.getState(); }
 
@@ -390,10 +443,11 @@ export class LiveMatchEngine {
   // Get over-by-over history with ball details
   getOverHistory(inningsNum) {
     const balls = inningsNum === 1 ? this.balls : this.balls2;
-    const overs = []; let overBalls = []; let legalInOver = 0; let overRuns = 0; let overNum = 1;
+    const overs = []; let overBalls = []; let legalInOver = 0; let overRuns = 0; let overNum = 1; let overBowler = '';
     for (const b of balls) {
       overBalls.push(b); overRuns += b.totalRuns || 0;
-      if (!b.isWide && !b.isNoBall) { legalInOver++; if (legalInOver >= 6) { overs.push({ over: overNum, runs: overRuns, balls: [...overBalls] }); overNum++; legalInOver = 0; overRuns = 0; overBalls = []; } }
+      if (!overBowler && b.bowlerName) overBowler = b.bowlerName;
+      if (!b.isWide && !b.isNoBall) { legalInOver++; if (legalInOver >= 6) { overs.push({ over: overNum, runs: overRuns, balls: [...overBalls], bowlerName: overBowler }); overNum++; legalInOver = 0; overRuns = 0; overBalls = []; overBowler = ''; } }
     }
     // Current incomplete over is NOT included (it's shown in THIS OVER)
     return overs;
@@ -490,6 +544,7 @@ export class LiveMatchEngine {
       isFreeHit:this.isFreeHit,isComplete:this.isComplete,result:this.result,winnerId:this.winnerId,playerOfMatch:this.playerOfMatch,
       matchType:this.matchType,
       availableBatsmen:this.getAvailableBatsmen(),availableBowlers:this.getAvailableBowlers(),
+      availableNonStrikers:this.getAvailableNonStrikers(),
       canUndo:this.undoStack.length>0
     };
   }
