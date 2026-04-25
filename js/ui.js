@@ -4488,6 +4488,16 @@ export class UI {
         const r = b.batRuns ? '+' + b.batRuns : '';
         return `<span class="ball-chip wicket" style="font-size:0.55rem;">NB${r}·W</span>`;
       }
+      // Wicket + Bye (B+RO)
+      if (b.wicket && b.isBye) {
+        const r = b.extraRuns || 0;
+        return `<span class="ball-chip wicket" style="font-size:0.55rem;">${r}B·W</span>`;
+      }
+      // Wicket + Leg Bye (LB+RO)
+      if (b.wicket && b.isLegBye) {
+        const r = b.extraRuns || 0;
+        return `<span class="ball-chip wicket" style="font-size:0.55rem;">${r}LB·W</span>`;
+      }
       // Plain wicket (with possible completed runs on run-out)
       if (b.wicket) {
         if (b.runs > 0) return `<span class="ball-chip wicket" style="font-size:0.6rem;">${b.runs}·W</span>`;
@@ -4495,8 +4505,8 @@ export class UI {
       }
       if (b.isWide) return `<span class="ball-chip wide">WD${b.additionalRuns?'+'+b.additionalRuns:''}</span>`;
       if (b.isNoBall) return `<span class="ball-chip noball">NB${(b.batRuns||b.byeRuns)?'+'+(b.batRuns||b.byeRuns):''}</span>`;
-      if (b.isBye) return `<span class="ball-chip bye">${b.extraRuns}B</span>`;
-      if (b.isLegBye) return `<span class="ball-chip bye">${b.extraRuns}LB</span>`;
+      if (b.isBye) return `<span class="ball-chip bye">${b.extraRuns||0}B</span>`;
+      if (b.isLegBye) return `<span class="ball-chip bye">${b.extraRuns||0}LB</span>`;
       if ((b.totalRuns||b.runs) === 6) return '<span class="ball-chip six">6</span>';
       if ((b.totalRuns||b.runs) === 4 && b.isBoundary) return '<span class="ball-chip boundary">4</span>';
       if (b.runs === 0 && !b.extraRuns) return '<span class="ball-chip dot">•</span>';
